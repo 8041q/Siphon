@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
+import { File, Directory, Paths } from 'expo-file-system';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -15,32 +15,31 @@ import { FuelDataClient, FuelStationFeature } from './src/api/siphonClient';
 
 
 // ---- Hybrid store: tile data + snapshots → files; small keys → AsyncStorage ----
-const DATA_DIR = FileSystem.documentDirectory + 'siphon/';
+const DATA_DIR = new Directory(Paths.document, 'siphon');
+const TILES_DIR = new Directory(DATA_DIR, 'tiles');
+const SNAPSHOTS_DIR = new Directory(DATA_DIR, 'snapshots');
 
-async function ensureDir(path: string): Promise<void> {
-  const info = await FileSystem.getInfoAsync(path);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(path, { intermediates: true });
-  }
+function ensureDir(dir: Directory): void {
+  dir.create({ intermediates: true, idempotent: true });
 }
 
 // Tile data keys: "siphon:data:<tile-path>" → file under tiles/
-function tileFilePath(key: string): string {
+function tileFilePath(key: string): File {
   const tilePath = key.slice('siphon:data:'.length);
-  return DATA_DIR + 'tiles/' + tilePath;
+  return new File(TILES_DIR, tilePath);
 }
 
 // Snapshot keys: "siphon:snapshot:YYYY-MM-DD" → file under snapshots/
-function snapshotFilePath(key: string): string {
+function snapshotFilePath(key: string): File {
   const date = key.slice('siphon:snapshot:'.length);
-  return DATA_DIR + 'snapshots/' + date + '.json';
+  return new File(SNAPSHOTS_DIR, date + '.json');
 }
 
 function isFileKey(key: string): boolean {
   return key.startsWith('siphon:data:') || key.startsWith('siphon:snapshot:');
 }
 
-function filePathForKey(key: string): string {
+function filePathForKey(key: string): File {
   if (key.startsWith('siphon:data:')) return tileFilePath(key);
   if (key.startsWith('siphon:snapshot:')) return snapshotFilePath(key);
   throw new Error('Unsupported key: ' + key);
@@ -50,7 +49,7 @@ const hybridStore = {
   async getItem(key: string): Promise<string | null> {
     if (!isFileKey(key)) return AsyncStorage.getItem(key);
     try {
-      return await FileSystem.readAsStringAsync(filePathForKey(key));
+      return await filePathForKey(key).text();
     } catch {
       return null;
     }
@@ -61,30 +60,28 @@ const hybridStore = {
       await AsyncStorage.setItem(key, value);
       return;
     }
-    await ensureDir(DATA_DIR);
+    ensureDir(DATA_DIR);
     if (key.startsWith('siphon:data:')) {
-      await ensureDir(DATA_DIR + 'tiles/');
-      // Ensure subdirectories for tile path exist
+      ensureDir(TILES_DIR);
       const tilePath = key.slice('siphon:data:'.length);
       const lastSlash = tilePath.lastIndexOf('/');
       if (lastSlash > 0) {
-        await ensureDir(DATA_DIR + 'tiles/' + tilePath.slice(0, lastSlash));
+        ensureDir(new Directory(TILES_DIR, tilePath.slice(0, lastSlash)));
       }
     }
     if (key.startsWith('siphon:snapshot:')) {
-      await ensureDir(DATA_DIR + 'snapshots/');
+      ensureDir(SNAPSHOTS_DIR);
     }
-    await FileSystem.writeAsStringAsync(filePathForKey(key), value);
+    filePathForKey(key).write(value);
   },
 
   async listKeys(prefix: string): Promise<string[]> {
     if (prefix === 'siphon:snapshot:') {
       try {
-        await ensureDir(DATA_DIR + 'snapshots/');
-        const files = await FileSystem.readDirectoryAsync(DATA_DIR + 'snapshots/');
-        return files
-          .filter(f => f.endsWith('.json'))
-          .map(f => 'siphon:snapshot:' + f.replace(/\.json$/, ''));
+        ensureDir(SNAPSHOTS_DIR);
+        return SNAPSHOTS_DIR.list()
+          .filter((item): item is File => item instanceof File && item.extension === '.json')
+          .map(item => 'siphon:snapshot:' + item.name.replace(/\.json$/, ''));
       } catch {
         return [];
       }
@@ -97,7 +94,7 @@ const hybridStore = {
       await AsyncStorage.removeItem(key);
       return;
     }
-    await FileSystem.deleteAsync(filePathForKey(key), { idempotent: true });
+    try { filePathForKey(key).delete(); } catch {}
   },
 };
 
