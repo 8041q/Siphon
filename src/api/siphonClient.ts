@@ -80,33 +80,38 @@ export class FuelDataClient {
   }
 
   // Step 1+2: conditional GET the root manifest, diff country hashes.
-  // Common case is a single request returning 304 — nothing changed anywhere.
-  async checkForUpdates(): Promise<{ changedCountries: CountryCode[]; root: RootManifest | null }> {
-    const etag = await this.store.getItem(KEYS.rootEtag);
-    const res = await fetch(`${this.baseUrl}/manifest.json`, {
-      headers: etag ? { 'If-None-Match': etag } : {},
-    });
+  // If the network call fails. report offline:true and changedCountries:[]
+  // so we fall back to whatever's cached rather than crashing the app.
+  async checkForUpdates(): Promise<{ changedCountries: CountryCode[]; root: RootManifest | null; offline: boolean }> {
+    try {
+      const etag = await this.store.getItem(KEYS.rootEtag);
+      const res = await fetch(`${this.baseUrl}/manifest.json`, {
+        headers: etag ? { 'If-None-Match': etag } : {},
+      });
 
-    if (res.status === 304) {
-      return { changedCountries: [], root: null };
+      if (res.status === 304) {
+        return { changedCountries: [], root: null, offline: false };
+      }
+      if (!res.ok) {
+        throw new Error(`Root manifest fetch failed: ${res.status}`);
+      }
+
+      const root: RootManifest = await res.json();
+      const newEtag = res.headers.get('etag');
+      if (newEtag) await this.store.setItem(KEYS.rootEtag, newEtag);
+
+      const cachedRootRaw = await this.store.getItem(KEYS.rootManifest);
+      const cachedRoot: RootManifest | null = cachedRootRaw ? JSON.parse(cachedRootRaw) : null;
+
+      const changedCountries = (Object.keys(root.countries) as CountryCode[]).filter(
+        (code) => root.countries[code].hash !== cachedRoot?.countries?.[code]?.hash
+      );
+
+      await this.store.setItem(KEYS.rootManifest, JSON.stringify(root));
+      return { changedCountries, root, offline: false };
+    } catch {
+      return { changedCountries: [], root: null, offline: true };
     }
-    if (!res.ok) {
-      throw new Error(`Root manifest fetch failed: ${res.status}`);
-    }
-
-    const root: RootManifest = await res.json();
-    const newEtag = res.headers.get('etag');
-    if (newEtag) await this.store.setItem(KEYS.rootEtag, newEtag);
-
-    const cachedRootRaw = await this.store.getItem(KEYS.rootManifest);
-    const cachedRoot: RootManifest | null = cachedRootRaw ? JSON.parse(cachedRootRaw) : null;
-
-    const changedCountries = (Object.keys(root.countries) as CountryCode[]).filter(
-      (code) => root.countries[code].hash !== cachedRoot?.countries?.[code]?.hash
-    );
-
-    await this.store.setItem(KEYS.rootManifest, JSON.stringify(root));
-    return { changedCountries, root };
   }
 
   // Step 3: fetch + cache a single country's manifest — but only over the
@@ -118,8 +123,7 @@ export class FuelDataClient {
     if (!changed) {
       const cached = await this.store.getItem(KEYS.countryManifest(code));
       if (cached) return JSON.parse(cached) as T;
-      // No cache yet (e.g. very first launch, or storage was cleared) —
-      // fall through and fetch even though nothing was flagged as changed.
+      // No cache yet (very first launch, or storage was cleared)
     }
 
     const res = await fetch(`${this.baseUrl}/${path}`);
