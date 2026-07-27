@@ -109,9 +109,19 @@ export class FuelDataClient {
     return { changedCountries, root };
   }
 
-  // Step 3: fetch + cache a single country's manifest. Only call this for
-  // countries checkForUpdates() actually flagged as changed.
-  private async getCountryManifest<T>(code: CountryCode, path: string): Promise<T> {
+  // Step 3: fetch + cache a single country's manifest — but only over the
+  // network if `changed` is true (i.e. checkForUpdates() flagged this
+  // country's hash as different from what we last saw). Otherwise use the
+  // manifest we cached last time. This is what makes "unchanged countries:
+  // skip entirely" (API.md step 2) actually happen.
+  private async getCountryManifest<T>(code: CountryCode, path: string, changed: boolean): Promise<T> {
+    if (!changed) {
+      const cached = await this.store.getItem(KEYS.countryManifest(code));
+      if (cached) return JSON.parse(cached) as T;
+      // No cache yet (e.g. very first launch, or storage was cleared) —
+      // fall through and fetch even though nothing was flagged as changed.
+    }
+
     const res = await fetch(`${this.baseUrl}/${path}`);
     if (!res.ok) throw new Error(`${code} manifest fetch failed: ${res.status}`);
     const manifest: T = await res.json();
@@ -119,12 +129,12 @@ export class FuelDataClient {
     return manifest;
   }
 
-  async getSpainManifest(path = 'data/es/manifest.json'): Promise<SpainManifest> {
-    return this.getCountryManifest<SpainManifest>('ES', path);
+  async getSpainManifest(changed: boolean, path = 'data/es/manifest.json'): Promise<SpainManifest> {
+    return this.getCountryManifest<SpainManifest>('ES', path, changed);
   }
 
-  async getPortugalManifest(path = 'data/pt/manifest.json'): Promise<PortugalManifest> {
-    return this.getCountryManifest<PortugalManifest>('PT', path);
+  async getPortugalManifest(changed: boolean, path = 'data/pt/manifest.json'): Promise<PortugalManifest> {
+    return this.getCountryManifest<PortugalManifest>('PT', path, changed);
   }
 
   // Step 4: fetch a tile/district .geojson ONLY if its hash differs from what's already cached. Works for both ES tiles and PT districts since
@@ -184,11 +194,22 @@ export class FuelDataClient {
   }
 
   // High-level convenience: "every station feature near this point, fetching
-  // only what's actually needed." Tries Spain's grid formula first, falls back to Portugal's bbox prefilter
-  async getStationsNear(lat: number, lng: number): Promise<FuelStationFeature[]> {
+  // only what's actually needed." Tries Spain's grid formula first, falls
+  // back to Portugal's bbox prefilter.
+  //
+  // `changedCountries` should be the array returned by checkForUpdates() —
+  // pass it straight through so a country whose hash didn't move is read
+  // from cache instead of re-fetched. On the common "nothing changed"
+  // day, that combined with checkForUpdates()'s 304 means this whole
+  // function does zero network requests.
+  async getStationsNear(
+    lat: number,
+    lng: number,
+    changedCountries: CountryCode[] = []
+  ): Promise<FuelStationFeature[]> {
     const features: FuelStationFeature[] = [];
 
-    const es = await this.getSpainManifest();
+    const es = await this.getSpainManifest(changedCountries.includes('ES'));
     const key = this.spainGridKey(lat, lng);
     if (es.tiles[key]) {
       const geojson = await this.fetchIfChanged(es.tiles[key]);
@@ -196,7 +217,7 @@ export class FuelDataClient {
       return features;
     }
 
-    const pt = await this.getPortugalManifest();
+    const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
     const districts = this.portugalDistrictsNear(pt, lat, lng);
     for (const district of districts) {
       const geojson = await this.fetchIfChanged(district);

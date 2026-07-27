@@ -36,8 +36,11 @@ export default function App() {
       const pos = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = pos.coords;
 
-      await client.checkForUpdates(); // refreshes cached manifests if anything changed
-      const nearby = await client.getStationsNear(latitude, longitude);
+      // Cheap first: conditional GET on the root manifest. On a normal day
+      // this comes back 304 and changedCountries is [] — everything below
+      // then reads from cache instead of hitting the network.
+      const { changedCountries } = await client.checkForUpdates();
+      const nearby = await client.getStationsNear(latitude, longitude, changedCountries);
       setStations(nearby);
     } catch (e: any) {
       setError(e.message ?? 'Something went wrong');
