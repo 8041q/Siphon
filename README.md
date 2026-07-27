@@ -2,27 +2,32 @@
 Setup
 
 ```bash
-npm install expo@~54.0.0 react@19.1.0 react-native@0.81.0
-
-npx expo install react-dom@19.1.0 @react-native-async-storage/async-storage expo-dev-client expo-file-system expo-location expo-system-ui react-native-safe-area-context @expo/ui @types/react typescript
-
+npm install
+npx expo install --check
 npx expo install --fix
 ```
-
-Update apk in repo:
+Prepare and run dev
 ```bash
-npx expo prebuild --platform android
-
+npx expo prebuild --clean
 cd android
-gradlew.bat assembleRelease
+.\gradlew assembleRelease
+npx expo run:android
 ```
 
-Update installed app on android phone
-Connect via USB and run:
+If android device already has apk installed, just connect via USB and run:
+Connect via USB and run (USB debugging enabled):
 ```bash
 npx expo run:android
 ```
 
+If you want to update the apk in the repo, just run:
+```bash
+npx expo prebuild --clean
+```
+
+
+
+\\\\\\\\\\\\\\\\\\\\\\\ SECTION UNDER REVIEW \\\\\\\\\\\\\\\\\\\\\\\\\\\
 Troubleshoot:
 
 I don´t know why, but on one device I used JDK 22 and worked, but on another I needed to install OpenJDK 17 (path variable needs to point to it)...
@@ -31,7 +36,6 @@ You can set with:
 $env:JAVA_HOME="C:\Program Files\Java\jdk-17"
 ```
 and then run build
-
 
 If build fails, to clean run:
 ```bash
