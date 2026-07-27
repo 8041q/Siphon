@@ -111,21 +111,50 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [locationApproximate, setLocationApproximate] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     setOffline(false);
+    setLocationApproximate(false);
     setSyncProgress(null);
+
+    // --- Location: graceful fallback chain ---
+    let latitude = 40.4168;
+    let longitude = -3.7038;
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        throw new Error('Location permission denied');
+      if (status === 'granted') {
+        try {
+          // Use low accuracy (WiFi/cell towers) — no GPS required
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+          latitude = pos.coords.latitude;
+          longitude = pos.coords.longitude;
+        } catch {
+          // Fallback to last known position
+          try {
+            const last = await Location.getLastKnownPositionAsync();
+            if (last) {
+              latitude = last.coords.latitude;
+              longitude = last.coords.longitude;
+            }
+          } catch {
+            // Both failed — keep default coordinates
+          }
+          setLocationApproximate(true);
+        }
+      } else {
+        setLocationApproximate(true);
       }
-      const pos = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = pos.coords;
+    } catch {
+      setLocationApproximate(true);
+    }
 
+    // --- Network data ---
+    try {
       // Step 1: conditional GET on root manifest to detect changes
       setSyncProgress('Checking for updates…');
       const { changedCountries, offline: wasOffline } = await client.checkForUpdates();
@@ -150,6 +179,11 @@ export default function App() {
       setSyncProgress('Loading nearby stations…');
       const nearby = await client.getStationsNear(latitude, longitude, changedCountries);
       setStations(nearby);
+
+      // Show a helpful message when offline with no cached data
+      if (wasOffline && nearby.length === 0) {
+        setError('No internet connection. Connect to download station data on first use.');
+      }
     } catch (e: any) {
       setError(e.message ?? 'Something went wrong');
     } finally {
@@ -171,14 +205,6 @@ export default function App() {
     );
   }
 
-  if (error) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       {offline && (
@@ -186,28 +212,39 @@ export default function App() {
           <Text style={styles.offlineText}>Using cached data — no connection</Text>
         </View>
       )}
-      <FlatList
-        data={stations}
-        keyExtractor={(item) => item.properties.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
-          const { name, brand, address, fuels } = item.properties;
-          return (
-            <View style={styles.card}>
-              <Text style={styles.brand}>{brand || name || 'Unknown station'}</Text>
-              <Text style={styles.address}>{address}</Text>
-              <View style={styles.prices}>
-                {Object.entries(fuels ?? {}).map(([fuel, price]) => (
-                  <Text key={fuel} style={styles.price}>
-                    {fuel}: {Number(price).toFixed(3)} €
-                  </Text>
-                ))}
+      {locationApproximate && (
+        <View style={styles.locationBanner}>
+          <Text style={styles.locationText}>Approximate location — enable GPS for better accuracy</Text>
+        </View>
+      )}
+      {error ? (
+        <View style={styles.center}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={stations}
+          keyExtractor={(item) => item.properties.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => {
+            const { name, brand, address, fuels } = item.properties;
+            return (
+              <View style={styles.card}>
+                <Text style={styles.brand}>{brand || name || 'Unknown station'}</Text>
+                <Text style={styles.address}>{address}</Text>
+                <View style={styles.prices}>
+                  {Object.entries(fuels ?? {}).map(([fuel, price]) => (
+                    <Text key={fuel} style={styles.price}>
+                      {fuel}: {Number(price).toFixed(3)} €
+                    </Text>
+                  ))}
+                </View>
               </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={<Text style={styles.dim}>No stations found nearby.</Text>}
-      />
+            );
+          }}
+          ListEmptyComponent={<Text style={styles.dim}>No stations found nearby.</Text>}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -225,4 +262,6 @@ const styles = StyleSheet.create({
   error: { color: '#c00', textAlign: 'center' },
   offlineBanner: { backgroundColor: '#fef3c7', paddingVertical: 6, paddingHorizontal: 16 },
   offlineText: { color: '#92400e', fontSize: 13, textAlign: 'center' },
+  locationBanner: { backgroundColor: '#e0f2fe', paddingVertical: 6, paddingHorizontal: 16 },
+  locationText: { color: '#075985', fontSize: 13, textAlign: 'center' },
 });

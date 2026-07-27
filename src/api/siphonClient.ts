@@ -125,7 +125,7 @@ export class FuelDataClient {
   // If the network fetch fails and we have a stale cache, we return it
   // rather than crashing — the map isn't useless just because the user
   // briefly lost connectivity.
-  private async getCountryManifest<T>(code: CountryCode, path: string, changed: boolean): Promise<T> {
+  private async getCountryManifest<T>(code: CountryCode, path: string, changed: boolean): Promise<T | null> {
     const cached = await this.store.getItem(KEYS.countryManifest(code));
     if (!changed && cached) return JSON.parse(cached) as T;
 
@@ -137,15 +137,15 @@ export class FuelDataClient {
       return manifest;
     } catch (e) {
       if (cached) return JSON.parse(cached) as T;
-      throw e;
+      return null;
     }
   }
 
-  async getSpainManifest(changed: boolean, path = 'data/es/manifest.json'): Promise<SpainManifest> {
+  async getSpainManifest(changed: boolean, path = 'data/es/manifest.json'): Promise<SpainManifest | null> {
     return this.getCountryManifest<SpainManifest>('ES', path, changed);
   }
 
-  async getPortugalManifest(changed: boolean, path = 'data/pt/manifest.json'): Promise<PortugalManifest> {
+  async getPortugalManifest(changed: boolean, path = 'data/pt/manifest.json'): Promise<PortugalManifest | null> {
     return this.getCountryManifest<PortugalManifest>('PT', path, changed);
   }
 
@@ -154,7 +154,7 @@ export class FuelDataClient {
   // If the network fetch fails and we have stale cached data, we return it
   // rather than throwing — so users can still see stations they previously
   // downloaded even when offline.
-  async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection> {
+  async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection | null> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
     if (cachedHash === entry.hash) {
       const cached = await this.store.getItem(KEYS.tileData(entry.path));
@@ -171,7 +171,7 @@ export class FuelDataClient {
     } catch (e) {
       const cached = await this.store.getItem(KEYS.tileData(entry.path));
       if (cached) return JSON.parse(cached);
-      throw e;
+      return null;
     }
   }
 
@@ -187,17 +187,21 @@ export class FuelDataClient {
   ): Promise<{ tileCount: number }> {
     const es = await this.getSpainManifest(changedCountries.includes('ES'));
     const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
-    const total = Object.keys(es.tiles).length + Object.keys(pt.districts).length;
+    const total = (es ? Object.keys(es.tiles).length : 0) + (pt ? Object.keys(pt.districts).length : 0);
     let loaded = 0;
 
-    for (const tile of Object.values(es.tiles)) {
-      await this.fetchIfChanged(tile);
-      onProgress?.(++loaded, total);
+    if (es) {
+      for (const tile of Object.values(es.tiles)) {
+        await this.fetchIfChanged(tile);
+        onProgress?.(++loaded, total);
+      }
     }
 
-    for (const district of Object.values(pt.districts)) {
-      await this.fetchIfChanged(district);
-      onProgress?.(++loaded, total);
+    if (pt) {
+      for (const district of Object.values(pt.districts)) {
+        await this.fetchIfChanged(district);
+        onProgress?.(++loaded, total);
+      }
     }
 
     return { tileCount: total };
@@ -228,27 +232,35 @@ export class FuelDataClient {
 
     const stations: Array<{ id: string; brand: string | null; fuels: Record<string, number> }> = [];
 
-    for (const tile of Object.values(es.tiles)) {
-      const geojson = await this.fetchIfChanged(tile);
-      for (const f of geojson.features) {
-        stations.push({
-          id: f.properties.id,
-          brand: f.properties.brand ?? null,
-          fuels: f.properties.fuels ?? {},
-        });
+    if (es) {
+      for (const tile of Object.values(es.tiles)) {
+        const geojson = await this.fetchIfChanged(tile);
+        if (!geojson) continue;
+        for (const f of geojson.features) {
+          stations.push({
+            id: f.properties.id,
+            brand: f.properties.brand ?? null,
+            fuels: f.properties.fuels ?? {},
+          });
+        }
       }
     }
 
-    for (const district of Object.values(pt.districts)) {
-      const geojson = await this.fetchIfChanged(district);
-      for (const f of geojson.features) {
-        stations.push({
-          id: f.properties.id,
-          brand: f.properties.brand ?? f.properties.name ?? null,
-          fuels: f.properties.fuels ?? {},
-        });
+    if (pt) {
+      for (const district of Object.values(pt.districts)) {
+        const geojson = await this.fetchIfChanged(district);
+        if (!geojson) continue;
+        for (const f of geojson.features) {
+          stations.push({
+            id: f.properties.id,
+            brand: f.properties.brand ?? f.properties.name ?? null,
+            fuels: f.properties.fuels ?? {},
+          });
+        }
       }
     }
+
+    if (stations.length === 0) return { recorded: false, stationCount: 0 };
 
     await this.store.setItem(key, JSON.stringify(stations));
     return { recorded: true, stationCount: stations.length };
@@ -346,27 +358,33 @@ export class FuelDataClient {
     // Spain — fetch the 3×3 block around the user's location.
     // Stations are deduplicated by id (Spain uses "es-XXXXX").
     const es = await this.getSpainManifest(changedCountries.includes('ES'));
-    for (const key of this.spainNeighborGridKeys(lat, lng)) {
-      const tile = es.tiles[key];
-      if (!tile) continue;
-      const geojson = await this.fetchIfChanged(tile);
-      for (const f of geojson.features) {
-        if (f.properties.id && seen.has(f.properties.id)) continue;
-        if (f.properties.id) seen.add(f.properties.id);
-        features.push(f);
+    if (es) {
+      for (const key of this.spainNeighborGridKeys(lat, lng)) {
+        const tile = es.tiles[key];
+        if (!tile) continue;
+        const geojson = await this.fetchIfChanged(tile);
+        if (!geojson) continue;
+        for (const f of geojson.features) {
+          if (f.properties.id && seen.has(f.properties.id)) continue;
+          if (f.properties.id) seen.add(f.properties.id);
+          features.push(f);
+        }
       }
     }
 
     // Portugal — bbox prefilter districts near the point.
     // Same dedup set (Portugal uses "pt-XXXXX" — no collision risk).
     const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
-    const districts = this.portugalDistrictsNear(pt, lat, lng);
-    for (const district of districts) {
-      const geojson = await this.fetchIfChanged(district);
-      for (const f of geojson.features) {
-        if (f.properties.id && seen.has(f.properties.id)) continue;
-        if (f.properties.id) seen.add(f.properties.id);
-        features.push(f);
+    if (pt) {
+      const districts = this.portugalDistrictsNear(pt, lat, lng);
+      for (const district of districts) {
+        const geojson = await this.fetchIfChanged(district);
+        if (!geojson) continue;
+        for (const f of geojson.features) {
+          if (f.properties.id && seen.has(f.properties.id)) continue;
+          if (f.properties.id) seen.add(f.properties.id);
+          features.push(f);
+        }
       }
     }
 
