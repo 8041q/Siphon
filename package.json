@@ -8,16 +8,20 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
-    "expo": "~57.0.8",
-    "react": "19.2.3",
-    "react-native": "0.86.0",
+    "@expo/ui": "~57.0.7",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~57.0.8",
     "expo-dev-client": "~57.0.9",
     "expo-file-system": "~57.0.1",
     "expo-location": "~57.0.6",
+    "expo-router": "*",
     "expo-system-ui": "~57.0.1",
-    "@expo/ui": "~57.0.7",
-    "react-native-safe-area-context": "~5.7.0"
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-maps": "~1.27.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@types/react": "~19.2.4",
