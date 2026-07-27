@@ -1,21 +1,10 @@
 /**
- * GeoSiphonClient.ts
+ * siphonClient.ts
  *
- * Cross-platform (iOS + Android, via React Native / Expo) client for the
- * Siphon fuel-prices API described in API.md.
- *
- * Implements the exact polling algorithm from the docs:
- *   1. Conditional GET on the root manifest (ETag / If-None-Match).
- *   2. Compare each country's `hash` against what's cached locally.
- *   3. For a changed country, fetch its manifest and diff tile/district hashes.
- *   4. Only fetch the individual .geojson files whose hash actually changed.
- *   5. Cache everything (manifests + ETags + geojson) for next time.
- *
+ * Cross-platform Client (iOS + Android, via React Native / Expo)
  * Storage is injected via a tiny interface that matches React Native's
- * AsyncStorage (`getItem`/`setItem`) exactly — on iOS and Android you just
- * pass AsyncStorage straight in, no adapter needed.
+ * AsyncStorage (`getItem`/`setItem`). On iOS and Android you just pass AsyncStorage straight in, no adapter needed.
  */
-
 // ---------- Types matching the documented schemas ----------
 
 export type CountryCode = 'ES' | 'PT';
@@ -64,8 +53,6 @@ export interface GeoJsonFeatureCollection {
   features: FuelStationFeature[];
 }
 
-// Satisfied as-is by React Native's AsyncStorage (getItem/setItem) — that's
-// the whole point. On web you could wrap localStorage in the same shape.
 export interface KeyValueStore {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
@@ -73,7 +60,7 @@ export interface KeyValueStore {
 
 // ---------- Client ----------
 
-const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/<user>/<repo>/main';
+const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/8041q/SiphonAPI/main';
 
 const KEYS = {
   rootEtag: 'siphon:etag:root',
@@ -140,8 +127,7 @@ export class FuelDataClient {
     return this.getCountryManifest<PortugalManifest>('PT', path);
   }
 
-  // Step 4: fetch a tile/district .geojson ONLY if its hash differs from
-  // what's already cached. Works for both ES tiles and PT districts since
+  // Step 4: fetch a tile/district .geojson ONLY if its hash differs from what's already cached. Works for both ES tiles and PT districts since
   // they share the same {path, hash} shape.
   async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
@@ -161,13 +147,13 @@ export class FuelDataClient {
 
   // ---------- Spatial helpers ----------
 
-  // Same formula as grid_key() in fetch_spain.py — no bbox lookup needed.
+  // Same formula as grid_key() in fetch_spain.py - no bbox lookup needed.
   spainGridKey(lat: number, lng: number): string {
     return `grid_${Math.floor(lat)}_${Math.floor(lng)}`;
   }
 
-  // Grid keys for a point plus its 8 neighbors — handy near a tile boundary,
-  // e.g. a user 2km from grid_40_-3's edge is often better served also
+  // Grid keys for a point plus its 8 neighbors - handy near a tile boundary,
+  // a user 2km from grid_40_-3's edge is often better served also
   // pulling grid_40_-4.
   spainNeighborGridKeys(lat: number, lng: number): string[] {
     const keys: string[] = [];
@@ -179,7 +165,7 @@ export class FuelDataClient {
     return [...new Set(keys)];
   }
 
-  // Portugal has no formula — bbox is the only prefilter, per API.md.
+  // Portugal has no formula - bbox is the only prefilter
   portugalDistrictsNear(
     manifest: PortugalManifest,
     lat: number,
@@ -198,9 +184,7 @@ export class FuelDataClient {
   }
 
   // High-level convenience: "every station feature near this point, fetching
-  // only what's actually needed." Tries Spain's grid formula first, falls
-  // back to Portugal's bbox prefilter — a point only realistically matches
-  // one country since ES/PT territory doesn't overlap.
+  // only what's actually needed." Tries Spain's grid formula first, falls back to Portugal's bbox prefilter
   async getStationsNear(lat: number, lng: number): Promise<FuelStationFeature[]> {
     const features: FuelStationFeature[] = [];
 
@@ -221,18 +205,3 @@ export class FuelDataClient {
     return features;
   }
 }
-
-// ---------- Wiring (React Native / Expo — identical on iOS & Android) ----------
-//
-// npx expo install @react-native-async-storage/async-storage
-//
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { FuelDataClient } from './siphonClient';
-//
-// const client = new FuelDataClient({
-//   store: AsyncStorage, // satisfies KeyValueStore as-is, zero adapter code
-//   baseUrl: 'https://raw.githubusercontent.com/<you>/<repo>/main',
-// });
-//
-// const { changedCountries } = await client.checkForUpdates();
-// const stations = await client.getStationsNear(38.7223, -9.1393); // e.g. Lisbon
