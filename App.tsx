@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -14,9 +14,95 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FuelDataClient, FuelStationFeature } from './src/api/siphonClient';
 
 
-// Fill in your repo before running.
+// ---- Hybrid store: tile data + snapshots → files; small keys → AsyncStorage ----
+const DATA_DIR = FileSystem.documentDirectory + 'siphon/';
+
+async function ensureDir(path: string): Promise<void> {
+  const info = await FileSystem.getInfoAsync(path);
+  if (!info.exists) {
+    await FileSystem.makeDirectoryAsync(path, { intermediates: true });
+  }
+}
+
+// Tile data keys: "siphon:data:<tile-path>" → file under tiles/
+function tileFilePath(key: string): string {
+  const tilePath = key.slice('siphon:data:'.length);
+  return DATA_DIR + 'tiles/' + tilePath;
+}
+
+// Snapshot keys: "siphon:snapshot:YYYY-MM-DD" → file under snapshots/
+function snapshotFilePath(key: string): string {
+  const date = key.slice('siphon:snapshot:'.length);
+  return DATA_DIR + 'snapshots/' + date + '.json';
+}
+
+function isFileKey(key: string): boolean {
+  return key.startsWith('siphon:data:') || key.startsWith('siphon:snapshot:');
+}
+
+function filePathForKey(key: string): string {
+  if (key.startsWith('siphon:data:')) return tileFilePath(key);
+  if (key.startsWith('siphon:snapshot:')) return snapshotFilePath(key);
+  throw new Error('Unsupported key: ' + key);
+}
+
+const hybridStore = {
+  async getItem(key: string): Promise<string | null> {
+    if (!isFileKey(key)) return AsyncStorage.getItem(key);
+    try {
+      return await FileSystem.readAsStringAsync(filePathForKey(key));
+    } catch {
+      return null;
+    }
+  },
+
+  async setItem(key: string, value: string): Promise<void> {
+    if (!isFileKey(key)) {
+      await AsyncStorage.setItem(key, value);
+      return;
+    }
+    await ensureDir(DATA_DIR);
+    if (key.startsWith('siphon:data:')) {
+      await ensureDir(DATA_DIR + 'tiles/');
+      // Ensure subdirectories for tile path exist
+      const tilePath = key.slice('siphon:data:'.length);
+      const lastSlash = tilePath.lastIndexOf('/');
+      if (lastSlash > 0) {
+        await ensureDir(DATA_DIR + 'tiles/' + tilePath.slice(0, lastSlash));
+      }
+    }
+    if (key.startsWith('siphon:snapshot:')) {
+      await ensureDir(DATA_DIR + 'snapshots/');
+    }
+    await FileSystem.writeAsStringAsync(filePathForKey(key), value);
+  },
+
+  async listKeys(prefix: string): Promise<string[]> {
+    if (prefix === 'siphon:snapshot:') {
+      try {
+        await ensureDir(DATA_DIR + 'snapshots/');
+        const files = await FileSystem.readDirectoryAsync(DATA_DIR + 'snapshots/');
+        return files
+          .filter(f => f.endsWith('.json'))
+          .map(f => 'siphon:snapshot:' + f.replace(/\.json$/, ''));
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  },
+
+  async removeItem(key: string): Promise<void> {
+    if (!isFileKey(key)) {
+      await AsyncStorage.removeItem(key);
+      return;
+    }
+    await FileSystem.deleteAsync(filePathForKey(key), { idempotent: true });
+  },
+};
+
 const client = new FuelDataClient({
-  store: AsyncStorage,
+  store: hybridStore,
   baseUrl: 'https://raw.githubusercontent.com/8041q/SiphonAPI/main',
 });
 
@@ -24,10 +110,14 @@ export default function App() {
   const [stations, setStations] = useState<FuelStationFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setOffline(false);
+    setSyncProgress(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -36,16 +126,35 @@ export default function App() {
       const pos = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = pos.coords;
 
-      // Cheap first: conditional GET on the root manifest. On a normal day
-      // this comes back 304 and changedCountries is [] — everything below
-      // then reads from cache instead of hitting the network.
-      const { changedCountries } = await client.checkForUpdates();
+      // Step 1: conditional GET on root manifest to detect changes
+      setSyncProgress('Checking for updates…');
+      const { changedCountries, offline: wasOffline } = await client.checkForUpdates();
+      setOffline(wasOffline);
+
+      // Step 2: sync every tile/district for both countries.
+      // On first launch every tile is downloaded from the network.
+      // On subsequent launches with a 304 root manifest, all tiles are
+      // read from cache — `syncAll` completes in <1 second at zero
+      // network cost.
+      setSyncProgress('Downloading stations data…');
+      await client.syncAll(changedCountries, (loaded, total) => {
+        if (total > 0 && changedCountries.length > 0) {
+          setSyncProgress(`Downloading stations data ${loaded}/${total}…`);
+        }
+      });
+
+      // Step 2.5: record today's price snapshot (no-op if already recorded today)
+      await client.recordDailySnapshot();
+
+      // Step 3: read stations near user — entirely from cache now
+      setSyncProgress('Loading nearby stations…');
       const nearby = await client.getStationsNear(latitude, longitude, changedCountries);
       setStations(nearby);
     } catch (e: any) {
       setError(e.message ?? 'Something went wrong');
     } finally {
       setLoading(false);
+      setSyncProgress(null);
     }
   }, []);
 
@@ -57,7 +166,7 @@ export default function App() {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text style={styles.dim}>Finding stations near you…</Text>
+        <Text style={styles.dim}>{syncProgress ?? 'Loading…'}</Text>
       </SafeAreaView>
     );
   }
@@ -72,10 +181,14 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {offline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>Using cached data — no connection</Text>
+        </View>
+      )}
       <FlatList
         data={stations}
         keyExtractor={(item) => item.properties.id}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           const { name, brand, address, fuels } = item.properties;
@@ -110,4 +223,6 @@ const styles = StyleSheet.create({
   price: { fontSize: 13, fontWeight: '600' },
   dim: { color: '#888', marginTop: 8 },
   error: { color: '#c00', textAlign: 'center' },
+  offlineBanner: { backgroundColor: '#fef3c7', paddingVertical: 6, paddingHorizontal: 16 },
+  offlineText: { color: '#92400e', fontSize: 13, textAlign: 'center' },
 });

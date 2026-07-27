@@ -56,6 +56,8 @@ export interface GeoJsonFeatureCollection {
 export interface KeyValueStore {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
+  listKeys?(prefix: string): Promise<string[]>;
+  removeItem?(key: string): Promise<void>;
 }
 
 // ---------- Client ----------
@@ -119,18 +121,24 @@ export class FuelDataClient {
   // country's hash as different from what we last saw). Otherwise use the
   // manifest we cached last time. This is what makes "unchanged countries:
   // skip entirely" (API.md step 2) actually happen.
+  //
+  // If the network fetch fails and we have a stale cache, we return it
+  // rather than crashing — the map isn't useless just because the user
+  // briefly lost connectivity.
   private async getCountryManifest<T>(code: CountryCode, path: string, changed: boolean): Promise<T> {
-    if (!changed) {
-      const cached = await this.store.getItem(KEYS.countryManifest(code));
-      if (cached) return JSON.parse(cached) as T;
-      // No cache yet (very first launch, or storage was cleared)
-    }
+    const cached = await this.store.getItem(KEYS.countryManifest(code));
+    if (!changed && cached) return JSON.parse(cached) as T;
 
-    const res = await fetch(`${this.baseUrl}/${path}`);
-    if (!res.ok) throw new Error(`${code} manifest fetch failed: ${res.status}`);
-    const manifest: T = await res.json();
-    await this.store.setItem(KEYS.countryManifest(code), JSON.stringify(manifest));
-    return manifest;
+    try {
+      const res = await fetch(`${this.baseUrl}/${path}`);
+      if (!res.ok) throw new Error(`${code} manifest fetch failed: ${res.status}`);
+      const manifest: T = await res.json();
+      await this.store.setItem(KEYS.countryManifest(code), JSON.stringify(manifest));
+      return manifest;
+    } catch (e) {
+      if (cached) return JSON.parse(cached) as T;
+      throw e;
+    }
   }
 
   async getSpainManifest(changed: boolean, path = 'data/es/manifest.json'): Promise<SpainManifest> {
@@ -143,6 +151,9 @@ export class FuelDataClient {
 
   // Step 4: fetch a tile/district .geojson ONLY if its hash differs from what's already cached. Works for both ES tiles and PT districts since
   // they share the same {path, hash} shape.
+  // If the network fetch fails and we have stale cached data, we return it
+  // rather than throwing — so users can still see stations they previously
+  // downloaded even when offline.
   async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
     if (cachedHash === entry.hash) {
@@ -150,13 +161,127 @@ export class FuelDataClient {
       if (cached) return JSON.parse(cached);
     }
 
-    const res = await fetch(`${this.baseUrl}/${entry.path}`);
-    if (!res.ok) throw new Error(`Tile fetch failed: ${entry.path} (${res.status})`);
-    const geojson: GeoJsonFeatureCollection = await res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/${entry.path}`);
+      if (!res.ok) throw new Error(`Tile fetch failed: ${entry.path} (${res.status})`);
+      const geojson: GeoJsonFeatureCollection = await res.json();
+      await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
+      await this.store.setItem(KEYS.tileData(entry.path), JSON.stringify(geojson));
+      return geojson;
+    } catch (e) {
+      const cached = await this.store.getItem(KEYS.tileData(entry.path));
+      if (cached) return JSON.parse(cached);
+      throw e;
+    }
+  }
 
-    await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
-    await this.store.setItem(KEYS.tileData(entry.path), JSON.stringify(geojson));
-    return geojson;
+  // Step 5: download (or refresh from cache) every single tile/district for
+  // both countries so the full dataset lives on-device. On first launch every
+  // tile is fetched from the network; on subsequent launches with a 304 root
+  // manifest hash-comparisons skip unchanged tiles at zero network cost.
+  //
+  // `onProgress` fires once per tile so the UI can show a progress bar.
+  async syncAll(
+    changedCountries: CountryCode[] = [],
+    onProgress?: (loaded: number, total: number) => void
+  ): Promise<{ tileCount: number }> {
+    const es = await this.getSpainManifest(changedCountries.includes('ES'));
+    const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
+    const total = Object.keys(es.tiles).length + Object.keys(pt.districts).length;
+    let loaded = 0;
+
+    for (const tile of Object.values(es.tiles)) {
+      await this.fetchIfChanged(tile);
+      onProgress?.(++loaded, total);
+    }
+
+    for (const district of Object.values(pt.districts)) {
+      await this.fetchIfChanged(district);
+      onProgress?.(++loaded, total);
+    }
+
+    return { tileCount: total };
+  }
+
+  // ---------- Price history ----------
+
+  // Walk every cached tile/district for both countries, extract station
+  // identity + current fuel prices, and write a daily snapshot.
+  // Only the first call per calendar day actually writes — repeated calls
+  // the same day are no-ops. This keeps history compact while giving you
+  // a full price picture every day.
+  //
+  // Spain tiles and Portugal districts are structurally different in how
+  // they partition data, but each feature in the geojson carries the same
+  // {id, brand, fuels} property shape, so the extraction is identical.
+  // For Portugal we fall back from `brand` to `name` when brand is empty.
+  async recordDailySnapshot(): Promise<{ recorded: boolean; stationCount: number }> {
+    const today = new Date().toISOString().split('T')[0];
+    const key = `siphon:snapshot:${today}`;
+
+    if (await this.store.getItem(key)) {
+      return { recorded: false, stationCount: 0 };
+    }
+
+    const es = await this.getSpainManifest(false);
+    const pt = await this.getPortugalManifest(false);
+
+    const stations: Array<{ id: string; brand: string | null; fuels: Record<string, number> }> = [];
+
+    for (const tile of Object.values(es.tiles)) {
+      const geojson = await this.fetchIfChanged(tile);
+      for (const f of geojson.features) {
+        stations.push({
+          id: f.properties.id,
+          brand: f.properties.brand ?? null,
+          fuels: f.properties.fuels ?? {},
+        });
+      }
+    }
+
+    for (const district of Object.values(pt.districts)) {
+      const geojson = await this.fetchIfChanged(district);
+      for (const f of geojson.features) {
+        stations.push({
+          id: f.properties.id,
+          brand: f.properties.brand ?? f.properties.name ?? null,
+          fuels: f.properties.fuels ?? {},
+        });
+      }
+    }
+
+    await this.store.setItem(key, JSON.stringify(stations));
+    return { recorded: true, stationCount: stations.length };
+  }
+
+  // Delete every daily snapshot ever recorded. All historical data is gone.
+  async clearPriceHistory(): Promise<{ deleted: number }> {
+    if (!this.store.listKeys || !this.store.removeItem) return { deleted: 0 };
+    const keys = await this.store.listKeys('siphon:snapshot:');
+    for (const key of keys) {
+      await this.store.removeItem(key);
+    }
+    return { deleted: keys.length };
+  }
+
+  // Remove snapshots older than `keepMonths` months. Useful when you want
+  // to free space without wiping everything.
+  async trimPriceHistory(keepMonths: number = 2): Promise<{ deleted: number }> {
+    if (!this.store.listKeys || !this.store.removeItem) return { deleted: 0 };
+    const keys = await this.store.listKeys('siphon:snapshot:');
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - keepMonths);
+
+    let deleted = 0;
+    for (const key of keys) {
+      const dateStr = key.split(':').pop()!;
+      const snapshotDate = new Date(dateStr + 'T00:00:00Z');
+      if (snapshotDate < cutoff) {
+        await this.store.removeItem(key);
+        deleted++;
+      }
+    }
+    return { deleted };
   }
 
   // ---------- Spatial helpers ----------
@@ -198,8 +323,12 @@ export class FuelDataClient {
   }
 
   // High-level convenience: "every station feature near this point, fetching
-  // only what's actually needed." Tries Spain's grid formula first, falls
-  // back to Portugal's bbox prefilter.
+  // only what's actually needed."
+  //
+  // Checks BOTH Spain and Portugal so users near the border get stations
+  // from both sides instead of just one country's data. Spain tiles are
+  // looked up via a 3×3 grid-key block around the point so a user near a
+  // tile boundary also pulls adjacent tiles.
   //
   // `changedCountries` should be the array returned by checkForUpdates() —
   // pass it straight through so a country whose hash didn't move is read
@@ -212,21 +341,35 @@ export class FuelDataClient {
     changedCountries: CountryCode[] = []
   ): Promise<FuelStationFeature[]> {
     const features: FuelStationFeature[] = [];
+    const seen = new Set<string>();
 
+    // Spain — fetch the 3×3 block around the user's location.
+    // Stations are deduplicated by id (Spain uses "es-XXXXX").
     const es = await this.getSpainManifest(changedCountries.includes('ES'));
-    const key = this.spainGridKey(lat, lng);
-    if (es.tiles[key]) {
-      const geojson = await this.fetchIfChanged(es.tiles[key]);
-      features.push(...geojson.features);
-      return features;
+    for (const key of this.spainNeighborGridKeys(lat, lng)) {
+      const tile = es.tiles[key];
+      if (!tile) continue;
+      const geojson = await this.fetchIfChanged(tile);
+      for (const f of geojson.features) {
+        if (f.properties.id && seen.has(f.properties.id)) continue;
+        if (f.properties.id) seen.add(f.properties.id);
+        features.push(f);
+      }
     }
 
+    // Portugal — bbox prefilter districts near the point.
+    // Same dedup set (Portugal uses "pt-XXXXX" — no collision risk).
     const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
     const districts = this.portugalDistrictsNear(pt, lat, lng);
     for (const district of districts) {
       const geojson = await this.fetchIfChanged(district);
-      features.push(...geojson.features);
+      for (const f of geojson.features) {
+        if (f.properties.id && seen.has(f.properties.id)) continue;
+        if (f.properties.id) seen.add(f.properties.id);
+        features.push(f);
+      }
     }
+
     return features;
   }
 }
