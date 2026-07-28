@@ -36,6 +36,20 @@
       }
     },
     "plugins": [
-    ]
+      "expo-router",
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "cmakeVersion": "4.1.2"
+          }
+        }
+      ]
+    ],
+    "scheme": "siphon",
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

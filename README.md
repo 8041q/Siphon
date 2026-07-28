@@ -23,6 +23,7 @@ npx expo run:android
 If you want to update the apk in the repo, just run:
 ```bash
 npx expo prebuild --clean
+.\gradlew assembleRelease
 ```
 
 
@@ -48,3 +49,4 @@ and Run again
 .\gradlew assembleRelease
 ```
 
+Make sure CMAKE in Android Studio is the latest version in SKD Tools
