@@ -29,6 +29,7 @@ interface AppState {
   reload: () => void;
   refreshLocation: () => void;
   filteredStations: FuelStationFeature[];
+  loadStationsForRegion: (lat: number, lng: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -44,6 +45,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [searchFilter, setSearchFilter] = useState<SearchFilter>({});
 
   const started = useRef(false);
+  const changedCountriesRef = useRef<import('../api/siphonClient').CountryCode[]>([]);
+  const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!started.current) {
@@ -62,17 +65,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSyncProgress('Checking for updates…');
       const result = await client.checkForUpdates();
       setOffline(result.offline);
+      changedCountriesRef.current = result.changedCountries;
 
-      setSyncProgress('Downloading stations data…');
+      const cached = await client.getStationsNear(
+        location.latitude,
+        location.longitude
+      );
+      if (cached.length > 0) {
+        setStations(cached);
+        setLoading(false);
+        setSyncProgress(null);
+      }
+
+      setSyncProgress('Syncing latest data…');
       await client.syncAll(result.changedCountries, (loaded, total) => {
         if (total > 0 && result.changedCountries.length > 0) {
-          setSyncProgress(`Downloading stations data ${loaded}/${total}…`);
+          setSyncProgress(`Syncing ${loaded}/${total}…`);
         }
       });
 
       await client.recordDailySnapshot();
 
-      setSyncProgress('Loading nearby stations…');
       const nearby = await client.getStationsNear(
         location.latitude,
         location.longitude,
@@ -80,7 +93,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
       setStations(nearby);
 
-      if (result.offline && nearby.length === 0) {
+      if (cached.length === 0 && result.offline && nearby.length === 0) {
         setError('No internet connection. Connect to download station data on first use.');
       }
     } catch (e: any) {
@@ -96,6 +109,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       load();
     }
   }, [requestingLocation, load]);
+
+  const loadStationsForRegion = useCallback(async (lat: number, lng: number) => {
+    if (regionTimerRef.current) clearTimeout(regionTimerRef.current);
+    regionTimerRef.current = setTimeout(async () => {
+      try {
+        const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current);
+        setStations(nearby);
+      } catch {}
+    }, 300);
+  }, []);
 
   const filteredStations = useMemo(() => {
     let result = stations;
@@ -129,11 +152,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reload: load,
       refreshLocation,
       filteredStations,
+      loadStationsForRegion,
     }),
     [
       stations, loading, error, offline, syncProgress,
       location, requestingLocation, selectedStation, searchFilter,
-      load, refreshLocation, filteredStations,
+      load, refreshLocation, filteredStations, loadStationsForRegion,
     ]
   );
 

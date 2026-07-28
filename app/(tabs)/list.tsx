@@ -1,5 +1,7 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback } from 'react';
 
 import { StationCard } from '../../src/components/StationCard';
 import { StationDetailSheet } from '../../src/components/StationDetailSheet';
@@ -8,6 +10,13 @@ import { useApp } from '../../src/hooks/useApp';
 
 export default function ListScreen() {
   const { filteredStations, loading, syncProgress, error, offline, location, setSelectedStation } = useApp();
+
+  const handleStationPress = useCallback(
+    (station: (typeof filteredStations)[number]) => {
+      setSelectedStation(station);
+    },
+    [setSelectedStation]
+  );
 
   if (loading) return <SyncOverlay message={syncProgress} />;
 
@@ -28,14 +37,14 @@ export default function ListScreen() {
           <Text style={styles.error}>{error}</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={filteredStations}
           keyExtractor={(item) => item.properties.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <StationCard
               station={item}
-              onPress={() => setSelectedStation(item)}
+              onPress={handleStationPress}
             />
           )}
           ListEmptyComponent={

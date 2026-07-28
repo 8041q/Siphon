@@ -185,23 +185,23 @@ export class FuelDataClient {
     changedCountries: CountryCode[] = [],
     onProgress?: (loaded: number, total: number) => void
   ): Promise<{ tileCount: number }> {
-    const es = await this.getSpainManifest(changedCountries.includes('ES'));
-    const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
-    const total = (es ? Object.keys(es.tiles).length : 0) + (pt ? Object.keys(pt.districts).length : 0);
+    const [es, pt] = await Promise.all([
+      this.getSpainManifest(changedCountries.includes('ES')),
+      this.getPortugalManifest(changedCountries.includes('PT')),
+    ]);
+    const entries = [
+      ...(es ? Object.values(es.tiles) : []),
+      ...(pt ? Object.values(pt.districts) : []),
+    ];
+    const total = entries.length;
     let loaded = 0;
 
-    if (es) {
-      for (const tile of Object.values(es.tiles)) {
-        await this.fetchIfChanged(tile);
-        onProgress?.(++loaded, total);
-      }
-    }
-
-    if (pt) {
-      for (const district of Object.values(pt.districts)) {
-        await this.fetchIfChanged(district);
-        onProgress?.(++loaded, total);
-      }
+    const CONCURRENCY = 6;
+    for (let i = 0; i < entries.length; i += CONCURRENCY) {
+      const batch = entries.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map((entry) => this.fetchIfChanged(entry)));
+      loaded += batch.length;
+      onProgress?.(loaded, total);
     }
 
     return { tileCount: total };
@@ -352,39 +352,32 @@ export class FuelDataClient {
     lng: number,
     changedCountries: CountryCode[] = []
   ): Promise<FuelStationFeature[]> {
-    const features: FuelStationFeature[] = [];
     const seen = new Set<string>();
 
-    // Spain — fetch the 3×3 block around the user's location.
-    // Stations are deduplicated by id (Spain uses "es-XXXXX").
-    const es = await this.getSpainManifest(changedCountries.includes('ES'));
-    if (es) {
-      for (const key of this.spainNeighborGridKeys(lat, lng)) {
-        const tile = es.tiles[key];
-        if (!tile) continue;
-        const geojson = await this.fetchIfChanged(tile);
-        if (!geojson) continue;
-        for (const f of geojson.features) {
-          if (f.properties.id && seen.has(f.properties.id)) continue;
-          if (f.properties.id) seen.add(f.properties.id);
-          features.push(f);
-        }
-      }
-    }
+    const [es, pt] = await Promise.all([
+      this.getSpainManifest(changedCountries.includes('ES')),
+      this.getPortugalManifest(changedCountries.includes('PT')),
+    ]);
 
-    // Portugal — bbox prefilter districts near the point.
-    // Same dedup set (Portugal uses "pt-XXXXX" — no collision risk).
-    const pt = await this.getPortugalManifest(changedCountries.includes('PT'));
-    if (pt) {
-      const districts = this.portugalDistrictsNear(pt, lat, lng);
-      for (const district of districts) {
-        const geojson = await this.fetchIfChanged(district);
-        if (!geojson) continue;
-        for (const f of geojson.features) {
-          if (f.properties.id && seen.has(f.properties.id)) continue;
-          if (f.properties.id) seen.add(f.properties.id);
-          features.push(f);
-        }
+    const esEntries = es
+      ? this.spainNeighborGridKeys(lat, lng)
+          .map((key) => es.tiles[key])
+          .filter(Boolean)
+      : [];
+    const ptEntries = pt
+      ? this.portugalDistrictsNear(pt, lat, lng)
+      : [];
+
+    const allEntries = [...esEntries, ...ptEntries];
+    const geojsons = await Promise.all(allEntries.map((e) => this.fetchIfChanged(e)));
+
+    const features: FuelStationFeature[] = [];
+    for (const geojson of geojsons) {
+      if (!geojson) continue;
+      for (const f of geojson.features) {
+        if (f.properties.id && seen.has(f.properties.id)) continue;
+        if (f.properties.id) seen.add(f.properties.id);
+        features.push(f);
       }
     }
 

@@ -1,4 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
+import type { FC } from 'react';
+import { memo } from 'react';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { PriceBadge } from './PriceBadge';
@@ -8,7 +10,7 @@ interface StationCardProps {
   onPress?: (station: FuelStationFeature) => void;
 }
 
-export function StationCard({ station, onPress }: StationCardProps) {
+const StationCardComponent: FC<StationCardProps> = ({ station, onPress }) => {
   const { name, brand, address, fuels } = station.properties;
   const entries = Object.entries(fuels ?? {});
 
@@ -44,3 +46,5 @@ export function StationCard({ station, onPress }: StationCardProps) {
     </TouchableOpacity>
   );
 }
+
+export const StationCard = memo(StationCardComponent);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Text, View } from 'react-native';
 import { fuelLabel } from '../utils/fuelNames';
 
@@ -6,7 +7,7 @@ interface PriceBadgeProps {
   price: number;
 }
 
-export function PriceBadge({ fuel, price }: PriceBadgeProps) {
+const PriceBadgeComponent = ({ fuel, price }: PriceBadgeProps) => {
   return (
     <View
       style={{
@@ -25,3 +26,5 @@ export function PriceBadge({ fuel, price }: PriceBadgeProps) {
     </View>
   );
 }
+
+export const PriceBadge = memo(PriceBadgeComponent);

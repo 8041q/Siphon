@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 import { Circle, G, Line, Path, Svg, Text as SvgText } from 'react-native-svg';
+import type { FC } from 'react';
+import { memo } from 'react';
 
 import type { PriceHistoryPoint } from '../hooks/usePriceHistory';
 
@@ -12,7 +14,7 @@ interface PriceChartProps {
 
 const PADDING = { top: 20, right: 16, bottom: 32, left: 50 };
 
-export function PriceChart({ data, fuelLabel, width = 350, height = 220 }: PriceChartProps) {
+const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: PriceChartProps) => {
   if (data.length < 2) {
     return (
       <View style={{ alignItems: 'center', padding: 24 }}>
@@ -102,3 +104,5 @@ export function PriceChart({ data, fuelLabel, width = 350, height = 220 }: Price
     </View>
   );
 }
+
+export const PriceChart = memo(PriceChartComponent);

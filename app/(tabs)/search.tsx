@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback } from 'react';
 
 import { StationCard } from '../../src/components/StationCard';
 import { StationDetailSheet } from '../../src/components/StationDetailSheet';
@@ -9,6 +11,13 @@ import { FUEL_LABELS } from '../../src/utils/fuelNames';
 
 export default function SearchScreen() {
   const { stations, setSelectedStation } = useApp();
+
+  const handleStationPress = useCallback(
+    (station: (typeof stations)[number]) => {
+      setSelectedStation(station);
+    },
+    [setSelectedStation]
+  );
   const [brandQuery, setBrandQuery] = useState('');
   const [selectedFuel, setSelectedFuel] = useState<string | null>(null);
 
@@ -89,19 +98,19 @@ export default function SearchScreen() {
         </View>
       )}
 
-      {(brandQuery !== '' || selectedFuel) && (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.properties.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <StationCard station={item} onPress={() => setSelectedStation(item)} />
-          )}
-          ListEmptyComponent={
-            <Text style={styles.dim}>No stations match your filter.</Text>
-          }
-        />
+  {(brandQuery !== '' || selectedFuel) && (
+    <FlashList
+      data={results}
+      keyExtractor={(item) => item.properties.id}
+      contentContainerStyle={styles.list}
+      renderItem={({ item }) => (
+        <StationCard station={item} onPress={handleStationPress} />
       )}
+      ListEmptyComponent={
+        <Text style={styles.dim}>No stations match your filter.</Text>
+      }
+        />
+  )}
 
       <StationDetailSheet />
     </SafeAreaView>

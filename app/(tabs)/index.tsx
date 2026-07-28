@@ -8,7 +8,7 @@ import { SyncOverlay } from '../../src/components/SyncOverlay';
 import { useApp } from '../../src/hooks/useApp';
 
 export default function MapScreen() {
-  const { filteredStations, loading, syncProgress, error, offline, location, setSelectedStation } = useApp();
+  const { filteredStations, loading, syncProgress, error, offline, location, setSelectedStation, loadStationsForRegion } = useApp();
 
   const onMarkerPress = useCallback(
     (station: (typeof filteredStations)[number]) => {
@@ -50,6 +50,7 @@ export default function MapScreen() {
         initialRegion={initialRegion}
         stations={filteredStations}
         onMarkerPress={onMarkerPress}
+        onRegionChange={loadStationsForRegion}
       />
 
       <StationDetailSheet />

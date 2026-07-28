@@ -6,9 +6,20 @@ import type { StationMapProps } from './types';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
-function StationMapAndroid({ initialRegion, stations, onMarkerPress }: StationMapProps) {
+function StationMapAndroid({ initialRegion, stations, onMarkerPress, onRegionChange }: StationMapProps) {
   return (
-    <Map style={styles.map} mapStyle={OPENFREEMAP_STYLE} compass logo={false}>
+    <Map
+      style={styles.map}
+      mapStyle={OPENFREEMAP_STYLE}
+      compass
+      logo={false}
+      onRegionDidChange={(event) => {
+        if (onRegionChange) {
+          const [lng, lat] = event.nativeEvent.center;
+          onRegionChange(lat, lng);
+        }
+      }}
+    >
       <Camera
         center={[initialRegion.longitude, initialRegion.latitude]}
         zoom={12}
@@ -33,7 +44,7 @@ function StationMapAndroid({ initialRegion, stations, onMarkerPress }: StationMa
   );
 }
 
-function StationMapIOS({ initialRegion, stations, onMarkerPress }: StationMapProps) {
+function StationMapIOS({ initialRegion, stations, onMarkerPress, onRegionChange }: StationMapProps) {
   return (
     <MapView
       style={styles.map}
@@ -41,6 +52,11 @@ function StationMapIOS({ initialRegion, stations, onMarkerPress }: StationMapPro
       showsUserLocation
       showsMyLocationButton
       showsCompass
+      onRegionChangeComplete={(region) => {
+        if (onRegionChange) {
+          onRegionChange(region.latitude, region.longitude);
+        }
+      }}
     >
       {stations.map((station) => {
         const [lng, lat] = station.geometry.coordinates;
