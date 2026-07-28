@@ -3,16 +3,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { FuelDataClient, FuelStationFeature } from '../api/siphonClient';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
-
-export const client = new FuelDataClient({
-  store: hybridStore,
-  baseUrl: 'https://raw.githubusercontent.com/8041q/SiphonAPI/main',
-});
-
-export interface SearchFilter {
-  brand?: string;
-  fuelType?: string;
-}
+import * as Haptics from 'expo-haptics';
+import type { FC } from 'react';
 
 interface StationState {
   stations: FuelStationFeature[];
@@ -30,11 +22,18 @@ interface LocationState {
   refreshLocation: () => void;
 }
 
+type SearchFilter = {
+  brand?: string;
+  fuelType?: string;
+};
+
 interface UIState {
   selectedStation: FuelStationFeature | null;
   searchFilter: SearchFilter;
   setSelectedStation: (s: FuelStationFeature | null) => void;
   setSearchFilter: (f: SearchFilter) => void;
+  favorites: Set<string>;
+  toggleFavorite: (station: FuelStationFeature) => void;
 }
 
 interface Actions {
@@ -46,6 +45,11 @@ const LocationContext = createContext<LocationState | null>(null);
 const UIContext = createContext<UIState | null>(null);
 const ActionsContext = createContext<Actions | null>(null);
 
+export const client = new FuelDataClient({
+  store: hybridStore,
+  baseUrl: 'https://raw.githubusercontent.com/8041q/SiphonAPI/main',
+});
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { location, requesting: requestingLocation, refresh: refreshLocation } = useLocation();
   const [stations, setStations] = useState<FuelStationFeature[]>([]);
@@ -54,11 +58,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [offline, setOffline] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
-  const [searchFilter, setSearchFilter] = useState<SearchFilter>({});
+  const [searchFilter, setSearchFilter] = useState<{ brand?: string; fuelType?: string }>({});
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const started = useRef(false);
   const changedCountriesRef = useRef<import('../api/siphonClient').CountryCode[]>([]);
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggleFavorite = useCallback((station: FuelStationFeature) => {
+    const id = station.properties.id;
+    setFavorites((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      return newSet;
+    });
+  }, []);
 
   useEffect(() => {
     if (!started.current) {
@@ -176,8 +195,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       searchFilter,
       setSelectedStation,
       setSearchFilter,
+      favorites,
+      toggleFavorite,
     }),
-    [selectedStation, searchFilter]
+    [selectedStation, searchFilter, favorites, toggleFavorite]
   );
 
   const actionsValue = useMemo<Actions>(

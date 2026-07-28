@@ -1,52 +1,36 @@
-import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return (
-    <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>
-      {emoji}
-    </Text>
-  );
-}
+import { useColorScheme } from 'react-native';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { tokens } from '../../src/theme/tokens';
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+  const tint = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'].tint;
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#6b7280',
-        tabBarStyle: { paddingBottom: 4, paddingTop: 4 },
-      }}
+    <NativeTabs
+      tintColor={tint}
+      blurEffect="systemUltraThinMaterial"
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Map',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="list"
-        options={{
-          title: 'List',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🔍" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
+        <NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="list">
+        <NativeTabs.Trigger.Icon sf="list.bullet" md="list" />
+        <NativeTabs.Trigger.Label>Stations</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="search">
+        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
+        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="favorites">
+        <NativeTabs.Trigger.Icon sf="star.fill" md="star" />
+        <NativeTabs.Trigger.Label>Favorites</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Icon sf="gearshape.fill" md="settings" />
+        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

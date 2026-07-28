@@ -1,30 +1,49 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
+import { useColorScheme } from 'react-native';
 import { Text, View } from 'react-native';
 import { fuelLabel } from '../utils/fuelNames';
+import { tokens } from '../theme';
 
 interface PriceBadgeProps {
   fuel: string;
   price: number;
 }
 
-const PriceBadgeComponent = ({ fuel, price }: PriceBadgeProps) => {
+function PriceBadgeComponent({ fuel, price }: PriceBadgeProps) {
+  const colorScheme = useColorScheme();
+  const colors = tokenColors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const typography = tokens.typography;
+  const radius = tokens.radius;
+
+  const priceCategory = useMemo(() => {
+    if (price < 1.50) return { color: colors.priceLow, icon: '●' };
+    if (price < 1.80) return { color: colors.priceMid, icon: '●' };
+    return { color: colors.priceHigh, icon: '●' };
+  }, [price, colors]);
+
   return (
     <View
       style={{
-        backgroundColor: '#e5e7eb',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        backgroundColor: colors.surface,
+        borderRadius: radius.sm,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        gap: 4,
       }}
     >
-      <Text style={{ fontSize: 13, fontWeight: '600' }}>
+      <Text style={{ fontSize: typography.footnote.size, fontWeight: typography.footnote.weight, color: colors.secondaryLabel }}>
         {fuelLabel(fuel)}
       </Text>
-      <Text style={{ fontSize: 14, fontWeight: '700', color: '#166534' }}>
-        {price.toFixed(3)} €
+      <Text style={{ fontSize: typography.subheadline.size, fontWeight: typography.subheadline.weight, color: priceCategory.color, fontFamily: 'System' }}>
+        {price.toFixed(3)} {priceCategory.icon}
       </Text>
     </View>
   );
 }
+
+const tokenColors = {
+  light: tokens.color.light,
+  dark: tokens.color.dark,
+};
 
 export const PriceBadge = memo(PriceBadgeComponent);

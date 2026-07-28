@@ -1,9 +1,10 @@
-import { Text, View } from 'react-native';
+import { Text, useColorScheme, View } from 'react-native';
 import { Circle, G, Line, Path, Svg, Text as SvgText } from 'react-native-svg';
 import type { FC } from 'react';
 import { memo } from 'react';
 
 import type { PriceHistoryPoint } from '../hooks/usePriceHistory';
+import { tokens } from '../theme/tokens';
 
 interface PriceChartProps {
   data: PriceHistoryPoint[];
@@ -15,10 +16,14 @@ interface PriceChartProps {
 const PADDING = { top: 20, right: 16, bottom: 32, left: 50 };
 
 const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: PriceChartProps) => {
+  const colorScheme = useColorScheme();
+  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
+  const t = tokens.typography;
+
   if (data.length < 2) {
     return (
       <View style={{ alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: '#888' }}>
+        <Text style={{ color: colors.secondaryLabel }}>
           {data.length === 1 ? 'Only one data point — need at least 2 for a chart.' : 'No price history available.'}
         </Text>
       </View>
@@ -43,7 +48,7 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
 
   return (
     <View>
-      <Text style={{ fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 8 }}>
+      <Text style={{ fontSize: t.callout.size, fontWeight: t.callout.weight, textAlign: 'center', marginBottom: 8, color: colors.label }}>
         {fuelLabel}
       </Text>
       <Svg width={width} height={height}>
@@ -55,13 +60,13 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
                 y1={yScale(v)}
                 x2={width - PADDING.right}
                 y2={yScale(v)}
-                stroke="#e5e7eb"
+                stroke={colors.separator}
                 strokeWidth={1}
               />
               <SvgText
                 x={PADDING.left - 8}
                 y={yScale(v) + 4}
-                fill="#6b7280"
+                fill={colors.secondaryLabel}
                 fontSize={11}
                 textAnchor="end"
               >
@@ -69,14 +74,14 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
               </SvgText>
             </G>
           ))}
-          <Path d={linePath} fill="none" stroke="#2563eb" strokeWidth={2} />
+          <Path d={linePath} fill="none" stroke={colors.tint} strokeWidth={2} />
           {data.map((d, i) => (
             <Circle
               key={d.date}
               cx={xScale(i)}
               cy={yScale(d.price)}
               r={3}
-              fill="#2563eb"
+              fill={colors.tint}
             />
           ))}
           {data
@@ -91,7 +96,7 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
                   key={d.date}
                   x={xScale(idx)}
                   y={height - 8}
-                  fill="#6b7280"
+                  fill={colors.secondaryLabel}
                   fontSize={10}
                   textAnchor="middle"
                 >

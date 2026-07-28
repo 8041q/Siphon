@@ -1,13 +1,20 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 import { useApp } from '../../src/hooks/useApp';
 import { usePriceHistory } from '../../src/hooks/usePriceHistory';
 import { PriceChart } from '../../src/components/PriceChart';
 import { fuelLabel } from '../../src/utils/fuelNames';
+import { tokens } from '../../src/theme/tokens';
 
 export default function PriceTrendsScreen() {
+  const colorScheme = useColorScheme();
+  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
+  const s = tokens.spacing;
+  const t = tokens.typography;
+  const r = tokens.radius;
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const { stations } = useApp();
 
@@ -27,22 +34,22 @@ export default function PriceTrendsScreen() {
   if (!station) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: '#888' }}>Station not found.</Text>
+        <Text style={{ color: colors.secondaryLabel }}>Station not found.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#fff' }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 4 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: s.lg }}>
+      <Text style={{ fontSize: t.title3.size, fontWeight: t.title3.weight, color: colors.label, marginBottom: s.xs }}>
         {station.properties.brand || station.properties.name || 'Station'}
       </Text>
-      <Text style={{ fontSize: 14, color: '#555', marginBottom: 16 }}>
+      <Text style={{ fontSize: t.subheadline.size, color: colors.secondaryLabel, marginBottom: s.lg }}>
         {station.properties.address}
       </Text>
 
       {fuels.length > 1 && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: s.sm, marginBottom: s.lg }}>
           {fuels.map((fuel) => (
             <TouchableOpacity
               key={fuel}
@@ -51,15 +58,15 @@ export default function PriceTrendsScreen() {
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 6,
-                borderRadius: 16,
-                backgroundColor: selectedFuel === fuel ? '#2563eb' : '#f4f4f5',
+                borderRadius: r.xl,
+                backgroundColor: selectedFuel === fuel ? colors.tint : colors.groupedBackground,
               }}
             >
               <Text
                 style={{
-                  fontSize: 13,
+                  fontSize: t.caption1.size,
                   fontWeight: '600',
-                  color: selectedFuel === fuel ? '#fff' : '#333',
+                  color: selectedFuel === fuel ? '#fff' : colors.label,
                 }}
               >
                 {fuelLabel(fuel)}
@@ -70,7 +77,7 @@ export default function PriceTrendsScreen() {
       )}
 
       {loading ? (
-        <Text style={{ color: '#888', textAlign: 'center' }}>Loading price history…</Text>
+        <Text style={{ color: colors.secondaryLabel, textAlign: 'center' }}>Loading price history…</Text>
       ) : (
         <PriceChart data={data} fuelLabel={fuelLabel(selectedFuel ?? '')} />
       )}

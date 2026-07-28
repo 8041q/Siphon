@@ -1,20 +1,23 @@
-import { useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCallback } from 'react';
 
+import { tokens } from '../../src/theme/tokens';
+import { Icon } from '../../src/theme/Icon';
 import { StationCard } from '../../src/components/StationCard';
-import { StationDetailSheet } from '../../src/components/StationDetailSheet';
 import { useStations, useUI } from '../../src/hooks/useApp';
-import { FUEL_LABELS } from '../../src/utils/fuelNames';
+import type { FuelStationFeature } from '../../src/api/siphonClient';
 
 export default function SearchScreen() {
+  const colorScheme = useColorScheme();
   const { stations } = useStations();
   const { setSelectedStation } = useUI();
+  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
+  const s = tokens.spacing;
 
   const handleStationPress = useCallback(
-    (station: (typeof stations)[number]) => {
+    (station: FuelStationFeature) => {
       setSelectedStation(station);
     },
     [setSelectedStation]
@@ -33,148 +36,84 @@ export default function SearchScreen() {
       );
     }
     if (selectedFuel) {
-      filtered = filtered.filter((s) => selectedFuel in (s.properties.fuels ?? {}));
+      filtered = filtered.filter((s) => selectedFuel in s.properties.fuels);
     }
     return filtered;
-  }, [stations, brandQuery, selectedFuel]);
-
-  const uniqueBrands = useMemo(() => {
-    const brands = new Set<string>();
-    stations.forEach((s) => {
-      if (s.properties.brand) brands.add(s.properties.brand);
-    });
-    return [...brands].sort();
-  }, [stations]);
+  }, [brandQuery, selectedFuel, stations]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <TextInput
-        style={styles.input}
-        placeholder="Search by brand or station name…"
-        placeholderTextColor="#999"
-        value={brandQuery}
-        onChangeText={setBrandQuery}
-        autoCapitalize="none"
-        autoCorrect={false}
-        clearButtonMode="while-editing"
-      />
-
-      <View style={styles.fuelRow}>
-        {Object.keys(FUEL_LABELS).map((fuel) => (
-          <TouchableOpacity
-            key={fuel}
-            activeOpacity={0.7}
-            onPress={() => setSelectedFuel(selectedFuel === fuel ? null : fuel)}
-            style={[
-              styles.fuelChip,
-              selectedFuel === fuel && styles.fuelChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.fuelChipText,
-                selectedFuel === fuel && styles.fuelChipTextActive,
-              ]}
-            >
-              {FUEL_LABELS[fuel]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {brandQuery === '' && !selectedFuel && (
-        <View style={styles.hintContainer}>
-          <Text style={styles.hint}>Type a brand name or select a fuel type to filter</Text>
-          <View style={styles.brandList}>
-            <Text style={styles.sectionTitle}>Available brands</Text>
-            {uniqueBrands.map((brand) => (
-              <TouchableOpacity
-                key={brand}
-                onPress={() => setBrandQuery(brand)}
-              >
-                <Text style={styles.brandItem}>{brand}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {(brandQuery !== '' || selectedFuel) && (
-        <FlashList
-          data={results}
-          keyExtractor={(item) => item.properties.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <StationCard station={item} onPress={handleStationPress} />
-          )}
-          ListEmptyComponent={
-            <Text style={styles.dim}>No stations match your filter.</Text>
-          }
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: s.xl, paddingVertical: s.xl }}>
+        <SearchBar
+          brandQuery={brandQuery}
+          setBrandQuery={setBrandQuery}
+          colors={colors}
         />
-      )}
-
-      <StationDetailSheet />
+        <StationList
+          results={results}
+          handleStationPress={handleStationPress}
+        />
+      </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  input: {
-    margin: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#f4f4f5',
-    fontSize: 15,
-  },
-  fuelRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  fuelChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#f4f4f5',
-  },
-  fuelChipActive: {
-    backgroundColor: '#2563eb',
-  },
-  fuelChipText: {
-    fontSize: 13,
-    color: '#333',
-  },
-  fuelChipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  hintContainer: {
-    paddingHorizontal: 16,
-    marginTop: 16,
-  },
-  hint: {
-    color: '#888',
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  brandList: {
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-  },
-  brandItem: {
-    fontSize: 15,
-    color: '#2563eb',
-    paddingVertical: 6,
-  },
-  list: { padding: 16, gap: 12 },
-  dim: { color: '#888', textAlign: 'center', marginTop: 32 },
-});
+function SearchBar({ brandQuery, setBrandQuery, colors }: { brandQuery: string; setBrandQuery: (q: string) => void; colors: typeof tokens.color.light }) {
+  const r = tokens.radius;
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.groupedBackground,
+        borderRadius: r.md,
+        marginBottom: 16,
+        marginTop: -16,
+        marginHorizontal: 4,
+      }}
+    >
+      <View style={{ paddingHorizontal: 4 }}>
+        <Icon sf="magnifyingglass" md="search" size={17} color={colors.secondaryLabel} />
+      </View>
+      <TextInput
+        value={brandQuery}
+        onChangeText={setBrandQuery}
+        placeholder="Search stations..."
+        placeholderTextColor={colors.tertiaryLabel}
+        style={{ flex: 1, paddingHorizontal: 4 }}
+      />
+    </View>
+  );
+}
+
+function StationList({ results, handleStationPress }: { results: FuelStationFeature[]; handleStationPress: (station: FuelStationFeature) => void }) {
+  const colorScheme = useColorScheme();
+  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
+  const t = tokens.typography;
+  const s = tokens.spacing;
+
+  if (!results || results.length === 0) {
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <Text style={{ fontSize: t.title3.size, fontWeight: t.title3.weight, color: colors.secondaryLabel }}>
+          No stations found
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: t.headline.size, fontWeight: t.headline.weight, color: colors.label, marginBottom: s.sm }}>
+        Search Results
+      </Text>
+      <FlashList
+        data={results}
+        renderItem={({ item }) => (
+          <StationCard station={item} onPress={handleStationPress} />
+        )}
+      />
+    </View>
+  );
+}
