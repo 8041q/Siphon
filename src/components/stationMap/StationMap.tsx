@@ -1,37 +1,50 @@
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Map, Camera, UserLocation, Marker as MapLibreMarker } from '@maplibre/maplibre-react-native';
+import { Map, Camera, Marker as MapLibreMarker, LogManager } from '@maplibre/maplibre-react-native';
+import type { MapRef } from '@maplibre/maplibre-react-native';
 import MapView, { Marker as AppleMarker } from 'react-native-maps';
 
 import type { StationMapProps } from './types';
 
+
+LogManager.onLog((event) => {
+  if (event.message.includes('latLngForPixel')) return true;
+  return false;
+});
+
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 function StationMapAndroid({ initialRegion, stations, onMarkerPress, onRegionChange }: StationMapProps) {
-  return (
-    <Map
-      style={styles.map}
-      mapStyle={OPENFREEMAP_STYLE}
-      compass
-      logo={false}
-      onRegionDidChange={(event) => {
-        if (onRegionChange) {
-          const [lng, lat] = event.nativeEvent.center;
-          onRegionChange(lat, lng);
-        }
-      }}
-    >
-      <Camera
-        center={[initialRegion.longitude, initialRegion.latitude]}
-        zoom={12}
-      />
-      <UserLocation animated />
-      {stations.map((station) => {
+  const mapRef = useRef<MapRef>(null);
+  const isDestroyed = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      isDestroyed.current = true;
+    };
+  }, []);
+
+  const handleRegionChange = useCallback(
+    (event: { nativeEvent: { center: [number, number] } }) => {
+      if (isDestroyed.current) return;
+      if (onRegionChange) {
+        const [lng, lat] = event.nativeEvent.center;
+        onRegionChange(lat, lng);
+      }
+    },
+    [onRegionChange],
+  );
+
+  const markers = useMemo(
+    () =>
+      stations.map((station) => {
         const [lng, lat] = station.geometry.coordinates;
         return (
           <MapLibreMarker
             key={station.properties.id}
             lngLat={[lng, lat]}
-            anchor="bottom"
+            anchor="center"
+            offset={[0, 0]}
             onPress={() => onMarkerPress(station)}
           >
             <View style={styles.markerPin}>
@@ -39,7 +52,24 @@ function StationMapAndroid({ initialRegion, stations, onMarkerPress, onRegionCha
             </View>
           </MapLibreMarker>
         );
-      })}
+      }),
+    [stations, onMarkerPress],
+  );
+
+  return (
+    <Map
+      ref={mapRef}
+      style={styles.map}
+      mapStyle={OPENFREEMAP_STYLE}
+      compass
+      logo={false}
+      onRegionDidChange={handleRegionChange}
+    >
+      <Camera
+        center={[initialRegion.longitude, initialRegion.latitude]}
+        zoom={12}
+      />
+      {markers}
     </Map>
   );
 }
@@ -58,7 +88,7 @@ function StationMapIOS({ initialRegion, stations, onMarkerPress, onRegionChange 
         }
       }}
     >
-      {stations.map((station) => {
+      {useMemo(() => stations.map((station) => {
         const [lng, lat] = station.geometry.coordinates;
         const title = station.properties.brand || station.properties.name || '';
         return (
@@ -69,21 +99,25 @@ function StationMapIOS({ initialRegion, stations, onMarkerPress, onRegionChange 
             description={station.properties.address}
             onPress={() => onMarkerPress(station)}
             tracksViewChanges={false}
+            // Fix iOS marker positioning
+            centerOffset={{ x: 0, y: 0 }}
+            calloutAnchor={{ x: 0.5, y: 0.5 }}
           />
         );
-      })}
+      }), [stations])}
     </MapView>
   );
 }
 
-export const StationMap = Platform.OS === 'ios' ? StationMapIOS : StationMapAndroid;
+export const StationMap = memo(Platform.OS === 'ios' ? StationMapIOS : StationMapAndroid);
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
   markerPin: {
     width: 28,
-    height: 36,
+    height: 28,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   markerDot: {
     width: 14,

@@ -6,11 +6,12 @@ import { useCallback } from 'react';
 
 import { StationCard } from '../../src/components/StationCard';
 import { StationDetailSheet } from '../../src/components/StationDetailSheet';
-import { useApp } from '../../src/hooks/useApp';
+import { useStations, useUI } from '../../src/hooks/useApp';
 import { FUEL_LABELS } from '../../src/utils/fuelNames';
 
 export default function SearchScreen() {
-  const { stations, setSelectedStation } = useApp();
+  const { stations } = useStations();
+  const { setSelectedStation } = useUI();
 
   const handleStationPress = useCallback(
     (station: (typeof stations)[number]) => {
@@ -98,19 +99,19 @@ export default function SearchScreen() {
         </View>
       )}
 
-  {(brandQuery !== '' || selectedFuel) && (
-    <FlashList
-      data={results}
-      keyExtractor={(item) => item.properties.id}
-      contentContainerStyle={styles.list}
-      renderItem={({ item }) => (
-        <StationCard station={item} onPress={handleStationPress} />
-      )}
-      ListEmptyComponent={
-        <Text style={styles.dim}>No stations match your filter.</Text>
-      }
+      {(brandQuery !== '' || selectedFuel) && (
+        <FlashList
+          data={results}
+          keyExtractor={(item) => item.properties.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <StationCard station={item} onPress={handleStationPress} />
+          )}
+          ListEmptyComponent={
+            <Text style={styles.dim}>No stations match your filter.</Text>
+          }
         />
-  )}
+      )}
 
       <StationDetailSheet />
     </SafeAreaView>

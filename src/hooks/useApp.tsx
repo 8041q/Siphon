@@ -14,25 +14,37 @@ export interface SearchFilter {
   fuelType?: string;
 }
 
-interface AppState {
+interface StationState {
   stations: FuelStationFeature[];
   loading: boolean;
   error: string | null;
   offline: boolean;
   syncProgress: string | null;
+  filteredStations: FuelStationFeature[];
+  reload: () => void;
+}
+
+interface LocationState {
   location: ReturnType<typeof useLocation>['location'];
   requestingLocation: boolean;
+  refreshLocation: () => void;
+}
+
+interface UIState {
   selectedStation: FuelStationFeature | null;
   searchFilter: SearchFilter;
   setSelectedStation: (s: FuelStationFeature | null) => void;
   setSearchFilter: (f: SearchFilter) => void;
-  reload: () => void;
-  refreshLocation: () => void;
-  filteredStations: FuelStationFeature[];
+}
+
+interface Actions {
   loadStationsForRegion: (lat: number, lng: number) => Promise<void>;
 }
 
-const AppContext = createContext<AppState | null>(null);
+const StationContext = createContext<StationState | null>(null);
+const LocationContext = createContext<LocationState | null>(null);
+const UIContext = createContext<UIState | null>(null);
+const ActionsContext = createContext<Actions | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { location, requesting: requestingLocation, refresh: refreshLocation } = useLocation();
@@ -117,7 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current);
         setStations(nearby);
       } catch {}
-    }, 300);
+    }, 800);
   }, []);
 
   const filteredStations = useMemo(() => {
@@ -136,36 +148,86 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return result;
   }, [stations, searchFilter]);
 
-  const ctx = useMemo<AppState>(
+  const stationValue = useMemo<StationState>(
     () => ({
       stations,
       loading,
       error,
       offline,
       syncProgress,
+      filteredStations,
+      reload: load,
+    }),
+    [stations, loading, error, offline, syncProgress, filteredStations, load]
+  );
+
+  const locationValue = useMemo<LocationState>(
+    () => ({
       location,
       requestingLocation,
+      refreshLocation,
+    }),
+    [location, requestingLocation, refreshLocation]
+  );
+
+  const uiValue = useMemo<UIState>(
+    () => ({
       selectedStation,
       searchFilter,
       setSelectedStation,
       setSearchFilter,
-      reload: load,
-      refreshLocation,
-      filteredStations,
-      loadStationsForRegion,
     }),
-    [
-      stations, loading, error, offline, syncProgress,
-      location, requestingLocation, selectedStation, searchFilter,
-      load, refreshLocation, filteredStations, loadStationsForRegion,
-    ]
+    [selectedStation, searchFilter]
   );
 
-  return <AppContext.Provider value={ctx}>{children}</AppContext.Provider>;
+  const actionsValue = useMemo<Actions>(
+    () => ({
+      loadStationsForRegion,
+    }),
+    [loadStationsForRegion]
+  );
+
+  return (
+    <StationContext.Provider value={stationValue}>
+      <LocationContext.Provider value={locationValue}>
+        <UIContext.Provider value={uiValue}>
+          <ActionsContext.Provider value={actionsValue}>
+            {children}
+          </ActionsContext.Provider>
+        </UIContext.Provider>
+      </LocationContext.Provider>
+    </StationContext.Provider>
+  );
 }
 
-export function useApp(): AppState {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
+export function useStations(): StationState {
+  const ctx = useContext(StationContext);
+  if (!ctx) throw new Error('useStations must be used within AppProvider');
   return ctx;
+}
+
+export function useLocationState(): LocationState {
+  const ctx = useContext(LocationContext);
+  if (!ctx) throw new Error('useLocationState must be used within AppProvider');
+  return ctx;
+}
+
+export function useUI(): UIState {
+  const ctx = useContext(UIContext);
+  if (!ctx) throw new Error('useUI must be used within AppProvider');
+  return ctx;
+}
+
+export function useActions(): Actions {
+  const ctx = useContext(ActionsContext);
+  if (!ctx) throw new Error('useActions must be used within AppProvider');
+  return ctx;
+}
+
+export function useApp(): StationState & LocationState & UIState & Actions {
+  const stations = useStations();
+  const location = useLocationState();
+  const ui = useUI();
+  const actions = useActions();
+  return { ...stations, ...location, ...ui, ...actions };
 }

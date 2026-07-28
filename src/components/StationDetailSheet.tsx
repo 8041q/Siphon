@@ -1,13 +1,13 @@
-import { BottomSheet } from '@expo/ui';
 import { router } from 'expo-router';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import type { FuelStationFeature } from '../api/siphonClient';
-import { useApp } from '../hooks/useApp';
+import { useUI } from '../hooks/useApp';
 import { fuelLabel } from '../utils/fuelNames';
+import { BottomSheet } from '@expo/ui';
 
 export function StationDetailSheet() {
-  const { selectedStation, setSelectedStation } = useApp();
+  const { selectedStation, setSelectedStation } = useUI();
   const station = selectedStation;
   if (!station) return null;
 
@@ -20,7 +20,7 @@ export function StationDetailSheet() {
       onDismiss={() => setSelectedStation(null)}
       snapPoints={['half', 'full']}
     >
-      <ScrollView style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
         <View style={{ gap: 8 }}>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>
             {brand || name || 'Unknown station'}
