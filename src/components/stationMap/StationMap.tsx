@@ -14,17 +14,19 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
   return (
     <Map
-      style={{ flex: 1 }}
-      mapStyle={OPENFREEMAP_STYLE}
-      compass
-      logo={false}
-      onRegionDidChange={(event) => {
-        if (onRegionChange) {
-          const [lng, lat] = event.nativeEvent.center;
-          const bounds = (event.nativeEvent as any).bounds as [number, number, number, number] | undefined;
-          onRegionChange(lat, lng, bounds);
-        }
-      }}
+        style={{ flex: 1 }}
+        mapStyle={OPENFREEMAP_STYLE}
+        compass
+        logo={false}
+        touchZoom
+        doubleTapZoom
+        onRegionDidChange={(event) => {
+          if (onRegionChange) {
+            const [lng, lat] = event.nativeEvent.center;
+            const bounds = (event.nativeEvent as any).bounds as [number, number, number, number] | undefined;
+            onRegionChange(lat, lng, bounds);
+          }
+        }}
     >
       <Camera
         center={[initialRegion.longitude, initialRegion.latitude]}
@@ -51,7 +53,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           </Marker>
         );
       }), [stations, tint])}
-    </Map>
+      </Map>
   );
 }
 

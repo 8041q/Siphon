@@ -61,3 +61,15 @@ If nothing changed, the server returns 304 Not Modified with no body It returns 
 "Search this area" button is a 100% local cache read
 
 When data actually changes (server-side hashes differ), syncAll re-downloads only the changed tiles (always only on app launch)
+
+## iOS / Android
+
+This is a **React Native + Expo** app. The shared TypeScript code in `src/` and `app/` runs on both platforms as-is — you write it once, and React Native renders native iOS (`UIView`) or Android (`ViewGroup`) under the hood. There is no `Platform.OS` branching or separate files for each platform.
+
+**You only touch platform-specific files for native config:**
+
+- **iOS** (`ios/` — Xcode project, `Info.plist`, `Podfile`, `AppDelegate.swift`.
+- **Android** (`android/` — configured declaratively in `app.json` under `expo.android`.
+- **Styling** is fully shared via NativeWind (Tailwind CSS for RN) with a single `tailwind.config.js`.
+
+For day-to-day features and UI changes, everything lives in shared code. No double work.

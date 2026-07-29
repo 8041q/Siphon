@@ -73,6 +73,7 @@ export function StationDetailSheet() {
       ref={bottomSheetRef}
       snapPoints={snapPoints}
       enablePanDownToClose
+      enableContentPanningGesture={false}
       enableDynamicSizing={false}
       onDismiss={handleDismiss}
       backgroundStyle={{
@@ -82,9 +83,7 @@ export function StationDetailSheet() {
         backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)' 
       }}
     >
-      <BottomSheetScrollView
-        key={selectedStation?.properties.id ?? 'empty'}
-      >
+      <BottomSheetScrollView>
         {selectedStation ? (
           <DetailContent
             station={selectedStation}
