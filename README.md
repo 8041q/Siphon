@@ -64,6 +64,8 @@ When data actually changes (server-side hashes differ), syncAll re-downloads onl
 
 ## iOS / Android
 
+Overview: Expo SDK 57 app for finding fuel station prices in Spain/Portugal. Uses MapLibre GL maps, Expo Router, NativeWind, offline-first caching via AsyncStorage + expo-file-system.
+
 This is a **React Native + Expo** app. The shared TypeScript code in `src/` and `app/` runs on both platforms as-is — you write it once, and React Native renders native iOS (`UIView`) or Android (`ViewGroup`) under the hood. There is no `Platform.OS` branching or separate files for each platform.
 
 **You only touch platform-specific files for native config:**
@@ -73,3 +75,13 @@ This is a **React Native + Expo** app. The shared TypeScript code in `src/` and 
 - **Styling** is fully shared via NativeWind (Tailwind CSS for RN) with a single `tailwind.config.js`.
 
 For day-to-day features and UI changes, everything lives in shared code. No double work.
+
+### Features:
+
+Offline-first sync with ETag-based conditional requests (siphonClient.ts)
+Hybrid storage — small keys in AsyncStorage, large tile data/snapshots on filesystem (hybridStore.ts)
+Hash-comparison tile fetching skips unchanged tiles at zero network cost
+3×3 grid-key lookup for Spain tiles handles boundary edge cases
+New Architecture enabled (newArchEnabled: true, RCTNewArchEnabled → true in Info.plist)
+No div/span usage — all UI uses React Native components ✅ (per system-prompt.txt rules)
+GPS Usage: Location is detected only once when you request it (either on startup or by tapping 'My Location'). So as to not use up battery life. (won't keep update your location as you walk)

@@ -20,6 +20,7 @@ interface LocationState {
   location: ReturnType<typeof useLocation>['location'];
   requestingLocation: boolean;
   refreshLocation: () => void;
+  locateWithGps: () => Promise<{ latitude: number; longitude: number } | null>;
 }
 
 type SearchFilter = {
@@ -51,7 +52,7 @@ export const client = new FuelDataClient({
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { location, requesting: requestingLocation, refresh: refreshLocation } = useLocation();
+  const { location, requesting: requestingLocation, refresh: refreshLocation, locateWithGps } = useLocation();
   const [stations, setStations] = useState<FuelStationFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,8 +168,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       location,
       requestingLocation,
       refreshLocation,
+      locateWithGps,
     }),
-    [location, requestingLocation, refreshLocation]
+    [location, requestingLocation, refreshLocation, locateWithGps]
   );
 
   const uiValue = useMemo<UIState>(

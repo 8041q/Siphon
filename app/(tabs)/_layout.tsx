@@ -1,5 +1,5 @@
 import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,14 +19,18 @@ type TabItemProps = {
   isFocused?: boolean;
   onPress?: () => void;
   colorScheme: 'light' | 'dark';
+  bottomInset: number;
 };
 
-function TabItem({ icon: iconName, label, isFocused, onPress, colorScheme }: TabItemProps) {
+function TabItem({ icon: iconName, label, isFocused, onPress, colorScheme, bottomInset }: TabItemProps) {
   const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
   
   return (
     <Pressable onPress={onPress} className="flex-1">
-      <View className="flex-1 items-center justify-center py-1">
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ paddingTop: 4, paddingBottom: Math.max(bottomInset, 4) }}
+      >
         <Icon
           name={iconName}
           size={24}
@@ -47,7 +51,7 @@ function TabItem({ icon: iconName, label, isFocused, onPress, colorScheme }: Tab
   );
 }
 
-const TAB_BAR_CONTENT_HEIGHT = 70;
+const TAB_BAR_CONTENT_HEIGHT = Platform.OS === 'ios' ? 52 : 70;
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -65,12 +69,11 @@ export default function TabLayout() {
           borderTopWidth: 1,
           borderTopColor: colors.separator,
           height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-          paddingBottom: insets.bottom,
         }}
       >
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href as any} asChild>
-            <TabItem icon={tab.icon} label={tab.label} colorScheme={currentTheme} />
+            <TabItem icon={tab.icon} label={tab.label} colorScheme={currentTheme} bottomInset={insets.bottom} />
           </TabTrigger>
         ))}
       </TabList>

@@ -1,6 +1,6 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { View, useColorScheme } from 'react-native';
-import { Map, Camera, UserLocation, Marker } from '@maplibre/maplibre-react-native';
+import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
 
 import type { StationMapProps } from './types';
@@ -8,9 +8,16 @@ import { tokens } from '../../theme/tokens';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
-function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange }: StationMapProps) {
+function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, flyToCoords }: StationMapProps) {
   const colorScheme = useColorScheme();
   const tint = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'].tint;
+  const cameraRef = useRef<CameraRef>(null);
+
+  useEffect(() => {
+    if (flyToCoords) {
+      cameraRef.current?.flyTo({ center: flyToCoords, duration: 500 });
+    }
+  }, [flyToCoords]);
 
   return (
     <Map
@@ -29,6 +36,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         }}
     >
       <Camera
+        ref={cameraRef}
         center={[initialRegion.longitude, initialRegion.latitude]}
         zoom={12}
       />

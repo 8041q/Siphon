@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
@@ -11,10 +11,11 @@ export default function MapScreen() {
   const colorScheme = useColorScheme();
 
   const { filteredStations, loading, syncProgress, error, offline } = useStations();
-  const { location } = useLocationState();
+  const { location, requestingLocation, locateWithGps } = useLocationState();
   const { setSelectedStation } = useUI();
   const { loadStationsForRegion } = useActions();
 
+  const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
 
   const onMarkerPress = useCallback(
@@ -51,6 +52,22 @@ export default function MapScreen() {
     loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
   }, [loadStationsForRegion]);
 
+  const handleLocate = useCallback(async () => {
+    const gps = await locateWithGps();
+    if (gps) setFlyToCoords([gps.longitude, gps.latitude]);
+  }, [locateWithGps]);
+
+  const gpsOnceRef = useRef(false);
+  useEffect(() => {
+    if (!gpsOnceRef.current) {
+      gpsOnceRef.current = true;
+      (async () => {
+        const gps = await locateWithGps();
+        if (gps) setFlyToCoords([gps.longitude, gps.latitude]);
+      })();
+    }
+  }, [locateWithGps]);
+
   if (loading) return <SyncOverlay message={syncProgress} />;
 
   if (error) {
@@ -76,6 +93,7 @@ export default function MapScreen() {
         stations={filteredStations}
         onMarkerPress={onMarkerPress}
         onRegionChange={handleRegionChange}
+        flyToCoords={flyToCoords}
       />
 
       {/* Offline Banner positioning below status bar */}
@@ -105,6 +123,36 @@ export default function MapScreen() {
           </View>
         </TouchableOpacity>
       </View>
+
+      {/* Locate me button */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={handleLocate}
+        disabled={requestingLocation}
+        style={{
+          position: 'absolute',
+          bottom: 88,
+          right: 16,
+          zIndex: 10,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
+        {requestingLocation ? (
+          <ActivityIndicator size="small" color="#0C8599" />
+        ) : (
+          <Icon name="my_location" size={20} color="#0C8599" />
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
