@@ -13,15 +13,15 @@ function DetailContent({ station, onClose }: { station: FuelStationFeature; onCl
 
   return (
     <View className="gap-sm p-lg">
-      <Text className="text-title-3 text-label">
+      <Text className="text-title-3 text-label dark:text-label-dark">
         {brand || name || 'Unknown station'}
       </Text>
-      <Text className="text-subheadline text-secondary-label">{address}</Text>
+      <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark">{address}</Text>
 
       <View className="flex-row flex-wrap gap-sm mt-sm">
         {entries.map(([fuel, price]) => (
-          <View key={fuel} className="bg-surface rounded-sm px-sm py-xs">
-            <Text className="text-footnote text-secondary-label">
+          <View key={fuel} className="bg-surface dark:bg-surface-dark rounded-sm px-sm py-xs">
+            <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
               {fuelLabel(fuel)}: {price.toFixed(3)}€
             </Text>
           </View>

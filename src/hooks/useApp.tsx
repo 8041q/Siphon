@@ -60,7 +60,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
   const [searchFilter, setSearchFilter] = useState<{ brand?: string; fuelType?: string }>({});
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-
   const started = useRef(false);
   const changedCountriesRef = useRef<import('../api/siphonClient').CountryCode[]>([]);
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,7 +147,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current);
         setStations(nearby);
       } catch {}
-    }, 800);
+    }, 50);
   }, []);
 
   const filteredStations = useMemo(() => {

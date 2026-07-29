@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, TouchableOpacity, useColorScheme, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
@@ -35,9 +35,17 @@ export default function MapScreen() {
     }
   }, [offline]);
 
+  const insets = useSafeAreaInsets();
+
+  const mapCenterRef = useRef({ lat: location.latitude, lng: location.longitude });
+
+  const handleRegionChange = useCallback((lat: number, lng: number) => {
+    mapCenterRef.current = { lat, lng };
+  }, []);
+
   const handleSearchArea = useCallback(() => {
-    loadStationsForRegion(location.latitude, location.longitude);
-  }, [loadStationsForRegion, location]);
+    loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng);
+  }, [loadStationsForRegion]);
 
   if (loading) return <SyncOverlay message={syncProgress} />;
 
@@ -57,15 +65,31 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-      <StationMap
-        initialRegion={initialRegion}
-        stations={filteredStations}
-        onMarkerPress={onMarkerPress}
-        onRegionChange={loadStationsForRegion}
-      />
+    <View style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        {/*
+          To re-enable auto-fetch on map movement, replace handleRegionChange below with:
+          onRegionChange={loadStationsForRegion}
+        */}
+        <StationMap
+          initialRegion={initialRegion}
+          stations={filteredStations}
+          onMarkerPress={onMarkerPress}
+          onRegionChange={handleRegionChange}
+        />
 
-      <View className="absolute bottom-30 right-lg">
+        {showOfflineBanner && (
+          <View className="absolute top-0 left-0 right-0 z-10">
+            <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
+              <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
+                Using cached data — no connection
+              </Text>
+            </View>
+          </View>
+        )}
+      </SafeAreaView>
+
+      <View style={{ position: 'absolute', top: insets.top + 8, right: 16, zIndex: 10 }}>
         <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
           <BlurView
             intensity={80}
@@ -79,16 +103,6 @@ export default function MapScreen() {
           </BlurView>
         </TouchableOpacity>
       </View>
-
-      {showOfflineBanner && (
-        <View className="absolute top-0 left-0 right-0 z-10">
-          <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
-            <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
-              Using cached data — no connection
-            </Text>
-          </View>
-        </View>
-      )}
-    </SafeAreaView>
+    </View>
   );
 }

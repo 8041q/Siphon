@@ -46,7 +46,7 @@ export default function TabLayout() {
     <Tabs>
       <TabSlot />
       <TabList
-        className="flex-row bg-surface border-t border-separator"
+        className="flex-row bg-surface dark:bg-surface-dark border-t border-separator dark:border-separator-dark"
         style={{ paddingBottom: insets.bottom }}
       >
         {TABS.map((tab) => (

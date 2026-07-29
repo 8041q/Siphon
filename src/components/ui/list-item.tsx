@@ -12,15 +12,15 @@ export function ListItem({ children, onPress, trailing }: ListItemProps) {
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      className="flex-row items-center justify-between px-lg py-md bg-surface"
+      className="flex-row items-center justify-between px-lg py-md bg-surface dark:bg-surface-dark"
     >
       {typeof children === 'string' ? (
-        <Text className="text-body text-label">{children}</Text>
+        <Text className="text-body text-label dark:text-label-dark">{children}</Text>
       ) : (
         children
       )}
       {trailing && (
-        <Text className="text-body text-secondary-label">{trailing}</Text>
+        <Text className="text-body text-secondary-label dark:text-secondary-label-dark">{trailing}</Text>
       )}
     </TouchableOpacity>
   );

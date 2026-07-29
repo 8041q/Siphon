@@ -1,12 +1,13 @@
-import { memo, useState } from 'react';
-import { useColorScheme } from 'react-native';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { memo } from 'react';
+import { Pressable, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import type { FC } from 'react';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { PriceBadge } from './PriceBadge';
 import { Icon } from '../theme/Icon';
 import { tokens } from '../theme/tokens';
+
+const FAVORITE_COLOR = '#FFD60A';
 
 interface StationCardProps {
   station: FuelStationFeature;
@@ -23,12 +24,10 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const s = tokens.spacing;
   const r = tokens.radius;
   const t = tokens.typography;
-  const [favorite, setFavorite] = useState<boolean>(() => favorites?.has(station.properties.id) ?? false);
+  const favorite = favorites?.has(station.properties.id) ?? false;
 
   const handleToggleFavorite = (e: any) => {
     e.stopPropagation();
-    const newFavorite = !favorite;
-    setFavorite(newFavorite);
     onToggleFavorite?.(station);
   };
 
@@ -49,7 +48,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
         <Text style={{ fontSize: t.headline.size, fontWeight: t.headline.weight, color: colors.label }}>
           {brand || name || 'Unknown station'}
         </Text>
-        <TouchableOpacity onPress={handleToggleFavorite} style={{ padding: 4 }}>
+        <Pressable onPress={handleToggleFavorite} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <View style={{
             backgroundColor: colors.surface,
             borderRadius: r.sm,
@@ -58,10 +57,10 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
             <Icon
               name={favorite ? 'star.fill' : 'star'}
               size={18}
-              color={favorite ? colors.tint : colors.secondaryLabel}
+              color={favorite ? FAVORITE_COLOR : colors.secondaryLabel}
             />
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </View>
       <Text style={{ fontSize: t.footnote.size, color: colors.secondaryLabel }}>{address}</Text>
       {entries.length > 0 && (

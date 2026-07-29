@@ -1,23 +1,36 @@
 import '../global.css';
 
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { colorScheme } from 'nativewind';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { StationDetailSheet } from '../src/components/StationDetailSheet';
 import { AppProvider } from '../src/hooks/useApp';
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function ThemeInit() {
+  useEffect(() => {
+    AsyncStorage.getItem('siphon:theme').then((val) => {
+      if (val === 'light' || val === 'dark') {
+        colorScheme.set(val);
+      }
+    });
+  }, []);
+  return null;
+}
 
+export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-        <View className={`flex-1 ${colorScheme === 'dark' ? 'dark' : ''}`}>
-          <StatusBar style="auto" />
-          <AppProvider>
+        <AppProvider>
+          <ThemeInit />
+          <View className="flex-1">
+            <StatusBar style="auto" />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen
@@ -26,8 +39,8 @@ export default function RootLayout() {
               />
             </Stack>
             <StationDetailSheet />
-          </AppProvider>
-        </View>
+          </View>
+        </AppProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );

@@ -1,6 +1,5 @@
 import { memo, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
-import { Text, View } from 'react-native';
+import { Text, useColorScheme, View } from 'react-native';
 import { fuelLabel } from '../utils/fuelNames';
 import { tokens } from '../theme';
 

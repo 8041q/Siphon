@@ -50,3 +50,14 @@ and Run again
 ```
 
 Make sure CMAKE in Android Studio is the latest version in SKD Tools
+
+
+Logic:
+
+The only network call is checkForUpdates(), which runs once on app launch:
+It's a conditional GET with If-None-Match (ETag)
+If nothing changed, the server returns 304 Not Modified with no body It returns a list of which countries changed
+
+"Search this area" button is a 100% local cache read
+
+When data actually changes (server-side hashes differ), syncAll re-downloads only the changed tiles (always only on app launch)

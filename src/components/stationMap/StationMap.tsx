@@ -1,8 +1,7 @@
 import { memo, useMemo } from 'react';
-import { View } from 'react-native';
+import { View, useColorScheme } from 'react-native';
 import { Map, Camera, UserLocation, Marker } from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
-import { useColorScheme } from 'react-native';
 
 import type { StationMapProps } from './types';
 import { tokens } from '../../theme/tokens';

@@ -38,7 +38,8 @@ export default function FavoritesScreen() {
         <FlashList
           data={favoriteStations}
           keyExtractor={(item) => item.properties.id}
-          contentContainerStyle={{ padding: 16, gap: 12 }}
+          contentContainerStyle={{ padding: 16 }}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           renderItem={({ item }) => (
             <StationCard
               station={item}

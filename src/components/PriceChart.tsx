@@ -36,6 +36,15 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
   const prices = data.map((d) => d.price);
   const minP = Math.min(...prices);
   const maxP = Math.max(...prices);
+
+  if (!isFinite(minP) || !isFinite(maxP)) {
+    return (
+      <View style={{ alignItems: 'center', padding: 24 }}>
+        <Text style={{ color: colors.secondaryLabel }}>Invalid price data.</Text>
+      </View>
+    );
+  }
+
   const range = maxP - minP || 1;
 
   const xScale = (i: number) => PADDING.left + (i / (data.length - 1)) * chartW;
@@ -53,8 +62,8 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
       </Text>
       <Svg width={width} height={height}>
         <G>
-          {yLabels.map((v) => (
-            <G key={v}>
+          {yLabels.map((v, i) => (
+            <G key={`y-${i}`}>
               <Line
                 x1={PADDING.left}
                 y1={yScale(v)}

@@ -1,13 +1,36 @@
-import { useState } from 'react';
-import { Alert, Text, useColorScheme, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Appearance, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colorScheme as nativewindColorScheme } from 'nativewind';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { client } from '../../src/hooks/useApp';
 import { ListItem } from '../../src/components/ui/list-item';
 
+type ThemePref = 'system' | 'light' | 'dark';
+
 export default function SettingsScreen() {
   const [clearing, setClearing] = useState(false);
-  const colorScheme = useColorScheme();
+  const [themePref, setThemePref] = useState<ThemePref>('system');
+
+  useEffect(() => {
+    AsyncStorage.getItem('siphon:theme').then((val) => {
+      if (val === 'light' || val === 'dark' || val === 'system') {
+        setThemePref(val);
+      }
+    });
+  }, []);
+
+  const handleThemeChange = (pref: ThemePref) => {
+    setThemePref(pref);
+    if (pref === 'system') {
+      const systemScheme = Appearance.getColorScheme();
+      nativewindColorScheme.set(systemScheme === 'dark' ? 'dark' : 'light');
+    } else {
+      nativewindColorScheme.set(pref);
+    }
+    AsyncStorage.setItem('siphon:theme', pref);
+  };
 
   const handleClearHistory = () => {
     Alert.alert(
@@ -58,32 +81,55 @@ export default function SettingsScreen() {
     );
   };
 
+  const themeOptions: { label: string; value: ThemePref }[] = [
+    { label: 'System', value: 'system' },
+    { label: 'Light', value: 'light' },
+    { label: 'Dark', value: 'dark' },
+  ];
+
   return (
-    <SafeAreaView
-      className={`flex-1 ${colorScheme === 'dark' ? 'bg-background' : 'bg-grouped-background'}`}
-    >
+    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       <View className="py-lg">
-        <View className="mx-lg rounded-md overflow-hidden bg-surface">
-          <Text className="text-footnote text-secondary-label px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            Appearance
+          </Text>
+          {themeOptions.map((option) => (
+            <View key={option.label}>
+              <ListItem
+                onPress={() => handleThemeChange(option.value)}
+                trailing={themePref === option.value ? '✓' : undefined}
+              >
+                {option.label}
+              </ListItem>
+              {option.value !== themeOptions[themeOptions.length - 1].value && (
+                <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+              )}
+            </View>
+          ))}
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark mt-xl">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             Price History
           </Text>
           <ListItem onPress={handleTrimHistory}>
             Trim old snapshots (keep 2 months)
           </ListItem>
-          <View className="h-px bg-separator mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem onPress={handleClearHistory}>
             Clear all price history
           </ListItem>
         </View>
 
-        <View className="mx-lg rounded-md overflow-hidden bg-surface mt-xl">
-          <Text className="text-footnote text-secondary-label px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark mt-xl">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             About
           </Text>
           <ListItem trailing="Siphon">App Name</ListItem>
-          <View className="h-px bg-separator mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem trailing="SiphonAPI">Data source</ListItem>
-          <View className="h-px bg-separator mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem trailing="1.0.0">Version</ListItem>
         </View>
       </View>
