@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
+
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
@@ -37,14 +37,19 @@ export default function MapScreen() {
 
   const insets = useSafeAreaInsets();
 
-  const mapCenterRef = useRef({ lat: location.latitude, lng: location.longitude });
+  const mapCenterRef = useRef({ lat: location.latitude, lng: location.longitude, bounds: undefined as [number, number, number, number] | undefined });
+  const firstBoundsRef = useRef(false);
 
-  const handleRegionChange = useCallback((lat: number, lng: number) => {
-    mapCenterRef.current = { lat, lng };
-  }, []);
+  const handleRegionChange = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
+    mapCenterRef.current = { lat, lng, bounds };
+    if (bounds && !firstBoundsRef.current) {
+      firstBoundsRef.current = true;
+      loadStationsForRegion(lat, lng, bounds);
+    }
+  }, [loadStationsForRegion]);
 
   const handleSearchArea = useCallback(() => {
-    loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng);
+    loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
   }, [loadStationsForRegion]);
 
   if (loading) return <SyncOverlay message={syncProgress} />;
@@ -66,7 +71,7 @@ export default function MapScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={[]}>
         {/*
           To re-enable auto-fetch on map movement, replace handleRegionChange below with:
           onRegionChange={loadStationsForRegion}
@@ -89,18 +94,24 @@ export default function MapScreen() {
         )}
       </SafeAreaView>
 
-      <View style={{ position: 'absolute', top: insets.top + 8, right: 16, zIndex: 10 }}>
+      <View style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
         <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
-          <BlurView
-            intensity={80}
-            tint={colorScheme === 'dark' ? 'dark' : 'light'}
-            className="flex-row items-center gap-xs px-lg py-sm rounded-full overflow-hidden"
+          <View
+            className="flex-row items-center gap-xs px-lg py-sm rounded-full"
+            style={{
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
           >
             <Icon name="magnifyingglass" size={17} color="#0C8599" />
             <Text className="text-footnote font-semibold text-tint">
               Search this area
             </Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
       </View>
     </View>

@@ -350,7 +350,8 @@ export class FuelDataClient {
   async getStationsNear(
     lat: number,
     lng: number,
-    changedCountries: CountryCode[] = []
+    changedCountries: CountryCode[] = [],
+    bounds?: [number, number, number, number]
   ): Promise<FuelStationFeature[]> {
     const seen = new Set<string>();
 
@@ -377,6 +378,14 @@ export class FuelDataClient {
       for (const f of geojson.features) {
         if (f.properties.id && seen.has(f.properties.id)) continue;
         if (f.properties.id) seen.add(f.properties.id);
+        if (bounds) {
+          const [west, south, east, north] = bounds;
+          const margin = 0.15;
+          const dLat = (north - south) * margin;
+          const dLng = (east - west) * margin;
+          const [slng, slat] = f.geometry.coordinates;
+          if (slat < south - dLat || slat > north + dLat || slng < west - dLng || slng > east + dLng) continue;
+        }
         features.push(f);
       }
     }

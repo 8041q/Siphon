@@ -21,7 +21,8 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
       onRegionDidChange={(event) => {
         if (onRegionChange) {
           const [lng, lat] = event.nativeEvent.center;
-          onRegionChange(lat, lng);
+          const bounds = (event.nativeEvent as any).bounds as [number, number, number, number] | undefined;
+          onRegionChange(lat, lng, bounds);
         }
       }}
     >

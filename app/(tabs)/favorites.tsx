@@ -23,7 +23,7 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
       {favoriteStations.length === 0 ? (
         <View className="flex-1 justify-center items-center p-xl">
           <Icon name="star.fill" size={48} color="rgba(60, 60, 67, 0.3)" />

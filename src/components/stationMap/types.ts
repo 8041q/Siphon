@@ -9,5 +9,5 @@ export interface StationMapProps {
   };
   stations: FuelStationFeature[];
   onMarkerPress: (station: FuelStationFeature) => void;
-  onRegionChange?: (lat: number, lng: number) => void;
+  onRegionChange?: (lat: number, lng: number, bounds?: [number, number, number, number]) => void;
 }

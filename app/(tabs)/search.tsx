@@ -41,9 +41,12 @@ export default function SearchScreen() {
   const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.6)' : 'rgba(60, 60, 67, 0.6)';
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
-      <View className="px-xl py-xl">
-        <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} secondaryLabel={secondaryLabel} />
+    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
+      <View className="flex-1">
+        {/* Added px-4 so SearchBar inset matches the list */}
+        <View className="px-4">
+          <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} secondaryLabel={secondaryLabel} />
+        </View>
         <StationList results={results} handleStationPress={handleStationPress} favorites={favorites} onToggleFavorite={toggleFavorite} />
       </View>
     </SafeAreaView>
@@ -52,16 +55,14 @@ export default function SearchScreen() {
 
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
   return (
-    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg -mt-lg mx-1">
-      <View className="px-1">
-        <Icon name="magnifyingglass" size={17} color={secondaryLabel} />
-      </View>
+    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg -mt-lg px-3 py-2">
+      <Icon name="magnifyingglass" size={17} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
         onChangeText={setBrandQuery}
         placeholder="Search stations..."
         placeholderTextColor={secondaryLabel}
-        className="flex-1 px-1 text-label dark:text-label-dark"
+        className="flex-1 ml-2 text-label dark:text-label-dark"
       />
     </View>
   );
@@ -80,12 +81,14 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
 
   return (
     <View className="flex-1">
-      <Text className="text-headline text-label dark:text-label-dark mb-sm">
+      {/* Added px-4 to match the horizontal layout */}
+      <Text className="text-headline text-label dark:text-label-dark mb-sm px-4">
         Search Results
       </Text>
       <FlashList
         data={results}
         keyExtractor={(item) => item.properties.id}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => (
           <StationCard station={item} onPress={handleStationPress} favorites={favorites} onToggleFavorite={onToggleFavorite} />

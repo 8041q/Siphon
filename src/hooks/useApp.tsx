@@ -37,7 +37,7 @@ interface UIState {
 }
 
 interface Actions {
-  loadStationsForRegion: (lat: number, lng: number) => Promise<void>;
+  loadStationsForRegion: (lat: number, lng: number, bounds?: [number, number, number, number]) => Promise<void>;
 }
 
 const StationContext = createContext<StationState | null>(null);
@@ -97,16 +97,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOffline(result.offline);
       changedCountriesRef.current = result.changedCountries;
 
-      const cached = await client.getStationsNear(
-        location.latitude,
-        location.longitude
-      );
-      if (cached.length > 0) {
-        setStations(cached);
-        setLoading(false);
-        setSyncProgress(null);
-      }
-
       setSyncProgress('Syncing latest data…');
       await client.syncAll(result.changedCountries, (loaded, total) => {
         if (total > 0 && result.changedCountries.length > 0) {
@@ -116,14 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       await client.recordDailySnapshot();
 
-      const nearby = await client.getStationsNear(
-        location.latitude,
-        location.longitude,
-        result.changedCountries
-      );
-      setStations(nearby);
-
-      if (cached.length === 0 && result.offline && nearby.length === 0) {
+      if (result.offline) {
         setError('No internet connection. Connect to download station data on first use.');
       }
     } catch (e: any) {
@@ -140,11 +123,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [requestingLocation, load]);
 
-  const loadStationsForRegion = useCallback(async (lat: number, lng: number) => {
+  const loadStationsForRegion = useCallback(async (lat: number, lng: number, bounds?: [number, number, number, number]) => {
     if (regionTimerRef.current) clearTimeout(regionTimerRef.current);
     regionTimerRef.current = setTimeout(async () => {
       try {
-        const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current);
+        const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
         setStations(nearby);
       } catch {}
     }, 50);

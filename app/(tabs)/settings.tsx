@@ -3,6 +3,7 @@ import { Alert, Appearance, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setBackgroundColorAsync } from 'expo-system-ui';
 
 import { client } from '../../src/hooks/useApp';
 import { ListItem } from '../../src/components/ui/list-item';
@@ -23,12 +24,14 @@ export default function SettingsScreen() {
 
   const handleThemeChange = (pref: ThemePref) => {
     setThemePref(pref);
+    let scheme: 'light' | 'dark';
     if (pref === 'system') {
-      const systemScheme = Appearance.getColorScheme();
-      nativewindColorScheme.set(systemScheme === 'dark' ? 'dark' : 'light');
+      scheme = Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
     } else {
-      nativewindColorScheme.set(pref);
+      scheme = pref;
     }
+    nativewindColorScheme.set(scheme);
+    setBackgroundColorAsync(scheme === 'dark' ? '#000000' : '#FFFFFF');
     AsyncStorage.setItem('siphon:theme', pref);
   };
 
@@ -88,8 +91,9 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
-      <View className="py-lg">
+    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
+      <View className="flex-1 py-lg">
+        
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             Appearance
@@ -109,12 +113,13 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark mt-xl">
+        
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             Price History
           </Text>
           <ListItem onPress={handleTrimHistory}>
-            Trim old snapshots (keep 2 months)
+            Trim list (keep last 2 months)
           </ListItem>
           <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem onPress={handleClearHistory}>
@@ -122,7 +127,8 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark mt-xl">
+        
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             About
           </Text>

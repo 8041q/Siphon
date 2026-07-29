@@ -62,7 +62,7 @@ module.exports = {
         callout: ['16px', { fontWeight: '400' }],
         subheadline: ['15px', { fontWeight: '400' }],
         footnote: ['13px', { fontWeight: '400' }],
-        'caption-1': ['12px', { fontWeight: '400' }],
+        'caption-1': ['12px', { lineHeight: '14px', fontWeight: '400' }],
         'caption-2': ['11px', { fontWeight: '400' }],
       },
     },
