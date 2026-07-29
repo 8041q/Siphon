@@ -1,7 +1,8 @@
 import { memo, useMemo } from 'react';
-import { Text, useColorScheme, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { fuelLabel } from '../utils/fuelNames';
-import { tokens } from '../theme';
+import { tokens } from '../theme/tokens';
 
 interface PriceBadgeProps {
   fuel: string;
@@ -9,40 +10,26 @@ interface PriceBadgeProps {
 }
 
 function PriceBadgeComponent({ fuel, price }: PriceBadgeProps) {
-  const colorScheme = useColorScheme();
-  const colors = tokenColors[colorScheme === 'dark' ? 'dark' : 'light'];
-  const typography = tokens.typography;
-  const radius = tokens.radius;
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = tokens.color[isDark ? 'dark' : 'light'];
 
-  const priceCategory = useMemo(() => {
-    if (price < 1.50) return { color: colors.priceLow, icon: '●' };
-    if (price < 1.80) return { color: colors.priceMid, icon: '●' };
-    return { color: colors.priceHigh, icon: '●' };
-  }, [price, colors]);
+  const priceColorClass = useMemo(() => {
+    if (price < 1.50) return 'text-price-low dark:text-price-low-dark';
+    if (price < 1.80) return 'text-price-mid dark:text-price-mid-dark';
+    return 'text-price-high dark:text-price-high-dark';
+  }, [price]);
 
   return (
-    <View
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: radius.sm,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        gap: 4,
-      }}
-    >
-      <Text style={{ fontSize: typography.footnote.size, fontWeight: typography.footnote.weight, color: colors.secondaryLabel }}>
+    <View className="bg-surface dark:bg-surface-dark rounded-sm px-3 py-1.5 gap-1">
+      <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
         {fuelLabel(fuel)}
       </Text>
-      <Text style={{ fontSize: typography.subheadline.size, fontWeight: typography.subheadline.weight, color: priceCategory.color, fontFamily: 'System' }}>
-        {price.toFixed(3)} {priceCategory.icon}
+      <Text className={`text-subheadline font-normal ${priceColorClass}`}>
+        {price.toFixed(3)} ●
       </Text>
     </View>
   );
 }
-
-const tokenColors = {
-  light: tokens.color.light,
-  dark: tokens.color.dark,
-};
 
 export const PriceBadge = memo(PriceBadgeComponent);

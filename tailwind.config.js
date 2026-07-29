@@ -9,11 +9,11 @@ module.exports = {
     extend: {
       colors: {
         background: '#FFFFFF',
-        'background-dark': '#000000',
+        'background-dark': '#1C1C1E',
         'grouped-background': '#F2F2F7',
-        'grouped-background-dark': '#000000',
+        'grouped-background-dark': '#2C2C2E',
         surface: '#FFFFFF',
-        'surface-dark': '#1C1C1E',
+        'surface-dark': '#3A3A3C',
         label: '#000000',
         'label-dark': '#FFFFFF',
         'secondary-label': 'rgba(60, 60, 67, 0.6)',
@@ -33,7 +33,7 @@ module.exports = {
         destructive: '#FF3B30',
         'destructive-dark': '#FF453A',
         'field-background': '#FFFFFF',
-        'field-background-dark': '#1C1C1E',
+        'field-background-dark': '#3A3A3C',
         'field-border': 'rgba(60, 60, 67, 0.21)',
         'field-border-dark': 'rgba(84, 84, 88, 0.6)',
       },

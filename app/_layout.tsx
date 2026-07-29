@@ -20,7 +20,7 @@ function ThemeInit() {
       if (val === 'light' || val === 'dark') {
         colorScheme.set(val);
         
-        setBackgroundColorAsync(val === 'dark' ? '#000000' : '#FFFFFF');
+        setBackgroundColorAsync(val === 'dark' ? '#1C1C1E' : '#FFFFFF');
       }
     });
   }, []);

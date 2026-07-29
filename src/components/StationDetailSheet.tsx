@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { fuelLabel } from '../utils/fuelNames';
@@ -52,6 +53,9 @@ export function StationDetailSheet() {
   const isPresentedRef = useRef(false);
   const snapPoints = useMemo(() => ['50%', '90%'], []);
 
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   useEffect(() => {
     if (selectedStation && !isPresentedRef.current) {
       isPresentedRef.current = true;
@@ -71,7 +75,12 @@ export function StationDetailSheet() {
       enablePanDownToClose
       enableDynamicSizing={false}
       onDismiss={handleDismiss}
-      handleIndicatorStyle={{ backgroundColor: 'rgba(60, 60, 67, 0.3)' }}
+      backgroundStyle={{
+        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+      }}
+      handleIndicatorStyle={{ 
+        backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)' 
+      }}
     >
       <BottomSheetScrollView
         key={selectedStation?.properties.id ?? 'empty'}

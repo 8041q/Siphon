@@ -1,7 +1,7 @@
-import { Text, useColorScheme, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Circle, G, Line, Path, Svg, Text as SvgText } from 'react-native-svg';
-import type { FC } from 'react';
 import { memo } from 'react';
+import { useColorScheme } from 'nativewind';
 
 import type { PriceHistoryPoint } from '../hooks/usePriceHistory';
 import { tokens } from '../theme/tokens';
@@ -16,8 +16,9 @@ interface PriceChartProps {
 const PADDING = { top: 20, right: 16, bottom: 32, left: 50 };
 
 const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: PriceChartProps) => {
-  const colorScheme = useColorScheme();
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = tokens.color[isDark ? 'dark' : 'light'];
   const t = tokens.typography;
 
   if (data.length < 2) {
@@ -98,7 +99,7 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
               const step = Math.max(1, Math.floor(data.length / 5));
               return i % step === 0 || i === data.length - 1;
             })
-            .map((d, i, arr) => {
+            .map((d) => {
               const idx = data.indexOf(d);
               return (
                 <SvgText
@@ -117,6 +118,6 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
       </Svg>
     </View>
   );
-}
+};
 
 export const PriceChart = memo(PriceChartComponent);

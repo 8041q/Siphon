@@ -18,10 +18,10 @@ type TabItemProps = {
   label: string;
   isFocused?: boolean;
   onPress?: () => void;
+  colorScheme: 'light' | 'dark';
 };
 
-function TabItem({ icon: iconName, label, isFocused, onPress }: TabItemProps) {
-  const { colorScheme } = useColorScheme();
+function TabItem({ icon: iconName, label, isFocused, onPress, colorScheme }: TabItemProps) {
   const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
   
   return (
@@ -33,7 +33,12 @@ function TabItem({ icon: iconName, label, isFocused, onPress }: TabItemProps) {
           color={isFocused ? colors.tint : colors.tertiaryLabel}
         />
         <Text
-          className={`text-caption-1 mt-0.5 ${isFocused ? 'text-tint dark:text-tint-dark' : 'text-tertiary-label dark:text-tertiary-label-dark'}`}
+          style={{
+            color: isFocused 
+              ? colors.tint 
+              : colors.tertiaryLabel
+          }}
+          className="text-caption-1 mt-0.5"
         >
           {label}
         </Text>
@@ -47,20 +52,25 @@ const TAB_BAR_CONTENT_HEIGHT = 70;
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
+  const currentTheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = tokens.color[currentTheme];
 
   return (
     <Tabs key={colorScheme}>
       <TabSlot />
       <TabList
-        className="flex-row bg-surface dark:bg-surface-dark border-t border-separator dark:border-separator-dark"
         style={{
+          flexDirection: 'row',
+          backgroundColor: colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: colors.separator,
           height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
           paddingBottom: insets.bottom,
         }}
       >
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href as any} asChild>
-            <TabItem icon={tab.icon} label={tab.label} />
+            <TabItem icon={tab.icon} label={tab.label} colorScheme={currentTheme} />
           </TabTrigger>
         ))}
       </TabList>

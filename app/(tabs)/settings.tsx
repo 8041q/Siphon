@@ -92,7 +92,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
-      <View className="flex-1 py-lg">
+      <View className="flex-1 gap-lg">
         
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">

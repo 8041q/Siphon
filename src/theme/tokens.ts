@@ -17,9 +17,9 @@ export const color = {
     fieldBorder: 'rgba(60, 60, 67, 0.21)',
   },
   dark: {
-    background: '#000000',
-    groupedBackground: '#000000',
-    surface: '#1C1C1E',
+    background: '#1C1C1E',
+    groupedBackground: '#2C2C2E',
+    surface: '#3A3A3C',
     label: '#FFFFFF',
     secondaryLabel: 'rgba(235, 235, 245, 0.6)',
     tertiaryLabel: 'rgba(235, 235, 245, 0.3)',
@@ -30,7 +30,7 @@ export const color = {
     priceHigh: '#FF453A',
     destructive: '#FF453A',
     error: '#FF453A',
-    fieldBackground: '#1C1C1E',
+    fieldBackground: '#3A3A3C',
     fieldBorder: 'rgba(84, 84, 88, 0.6)',
   },
 };

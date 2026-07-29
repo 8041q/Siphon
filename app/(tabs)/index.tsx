@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, TouchableOpacity, useColorScheme, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
@@ -56,9 +55,9 @@ export default function MapScreen() {
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center p-xl">
+      <View style={{ paddingTop: insets.top }} className="flex-1 justify-center items-center p-xl bg-background dark:bg-background-dark">
         <Text className="text-destructive dark:text-destructive-dark text-center">{error}</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -70,41 +69,33 @@ export default function MapScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={[]}>
-        {/*
-          To re-enable auto-fetch on map movement, replace handleRegionChange below with:
-          onRegionChange={loadStationsForRegion}
-        */}
-        <StationMap
-          initialRegion={initialRegion}
-          stations={filteredStations}
-          onMarkerPress={onMarkerPress}
-          onRegionChange={handleRegionChange}
-        />
+    <View className="flex-1 bg-background dark:bg-background-dark">
+      {/* Map rendering full bleed */}
+      <StationMap
+        initialRegion={initialRegion}
+        stations={filteredStations}
+        onMarkerPress={onMarkerPress}
+        onRegionChange={handleRegionChange}
+      />
 
-        {showOfflineBanner && (
-          <View className="absolute top-0 left-0 right-0 z-10">
-            <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
-              <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
-                Using cached data — no connection
-              </Text>
-            </View>
+      {/* Offline Banner positioning below status bar */}
+      {showOfflineBanner && (
+        <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
+          <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
+            <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
+              Using cached data — no connection
+            </Text>
           </View>
-        )}
-      </SafeAreaView>
+        </View>
+      )}
 
-      <View style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
+      {/* Floating search pill */}
+      <View style={{ position: 'absolute', top: insets.top + 12, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
         <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
           <View
             className="flex-row items-center gap-xs px-lg py-sm rounded-full"
             style={{
               backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.15,
-              shadowRadius: 4,
-              elevation: 4,
             }}
           >
             <Icon name="magnifyingglass" size={17} color="#0C8599" />

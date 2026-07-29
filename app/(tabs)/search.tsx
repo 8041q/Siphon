@@ -55,7 +55,7 @@ export default function SearchScreen() {
 
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
   return (
-    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg -mt-lg px-3 py-2">
+    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg px-3 py-2">
       <Icon name="magnifyingglass" size={17} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
