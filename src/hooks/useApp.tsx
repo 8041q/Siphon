@@ -64,6 +64,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const started = useRef(false);
   const changedCountriesRef = useRef<import('../api/siphonClient').CountryCode[]>([]);
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unmountedRef = useRef(false);
 
   const toggleFavorite = useCallback((station: FuelStationFeature) => {
     const id = station.properties.id;
@@ -77,6 +78,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return newSet;
     });
+  }, []);
+
+  useEffect(() => {
+    return () => { unmountedRef.current = true; };
   }, []);
 
   useEffect(() => {
@@ -116,7 +121,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       setSyncProgress(null);
     }
-  }, [location.latitude, location.longitude]);
+  }, []);
 
   useEffect(() => {
     if (started.current && !requestingLocation) {
@@ -124,11 +129,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [requestingLocation, load]);
 
+  useEffect(() => {
+    return () => {
+      if (regionTimerRef.current) {
+        clearTimeout(regionTimerRef.current);
+        regionTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const loadStationsForRegion = useCallback(async (lat: number, lng: number, bounds?: [number, number, number, number]) => {
     if (regionTimerRef.current) clearTimeout(regionTimerRef.current);
     regionTimerRef.current = setTimeout(async () => {
       try {
         const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
+        if (unmountedRef.current) return;
         setStations(nearby);
       } catch {}
     }, 50);

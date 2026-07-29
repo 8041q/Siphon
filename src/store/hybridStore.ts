@@ -31,6 +31,19 @@ function filePathForKey(key: string): File {
   throw new Error('Unsupported key: ' + key);
 }
 
+function listFilesRecursive(dir: Directory, prefix: string): string[] {
+  ensureDir(dir);
+  return dir.list().flatMap((item) => {
+    if (item instanceof File) {
+      return prefix + item.name;
+    }
+    if (item instanceof Directory) {
+      return listFilesRecursive(item, prefix + item.name + '/');
+    }
+    return [];
+  });
+}
+
 export const hybridStore: KeyValueStore = {
   async getItem(key: string): Promise<string | null> {
     if (!isFileKey(key)) return AsyncStorage.getItem(key);
@@ -68,6 +81,13 @@ export const hybridStore: KeyValueStore = {
         return SNAPSHOTS_DIR.list()
           .filter((item): item is File => item instanceof File && item.extension === '.json')
           .map(item => 'siphon:snapshot:' + item.name.replace(/\.json$/, ''));
+      } catch {
+        return [];
+      }
+    }
+    if (prefix === 'siphon:data:') {
+      try {
+        return listFilesRecursive(TILES_DIR, 'siphon:data:');
       } catch {
         return [];
       }

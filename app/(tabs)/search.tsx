@@ -20,7 +20,6 @@ export default function SearchScreen() {
     [setSelectedStation]
   );
   const [brandQuery, setBrandQuery] = useState('');
-  const [selectedFuel, setSelectedFuel] = useState<string | null>(null);
 
   const results = useMemo(() => {
     let filtered = stations;
@@ -32,11 +31,8 @@ export default function SearchScreen() {
           (s.properties.name ?? '').toLowerCase().includes(q)
       );
     }
-    if (selectedFuel) {
-      filtered = filtered.filter((s) => selectedFuel in s.properties.fuels);
-    }
     return filtered;
-  }, [brandQuery, selectedFuel, stations]);
+  }, [brandQuery, stations]);
 
   const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.6)' : 'rgba(60, 60, 67, 0.6)';
 

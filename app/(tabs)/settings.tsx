@@ -31,7 +31,7 @@ export default function SettingsScreen() {
       scheme = pref;
     }
     nativewindColorScheme.set(scheme);
-    setBackgroundColorAsync(scheme === 'dark' ? '#000000' : '#FFFFFF');
+    setBackgroundColorAsync(scheme === 'dark' ? '#1C1C1E' : '#FFFFFF');
     AsyncStorage.setItem('siphon:theme', pref);
   };
 

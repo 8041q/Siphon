@@ -19,6 +19,27 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     }
   }, [flyToCoords]);
 
+  const markers = useMemo(() => stations.map((station) => {
+    const [lng, lat] = station.geometry.coordinates;
+    return (
+      <Marker
+        key={station.properties.id}
+        id={station.properties.id}
+        lngLat={[lng, lat]}
+        anchor="center"
+        offset={[0, 0]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onMarkerPress(station);
+        }}
+      >
+        <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: tint, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.5)' }} />
+        </View>
+      </Marker>
+    );
+  }), [stations, tint]);
+
   return (
     <Map
         style={{ flex: 1 }}
@@ -41,26 +62,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         zoom={12}
       />
       <UserLocation animated />
-      {useMemo(() => stations.map((station) => {
-        const [lng, lat] = station.geometry.coordinates;
-        return (
-          <Marker
-            key={station.properties.id}
-            id={station.properties.id}
-            lngLat={[lng, lat]}
-            anchor="center"
-            offset={[0, 0]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onMarkerPress(station);
-            }}
-          >
-            <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: tint, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.5)' }} />
-            </View>
-          </Marker>
-        );
-      }), [stations, tint])}
+      {markers}
       </Map>
   );
 }
