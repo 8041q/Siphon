@@ -8,7 +8,7 @@ npx expo install --fix
 ```
 Prepare and run dev
 ```bash
-npx expo prebuild --clean --platform ios // npx expo prebuild --clean  --platform ios
+npx expo prebuild --clean --platform android // npx expo prebuild --clean --platform ios
 cd android
 .\gradlew assembleRelease
 npx expo run:android // npx expo run:ios

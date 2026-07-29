@@ -49,16 +49,18 @@ function DetailContent({ station, onClose }: { station: FuelStationFeature; onCl
 export function StationDetailSheet() {
   const { selectedStation, setSelectedStation } = useUI();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const isPresentedRef = useRef(false);
   const snapPoints = useMemo(() => ['50%', '90%'], []);
 
   useEffect(() => {
-    if (selectedStation) {
-      console.log('calling present, ref exists:', !!bottomSheetRef.current);
+    if (selectedStation && !isPresentedRef.current) {
+      isPresentedRef.current = true;
       bottomSheetRef.current?.present();
     }
   }, [selectedStation]);
 
   const handleDismiss = useCallback(() => {
+    isPresentedRef.current = false;
     setSelectedStation(null);
   }, [setSelectedStation]);
 
@@ -69,16 +71,19 @@ export function StationDetailSheet() {
       enablePanDownToClose
       enableDynamicSizing={false}
       onDismiss={handleDismiss}
-      onChange={(index) => console.log('sheet index changed to', index)}
       handleIndicatorStyle={{ backgroundColor: 'rgba(60, 60, 67, 0.3)' }}
     >
-      <BottomSheetScrollView className="flex-1">
+      <BottomSheetScrollView
+        key={selectedStation?.properties.id ?? 'empty'}
+      >
         {selectedStation ? (
           <DetailContent
             station={selectedStation}
             onClose={() => bottomSheetRef.current?.dismiss()}
           />
-        ) : null}
+        ) : (
+          <View />
+        )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
