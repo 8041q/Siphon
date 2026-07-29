@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.8041q.Siphon",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Siphon uses your location to show nearby fuel stations."
       }
     },
     "android": {

@@ -1,20 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useApp } from '../../src/hooks/useApp';
 import { usePriceHistory } from '../../src/hooks/usePriceHistory';
 import { PriceChart } from '../../src/components/PriceChart';
 import { fuelLabel } from '../../src/utils/fuelNames';
-import { tokens } from '../../src/theme/tokens';
 
 export default function PriceTrendsScreen() {
-  const colorScheme = useColorScheme();
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  const s = tokens.spacing;
-  const t = tokens.typography;
-  const r = tokens.radius;
-
   const { id } = useLocalSearchParams<{ id: string }>();
   const { stations } = useApp();
 
@@ -33,41 +26,36 @@ export default function PriceTrendsScreen() {
 
   if (!station) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: colors.secondaryLabel }}>Station not found.</Text>
+      <View className="flex-1 justify-center items-center p-xl">
+        <Text className="text-secondary-label dark:text-secondary-label-dark">Station not found.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: s.lg }}>
-      <Text style={{ fontSize: t.title3.size, fontWeight: t.title3.weight, color: colors.label, marginBottom: s.xs }}>
+    <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+      <Text className="text-title-3 mb-xs">
         {station.properties.brand || station.properties.name || 'Station'}
       </Text>
-      <Text style={{ fontSize: t.subheadline.size, color: colors.secondaryLabel, marginBottom: s.lg }}>
+      <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark mb-lg">
         {station.properties.address}
       </Text>
 
       {fuels.length > 1 && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: s.sm, marginBottom: s.lg }}>
+        <View className="flex-row flex-wrap gap-sm mb-lg">
           {fuels.map((fuel) => (
             <TouchableOpacity
               key={fuel}
               activeOpacity={0.7}
               onPress={() => setSelectedFuel(fuel)}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 6,
-                borderRadius: r.xl,
-                backgroundColor: selectedFuel === fuel ? colors.tint : colors.groupedBackground,
-              }}
+              className={`px-3.5 py-1.5 rounded-xl ${
+                selectedFuel === fuel ? 'bg-tint dark:bg-tint-dark' : 'bg-grouped-background dark:bg-grouped-background-dark'
+              }`}
             >
               <Text
-                style={{
-                  fontSize: t.caption1.size,
-                  fontWeight: '600',
-                  color: selectedFuel === fuel ? '#fff' : colors.label,
-                }}
+                className={`text-caption-1 font-semibold ${
+                  selectedFuel === fuel ? 'text-white' : 'text-label dark:text-label-dark'
+                }`}
               >
                 {fuelLabel(fuel)}
               </Text>
@@ -77,7 +65,9 @@ export default function PriceTrendsScreen() {
       )}
 
       {loading ? (
-        <Text style={{ color: colors.secondaryLabel, textAlign: 'center' }}>Loading price history…</Text>
+        <Text className="text-secondary-label dark:text-secondary-label-dark text-center">
+          Loading price history…
+        </Text>
       ) : (
         <PriceChart data={data} fuelLabel={fuelLabel(selectedFuel ?? '')} />
       )}

@@ -56,8 +56,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
             padding: 6,
           }}>
             <Icon
-              sf={favorite ? 'star.fill' : 'star'}
-              md={favorite ? 'star' : 'star_border'}
+              name={favorite ? 'star.fill' : 'star'}
               size={18}
               color={favorite ? colors.tint : colors.secondaryLabel}
             />

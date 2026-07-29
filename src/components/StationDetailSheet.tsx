@@ -1,94 +1,85 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { fuelLabel } from '../utils/fuelNames';
 import { useUI } from '../hooks/useApp';
-import { tokens } from '../theme';
-import { BottomSheet } from '@expo/ui';
 
 function DetailContent({ station, onClose }: { station: FuelStationFeature; onClose: () => void }) {
-  const colorScheme = useColorScheme();
   const { name, brand, address, fuels } = station.properties;
   const entries = Object.entries(fuels ?? {}) as [string, number][];
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  const t = tokens.typography;
-  const r = tokens.radius;
-  const s = tokens.spacing;
 
   return (
-    <ScrollView style={{ flex: 1 }}>
-      <View style={{ gap: s.sm, padding: s.lg }}>
-        <Text style={{ fontSize: t.title3.size, fontWeight: t.title3.weight, color: colors.label }}>
-          {brand || name || 'Unknown station'}
-        </Text>
-        <Text style={{ fontSize: t.subheadline.size, color: colors.secondaryLabel }}>{address}</Text>
+    <View className="gap-sm p-lg">
+      <Text className="text-title-3 text-label">
+        {brand || name || 'Unknown station'}
+      </Text>
+      <Text className="text-subheadline text-secondary-label">{address}</Text>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: s.sm,
-            marginTop: s.sm,
-          }}
-        >
-          {entries.map(([fuel, price]) => (
-            <View
-              key={fuel}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: r.sm,
-                paddingHorizontal: s.sm,
-                paddingVertical: s.xs,
-              }}
-            >
-              <Text style={{ fontSize: t.footnote.size, color: colors.secondaryLabel }}>
-                {fuelLabel(fuel)}: {price.toFixed(3)}€
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {entries.length > 0 && (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              onClose();
-              router.push(`/price-trends/${station.properties.id}`);
-            }}
-            style={{
-              marginTop: s.lg,
-              backgroundColor: colors.tint,
-              borderRadius: r.md,
-              paddingVertical: s.md,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: t.callout.size }}>
-              View Price History
+      <View className="flex-row flex-wrap gap-sm mt-sm">
+        {entries.map(([fuel, price]) => (
+          <View key={fuel} className="bg-surface rounded-sm px-sm py-xs">
+            <Text className="text-footnote text-secondary-label">
+              {fuelLabel(fuel)}: {price.toFixed(3)}€
             </Text>
-          </TouchableOpacity>
-        )}
+          </View>
+        ))}
       </View>
-    </ScrollView>
+
+      {entries.length > 0 && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            onClose();
+            router.push(`/price-trends/${station.properties.id}`);
+          }}
+          className="mt-lg bg-tint rounded-md py-md items-center"
+        >
+          <Text className="text-white font-semibold text-callout">
+            View Price History
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 export function StationDetailSheet() {
   const { selectedStation, setSelectedStation } = useUI();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['50%', '90%'], []);
+
+  useEffect(() => {
+    if (selectedStation) {
+      console.log('calling present, ref exists:', !!bottomSheetRef.current);
+      bottomSheetRef.current?.present();
+    }
+  }, [selectedStation]);
+
+  const handleDismiss = useCallback(() => {
+    setSelectedStation(null);
+  }, [setSelectedStation]);
 
   return (
-    <BottomSheet
-      isPresented={!!selectedStation}
-      onDismiss={() => setSelectedStation(null)}
-      snapPoints={['half', 'full']}
-      showDragIndicator
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      enableDynamicSizing={false}
+      onDismiss={handleDismiss}
+      onChange={(index) => console.log('sheet index changed to', index)}
+      handleIndicatorStyle={{ backgroundColor: 'rgba(60, 60, 67, 0.3)' }}
     >
-      <View style={{ flex: 1 }}>
+      <BottomSheetScrollView className="flex-1">
         {selectedStation ? (
-          <DetailContent station={selectedStation} onClose={() => setSelectedStation(null)} />
+          <DetailContent
+            station={selectedStation}
+            onClose={() => bottomSheetRef.current?.dismiss()}
+          />
         ) : null}
-      </View>
-    </BottomSheet>
+      </BottomSheetScrollView>
+    </BottomSheetModal>
   );
 }

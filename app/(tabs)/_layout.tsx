@@ -1,36 +1,60 @@
-import { useColorScheme } from 'react-native';
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { tokens } from '../../src/theme/tokens';
+import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
+import { Pressable, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Icon } from '../../src/components/ui/icon';
+
+const TABS = [
+  { name: 'index', href: '/', label: 'Map', icon: 'map.fill' },
+  { name: 'list', href: '/list', label: 'Stations', icon: 'list.bullet' },
+  { name: 'search', href: '/search', label: 'Search', icon: 'magnifyingglass' },
+  { name: 'favorites', href: '/favorites', label: 'Favorites', icon: 'star.fill' },
+  { name: 'settings', href: '/settings', label: 'Settings', icon: 'gearshape.fill' },
+];
+
+type TabItemProps = {
+  icon: string;
+  label: string;
+  isFocused?: boolean;
+  onPress?: () => void;
+};
+
+function TabItem({ icon: iconName, label, isFocused, onPress }: TabItemProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-1 items-center justify-center py-1"
+    >
+      <Icon
+        name={iconName}
+        size={24}
+        color={isFocused ? 'rgb(12, 133, 153)' : 'rgba(60, 60, 67, 0.3)'}
+      />
+      <Text
+        className={`text-caption-1 mt-0.5 ${isFocused ? 'text-tint' : 'text-tertiary-label'}`}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const tint = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'].tint;
+  const insets = useSafeAreaInsets();
 
   return (
-    <NativeTabs
-      tintColor={tint}
-      blurEffect="systemUltraThinMaterial"
-    >
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
-        <NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="list">
-        <NativeTabs.Trigger.Icon sf="list.bullet" md="list" />
-        <NativeTabs.Trigger.Label>Stations</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="search">
-        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
-        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="favorites">
-        <NativeTabs.Trigger.Icon sf="star.fill" md="star" />
-        <NativeTabs.Trigger.Label>Favorites</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <NativeTabs.Trigger.Icon sf="gearshape.fill" md="settings" />
-        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs>
+      <TabSlot />
+      <TabList
+        className="flex-row bg-surface border-t border-separator"
+        style={{ paddingBottom: insets.bottom }}
+      >
+        {TABS.map((tab) => (
+          <TabTrigger key={tab.name} name={tab.name} href={tab.href as any} asChild>
+            <TabItem icon={tab.icon} label={tab.label} />
+          </TabTrigger>
+        ))}
+      </TabList>
+    </Tabs>
   );
 }

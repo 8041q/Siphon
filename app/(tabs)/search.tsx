@@ -3,18 +3,14 @@ import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-n
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { tokens } from '../../src/theme/tokens';
-import { Icon } from '../../src/theme/Icon';
+import { Icon } from '../../src/components/ui/icon';
 import { StationCard } from '../../src/components/StationCard';
 import { useStations, useUI } from '../../src/hooks/useApp';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 
 export default function SearchScreen() {
-  const colorScheme = useColorScheme();
   const { stations } = useStations();
   const { setSelectedStation } = useUI();
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  const s = tokens.spacing;
 
   const handleStationPress = useCallback(
     (station: FuelStationFeature) => {
@@ -42,61 +38,37 @@ export default function SearchScreen() {
   }, [brandQuery, selectedFuel, stations]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ paddingHorizontal: s.xl, paddingVertical: s.xl }}>
-        <SearchBar
-          brandQuery={brandQuery}
-          setBrandQuery={setBrandQuery}
-          colors={colors}
-        />
-        <StationList
-          results={results}
-          handleStationPress={handleStationPress}
-        />
+    <SafeAreaView className="flex-1">
+      <View className="px-xl py-xl">
+        <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} />
+        <StationList results={results} handleStationPress={handleStationPress} />
       </View>
     </SafeAreaView>
   );
 }
 
-function SearchBar({ brandQuery, setBrandQuery, colors }: { brandQuery: string; setBrandQuery: (q: string) => void; colors: typeof tokens.color.light }) {
-  const r = tokens.radius;
-
+function SearchBar({ brandQuery, setBrandQuery }: { brandQuery: string; setBrandQuery: (q: string) => void }) {
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.groupedBackground,
-        borderRadius: r.md,
-        marginBottom: 16,
-        marginTop: -16,
-        marginHorizontal: 4,
-      }}
-    >
-      <View style={{ paddingHorizontal: 4 }}>
-        <Icon sf="magnifyingglass" md="search" size={17} color={colors.secondaryLabel} />
+    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg -mt-lg mx-1">
+      <View className="px-1">
+        <Icon name="magnifyingglass" size={17} color="rgba(60, 60, 67, 0.6)" />
       </View>
       <TextInput
         value={brandQuery}
         onChangeText={setBrandQuery}
         placeholder="Search stations..."
-        placeholderTextColor={colors.tertiaryLabel}
-        style={{ flex: 1, paddingHorizontal: 4 }}
+        placeholderTextColor="rgba(235, 235, 245, 0.3)"
+        className="flex-1 px-1 text-label dark:text-label-dark"
       />
     </View>
   );
 }
 
 function StationList({ results, handleStationPress }: { results: FuelStationFeature[]; handleStationPress: (station: FuelStationFeature) => void }) {
-  const colorScheme = useColorScheme();
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  const t = tokens.typography;
-  const s = tokens.spacing;
-
   if (!results || results.length === 0) {
     return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-        <Text style={{ fontSize: t.title3.size, fontWeight: t.title3.weight, color: colors.secondaryLabel }}>
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-title-3 text-secondary-label dark:text-secondary-label-dark">
           No stations found
         </Text>
       </View>
@@ -104,8 +76,8 @@ function StationList({ results, handleStationPress }: { results: FuelStationFeat
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: t.headline.size, fontWeight: t.headline.weight, color: colors.label, marginBottom: s.sm }}>
+    <View className="flex-1">
+      <Text className="text-headline mb-sm">
         Search Results
       </Text>
       <FlashList

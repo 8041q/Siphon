@@ -5,15 +5,11 @@ import { BlurView } from 'expo-blur';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
-import { Icon } from '../../src/theme/Icon';
+import { Icon } from '../../src/components/ui/icon';
 import { useStations, useUI, useLocationState, useActions } from '../../src/hooks/useApp';
-import { tokens } from '../../src/theme/tokens';
 
 export default function MapScreen() {
   const colorScheme = useColorScheme();
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  const s = tokens.spacing;
-  const t = tokens.typography;
 
   const { filteredStations, loading, syncProgress, error, offline } = useStations();
   const { location } = useLocationState();
@@ -40,7 +36,6 @@ export default function MapScreen() {
   }, [offline]);
 
   const handleSearchArea = useCallback(() => {
-    // Trigger region reload with current visible bounds
     loadStationsForRegion(location.latitude, location.longitude);
   }, [loadStationsForRegion, location]);
 
@@ -48,8 +43,8 @@ export default function MapScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: colors.destructive, textAlign: 'center' }}>{error}</Text>
+      <SafeAreaView className="flex-1 justify-center items-center p-xl">
+        <Text className="text-destructive dark:text-destructive-dark text-center">{error}</Text>
       </SafeAreaView>
     );
   }
@@ -62,7 +57,7 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
       <StationMap
         initialRegion={initialRegion}
         stations={filteredStations}
@@ -70,23 +65,15 @@ export default function MapScreen() {
         onRegionChange={loadStationsForRegion}
       />
 
-      <View style={{ position: 'absolute', bottom: 120, right: s.lg }}>
+      <View className="absolute bottom-30 right-lg">
         <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
           <BlurView
             intensity={80}
             tint={colorScheme === 'dark' ? 'dark' : 'light'}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: s.xs,
-              paddingHorizontal: s.lg,
-              paddingVertical: s.sm,
-              borderRadius: 24,
-              overflow: 'hidden',
-            }}
+            className="flex-row items-center gap-xs px-lg py-sm rounded-full overflow-hidden"
           >
-            <Icon sf="magnifyingglass" md="search" size={17} color={colors.tint} />
-            <Text style={{ fontSize: t.footnote.size, fontWeight: '600', color: colors.tint }}>
+            <Icon name="magnifyingglass" size={17} color="#0C8599" />
+            <Text className="text-footnote font-semibold text-tint">
               Search this area
             </Text>
           </BlurView>
@@ -94,15 +81,14 @@ export default function MapScreen() {
       </View>
 
       {showOfflineBanner && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
-          <View style={{ backgroundColor: colors.surface, paddingVertical: 6, paddingHorizontal: 16 }} pointerEvents="box-none">
-            <Text style={{ color: colors.secondaryLabel, fontSize: t.footnote.size, textAlign: 'center' }}>
+        <View className="absolute top-0 left-0 right-0 z-10">
+          <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
+            <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
               Using cached data — no connection
             </Text>
           </View>
         </View>
       )}
-
     </SafeAreaView>
   );
 }

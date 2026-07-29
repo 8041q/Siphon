@@ -8,21 +8,21 @@ npx expo install --fix
 ```
 Prepare and run dev
 ```bash
-npx expo prebuild --clean
+npx expo prebuild --clean --platform ios // npx expo prebuild --clean  --platform ios
 cd android
 .\gradlew assembleRelease
-npx expo run:android
+npx expo run:android // npx expo run:ios
 ```
 
 If android device already has apk installed, just connect via USB and run:
 Connect via USB and run (USB debugging enabled):
 ```bash
-npx expo run:android
+npx expo run:android // npx expo run:ios
 ```
 
 If you want to update the apk in the repo, just run:
 ```bash
-npx expo prebuild --clean
+npx expo prebuild --clean --platform ios // npx expo prebuild --clean 
 .\gradlew assembleRelease
 ```
 

@@ -1,19 +1,13 @@
 import { useCallback } from 'react';
-import { Text, useColorScheme, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StationCard } from '../../src/components/StationCard';
 import { useStations, useUI } from '../../src/hooks/useApp';
-import { tokens } from '../../src/theme/tokens';
-import { Icon } from '../../src/theme/Icon';
+import { Icon } from '../../src/components/ui/icon';
 
 export default function FavoritesScreen() {
-  const colorScheme = useColorScheme();
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  const s = tokens.spacing;
-  const t = tokens.typography;
-
   const { filteredStations } = useStations();
   const { favorites, setSelectedStation, toggleFavorite } = useUI();
 
@@ -29,14 +23,14 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top', 'bottom']}>
       {favoriteStations.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: s.xl }}>
-          <Icon sf="star.fill" md="star" size={48} color={colors.tertiaryLabel} />
-          <Text style={{ fontSize: t.body.size, color: colors.secondaryLabel, marginTop: s.md }}>
+        <View className="flex-1 justify-center items-center p-xl">
+          <Icon name="star.fill" size={48} color="rgba(60, 60, 67, 0.3)" />
+          <Text className="text-body text-secondary-label dark:text-secondary-label-dark mt-md">
             No favorites yet
           </Text>
-          <Text style={{ fontSize: t.footnote.size, color: colors.tertiaryLabel, marginTop: s.xs }}>
+          <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-xs">
             Tap the star on a station to add it here
           </Text>
         </View>
@@ -44,7 +38,7 @@ export default function FavoritesScreen() {
         <FlashList
           data={favoriteStations}
           keyExtractor={(item) => item.properties.id}
-          contentContainerStyle={{ padding: s.lg, gap: s.md }}
+          contentContainerStyle={{ padding: 16, gap: 12 }}
           renderItem={({ item }) => (
             <StationCard
               station={item}

@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Alert, useColorScheme } from 'react-native';
+import { Alert, Text, useColorScheme, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { client } from '../../src/hooks/useApp';
-import { tokens } from '../../src/theme/tokens';
-import { FieldGroup, ListItem } from '@expo/ui';
-import { ComposeBoundary } from '../../src/components/ComposeBoundary';
+import { ListItem } from '../../src/components/ui/list-item';
 
 export default function SettingsScreen() {
   const [clearing, setClearing] = useState(false);
   const colorScheme = useColorScheme();
-  const colors = colorScheme === 'dark' ? tokens.color.dark : tokens.color.light;
 
   const handleClearHistory = () => {
     Alert.alert(
@@ -61,22 +59,34 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ComposeBoundary style={{ flex: 1, backgroundColor: colors.background }}>
-      <FieldGroup>
-        <FieldGroup.Section title="Price History">
+    <SafeAreaView
+      className={`flex-1 ${colorScheme === 'dark' ? 'bg-background' : 'bg-grouped-background'}`}
+    >
+      <View className="py-lg">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface">
+          <Text className="text-footnote text-secondary-label px-lg pb-xs pt-md uppercase tracking-wide">
+            Price History
+          </Text>
           <ListItem onPress={handleTrimHistory}>
             Trim old snapshots (keep 2 months)
           </ListItem>
+          <View className="h-px bg-separator mx-lg" />
           <ListItem onPress={handleClearHistory}>
             Clear all price history
           </ListItem>
-        </FieldGroup.Section>
-        <FieldGroup.Section title="About">
-          <ListItem>Siphon</ListItem>
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface mt-xl">
+          <Text className="text-footnote text-secondary-label px-lg pb-xs pt-md uppercase tracking-wide">
+            About
+          </Text>
+          <ListItem trailing="Siphon">App Name</ListItem>
+          <View className="h-px bg-separator mx-lg" />
           <ListItem trailing="SiphonAPI">Data source</ListItem>
+          <View className="h-px bg-separator mx-lg" />
           <ListItem trailing="1.0.0">Version</ListItem>
-        </FieldGroup.Section>
-      </FieldGroup>
-    </ComposeBoundary>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
