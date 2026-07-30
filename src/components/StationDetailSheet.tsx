@@ -11,7 +11,7 @@ import { useUI } from '../hooks/useApp';
 
 function DetailContent({ station, onClose }: { station: FuelStationFeature; onClose: () => void }) {
   const { t } = useTranslation();
-  const { name, brand, address, fuels } = station.properties;
+  const { name, brand, address, fuels, hours, schedule, services, paymentMethods, municipality, district, province, postalCode, observations, otherServices, lastUpdated, extra } = station.properties;
   const entries = Object.entries(fuels ?? {}) as [string, number][];
 
   return (
@@ -20,6 +20,65 @@ function DetailContent({ station, onClose }: { station: FuelStationFeature; onCl
         {brand || name || t('common.unknown_station')}
       </Text>
       <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark">{address}</Text>
+
+      {schedule || hours ? (
+        <View className="mt-sm">
+          <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs">
+            {t('station.hours')}
+          </Text>
+          {schedule ? (
+            <Text className="text-footnote text-secondary-label">{schedule}</Text>
+          ) : (
+            <>
+              {hours.weekdays && <Text className="text-footnote text-secondary-label">{t('station.weekdays')}: {hours.weekdays}</Text>}
+              {hours.saturday && <Text className="text-footnote text-secondary-label">{t('station.saturday')}: {hours.saturday}</Text>}
+              {hours.sunday && <Text className="text-footnote text-secondary-label">{t('station.sunday')}: {hours.sunday}</Text>}
+              {hours.holiday && <Text className="text-footnote text-secondary-label">{t('station.holiday')}: {hours.holiday}</Text>}
+            </>)}
+        </View>
+      ) : null}
+
+      {services?.length > 0 && (
+        <View className="mt-sm">
+          <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs">
+            {t('station.services')}
+          </Text>
+          <Text className="text-footnote text-secondary-label">
+            {Array.isArray(services) ? services.join(', ') : services}
+          </Text>
+        </View>
+      )}
+
+      {paymentMethods?.length > 0 && (
+        <View className="mt-sm">
+          <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs">
+            {t('station.payment_methods')}
+          </Text>
+          <Text className="text-footnote text-secondary-label">
+            {Array.isArray(paymentMethods) ? paymentMethods.join(', ') : paymentMethods}
+          </Text>
+        </View>
+      )}
+
+      {(municipality || district || province || postalCode) && (
+        <View className="mt-sm">
+          <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs">
+            {municipality || district || province}
+          </Text>
+          {postalCode && <Text className="text-footnote text-secondary-label">{postalCode}</Text>}
+        </View>
+      )}
+
+      {(observations || otherServices || extra?.stationType || extra?.margin || lastUpdated) && (
+        <View className="mt-sm">
+          <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs">{t('common.station')}</Text>
+          {extra?.stationType && <Text className="text-footnote text-secondary-label">{t('station.station_type')}: {extra?.stationType}</Text>}
+          {otherServices && <Text className="text-footnote text-secondary-label">{t('station.other_services')}: {otherServices}</Text>}
+          {extra?.margin && <Text className="text-footnote text-secondary-label">{t('station.margin')}: {extra?.margin}</Text>}
+          {observations && <Text className="text-footnote text-secondary-label">{observations}</Text>}
+          {lastUpdated && <Text className="text-footnote text-secondary-label">{t('station.last_updated')}: {lastUpdated}</Text>}
+        </View>
+      )}
 
       <View className="flex-row flex-wrap gap-sm mt-sm">
         {entries.map(([fuel, price]) => (

@@ -7,6 +7,12 @@ export function fuelLabel(key: string): string {
 
 export const FUEL_UNITS: Record<string, (source: string) => string> = {
   lpg: (source) => (source === 'PT' ? '€/kg' : '€/L'),
+  cng: () => '€/kg',
+  cngkg: () => '€/kg',
+  cngm3: () => '€/m³',
+  lng: () => '€/kg',
+  bioCng: () => '€/kg',
+  bioLng: () => '€/kg',
 };
 
 export function fuelUnit(key: string, source?: string): string {

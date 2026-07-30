@@ -61,7 +61,24 @@
     "loading": "A carregar histórico de preços…"
   },
   "station": {
-    "view_price_history": "Ver Histórico de Preços"
+    "view_price_history": "Ver Histórico de Preços",
+    "hours": "Horário",
+    "schedule": "Horário",
+    "services": "Serviços",
+    "payment_methods": "Métodos de Pagamento",
+    "municipality": "Município",
+    "province": "Província",
+    "district": "Distrito",
+    "postal_code": "Código Postal",
+    "observations": "Observações",
+    "other_services": "Outros Serviços",
+    "station_type": "Tipo de Estação",
+    "margin": "Margem",
+    "last_updated": "Última Atualização",
+    "weekdays": "Dias úteis",
+    "saturday": "Sábado",
+    "sunday": "Domingo",
+    "holiday": "Feriado"
   },
   "price_chart": {
     "no_data": "Histórico de preços indisponível.",
@@ -77,12 +94,24 @@
   "fuel": {
     "gasoline95": "Gasolina 95",
     "gasoline95Plus": "Gasolina 95+",
+    "gasoline95Premium": "Gasolina 95 Premium",
     "gasoline98": "Gasolina 98",
     "gasoline98Plus": "Gasolina 98+",
     "diesel": "Gasóleo",
     "dieselPremium": "Gasóleo Premium",
     "dieselAgri": "Gasóleo Agrícola",
+    "dieselB": "Gasóleo Bonificado",
+    "dieselRenewable": "Gasóleo Renovável",
+    "dieselHeating": "Gasóleo de Aquecimento",
+    "bioDiesel": "Biodiesel",
+    "bioCng": "Bio-GNC",
+    "bioLng": "Bio-GNL",
+    "cng": "GNC",
+    "cngkg": "GNC (kg)",
+    "cngm3": "GNC (m³)",
+    "lng": "GNL",
     "lpg": "GPL",
+    "gasolineMix": "Gasolina Misturada",
     "adblue": "AdBlue"
   }
 }

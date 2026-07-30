@@ -61,7 +61,24 @@
     "loading": "Loading price history…"
   },
   "station": {
-    "view_price_history": "View Price History"
+    "view_price_history": "View Price History",
+    "hours": "Opening Hours",
+    "schedule": "Schedule",
+    "services": "Services",
+    "payment_methods": "Payment Methods",
+    "municipality": "Municipality",
+    "province": "Province",
+    "district": "District",
+    "postal_code": "Postal Code",
+    "observations": "Observations",
+    "other_services": "Other Services",
+    "station_type": "Station Type",
+    "margin": "Margin",
+    "last_updated": "Last Updated",
+    "weekdays": "Weekdays",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "holiday": "Holiday"
   },
   "price_chart": {
     "no_data": "No price history available.",
@@ -77,12 +94,24 @@
   "fuel": {
     "gasoline95": "Gasoline 95",
     "gasoline95Plus": "Gasoline 95+",
+    "gasoline95Premium": "Gasoline 95 Premium",
     "gasoline98": "Gasoline 98",
     "gasoline98Plus": "Gasoline 98+",
     "diesel": "Diesel",
     "dieselPremium": "Diesel Premium",
     "dieselAgri": "Diesel Agricultural",
+    "dieselB": "Discounted Diesel",
+    "dieselRenewable": "Renewable Diesel",
+    "dieselHeating": "Heating Diesel",
+    "bioDiesel": "Biodiesel",
+    "bioCng": "Bio-CNG",
+    "bioLng": "Bio-LNG",
+    "cng": "CNG",
+    "cngkg": "CNG (kg)",
+    "cngm3": "CNG (m³)",
+    "lng": "LNG",
     "lpg": "LPG",
+    "gasolineMix": "Mixed Gasoline",
     "adblue": "AdBlue"
   }
 }

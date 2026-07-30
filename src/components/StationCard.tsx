@@ -18,7 +18,7 @@ interface StationCardProps {
 
 const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorites, onToggleFavorite }) => {
   const { t } = useTranslation();
-  const { name, brand, address, fuels } = station.properties;
+  const { name, brand, address, fuels, municipality, district, hours, schedule } = station.properties;
   const entries = Object.entries(fuels ?? {});
   const favorite = favorites?.has(station.properties.id) ?? false;
 
@@ -50,6 +50,13 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
         </Pressable>
       </View>
       <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{address}</Text>
+      {(municipality || district) && (
+        <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-0.5">
+          {[municipality, district].filter(Boolean).join(', ')}
+          {(schedule || hours) ? ' · ' : ''}
+          {(schedule || hours) ? t('station.hours') : ''}
+        </Text>
+      )}
       {entries.length > 0 && (
         <View className="flex-row flex-wrap gap-sm mt-sm">
           {entries.map(([fuel, price]) => (

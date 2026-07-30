@@ -16,8 +16,8 @@ function PriceBadgeComponent({ fuel, price, source }: PriceBadgeProps) {
   const colors = tokens.color[isDark ? 'dark' : 'light'];
 
   const priceColorClass = useMemo(() => {
-    if (price < 1.50) return 'text-price-low dark:text-price-low-dark';
-    if (price < 1.80) return 'text-price-mid dark:text-price-mid-dark';
+    if (price < 1.65) return 'text-price-low dark:text-price-low-dark';
+    if (price < 1.87) return 'text-price-mid dark:text-price-mid-dark';
     return 'text-price-high dark:text-price-high-dark';
   }, [price]);
 
