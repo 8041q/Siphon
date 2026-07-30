@@ -1,15 +1,17 @@
-export const FUEL_LABELS: Record<string, string> = {
-  gasoline95: 'Gasolina 95',
-  gasoline95Plus: 'Gasolina 95+',
-  gasoline98: 'Gasolina 98',
-  gasoline98Plus: 'Gasolina 98+',
-  diesel: 'Gasóleo',
-  dieselPremium: 'Gasóleo Premium',
-  dieselAgri: 'Gasóleo Agrícola',
-  lpg: 'GPL',
-  adblue: 'AdBlue',
-};
+import i18n from '../i18n';
 
 export function fuelLabel(key: string): string {
-  return FUEL_LABELS[key] ?? key;
+  const translated = i18n.t(`fuel.${key}`, { defaultValue: '' });
+  return translated || key;
+}
+
+export const FUEL_UNITS: Record<string, (source: string) => string> = {
+  lpg: (source) => (source === 'PT' ? '€/kg' : '€/L'),
+};
+
+export function fuelUnit(key: string, source?: string): string {
+  if (key in FUEL_UNITS && source) {
+    return FUEL_UNITS[key](source);
+  }
+  return '€';
 }

@@ -1,0 +1,88 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "done": "Hecho",
+    "station": "Estación",
+    "unknown_station": "Estación desconocida",
+    "something_went_wrong": "Algo salió mal"
+  },
+  "tabs": {
+    "map": "Mapa",
+    "search": "Buscar",
+    "favorites": "Favoritos",
+    "settings": "Ajustes"
+  },
+  "map": {
+    "offline_banner": "Usando datos en caché — sin conexión",
+    "search_area": "Buscar esta área"
+  },
+  "search": {
+    "placeholder": "Buscar estaciones...",
+    "no_results": "No se encontraron estaciones",
+    "results_header": "Resultados de búsqueda"
+  },
+  "favorites": {
+    "empty_title": "Aún sin favoritos",
+    "empty_subtitle": "Toca la estrella de una estación para añadirla aquí"
+  },
+  "settings": {
+    "appearance": "Apariencia",
+    "theme_system": "Sistema",
+    "theme_light": "Claro",
+    "theme_dark": "Oscuro",
+    "price_history": "Historial de Precios",
+    "trim_list": "Limpiar lista (conservar últimos 2 meses)",
+    "clear_history": "Borrar todo el historial de precios",
+    "about": "Acerca de",
+    "app_name": "Nombre de la App",
+    "data_source": "Fuente de datos",
+    "version": "Versión",
+    "clear_alert_title": "Borrar Historial de Precios",
+    "clear_alert_message": "Esto eliminará TODOS los registros diarios de precios. Esta acción no se puede deshacer.",
+    "delete_all": "Borrar Todo",
+    "clear_failed": "Error al borrar el historial",
+    "trim_alert_title": "Limpiar Historial de Precios",
+    "trim_alert_message": "Conservar registros de los últimos 2 meses y borrar todo lo anterior.",
+    "trim": "Limpiar",
+    "trim_failed": "Error al limpiar el historial",
+    "deleted_snapshots": "{{count}} registro(s) eliminado(s).",
+    "deleted_old_snapshots": "{{count}} registro(s) antiguo(s) eliminado(s).",
+    "language": "Idioma",
+    "english": "Inglés",
+    "portuguese": "Portugués",
+    "spanish": "Español",
+    "french": "Francés",
+    "german": "Alemán"
+  },
+  "screen": {
+    "price_history": "Historial de Precios"
+  },
+  "price_trends": {
+    "loading": "Cargando historial de precios…"
+  },
+  "station": {
+    "view_price_history": "Ver Historial de Precios"
+  },
+  "price_chart": {
+    "no_data": "Historial de precios no disponible.",
+    "insufficient_data": "Solo un punto de datos — se necesitan al menos 2 para un gráfico.",
+    "invalid_data": "Datos de precio no válidos."
+  },
+  "sync": {
+    "checking_updates": "Buscando actualizaciones…",
+    "syncing_data": "Sincronizando datos…",
+    "syncing_progress": "Sincronizando {{loaded}}/{{total}}…",
+    "no_connection": "Sin conexión a internet. Conéctate para descargar los datos de las estaciones en el primer uso."
+  },
+  "fuel": {
+    "gasoline95": "Gasolina 95",
+    "gasoline95Plus": "Gasolina 95+",
+    "gasoline98": "Gasolina 98",
+    "gasoline98Plus": "Gasolina 98+",
+    "diesel": "Diésel",
+    "dieselPremium": "Diésel Premium",
+    "dieselAgri": "Diésel Agrícola",
+    "lpg": "GLP",
+    "adblue": "AdBlue"
+  }
+}

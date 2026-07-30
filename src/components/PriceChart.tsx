@@ -2,30 +2,36 @@ import { Text, View } from 'react-native';
 import { Circle, G, Line, Path, Svg, Text as SvgText } from 'react-native-svg';
 import { memo } from 'react';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 
 import type { PriceHistoryPoint } from '../hooks/usePriceHistory';
 import { tokens } from '../theme/tokens';
+import { fuelUnit } from '../utils/fuelNames';
 
 interface PriceChartProps {
   data: PriceHistoryPoint[];
   fuelLabel: string;
+  fuelKey?: string;
+  source?: string;
   width?: number;
   height?: number;
 }
 
 const PADDING = { top: 20, right: 16, bottom: 32, left: 50 };
 
-const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: PriceChartProps) => {
+const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, width = 350, height = 220 }: PriceChartProps) => {
+  const { t: translate } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = tokens.color[isDark ? 'dark' : 'light'];
   const t = tokens.typography;
+  const unit = fuelUnit(fuelKey ?? '', source);
 
   if (data.length < 2) {
     return (
       <View style={{ alignItems: 'center', padding: 24 }}>
         <Text style={{ color: colors.secondaryLabel }}>
-          {data.length === 1 ? 'Only one data point — need at least 2 for a chart.' : 'No price history available.'}
+          {data.length === 1 ? translate('price_chart.insufficient_data') : translate('price_chart.no_data')}
         </Text>
       </View>
     );
@@ -41,7 +47,7 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
   if (!isFinite(minP) || !isFinite(maxP)) {
     return (
       <View style={{ alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: colors.secondaryLabel }}>Invalid price data.</Text>
+        <Text style={{ color: colors.secondaryLabel }}>{translate('price_chart.invalid_data')}</Text>
       </View>
     );
   }
@@ -80,7 +86,7 @@ const PriceChartComponent = ({ data, fuelLabel, width = 350, height = 220 }: Pri
                 fontSize={11}
                 textAnchor="end"
               >
-                {v.toFixed(3)}
+                {v.toFixed(3)}{unit}
               </SvgText>
             </G>
           ))}

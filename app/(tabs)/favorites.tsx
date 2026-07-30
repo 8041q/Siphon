@@ -2,12 +2,14 @@ import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { StationCard } from '../../src/components/StationCard';
 import { useStations, useUI } from '../../src/hooks/useApp';
 import { Icon } from '../../src/components/ui/icon';
 
 export default function FavoritesScreen() {
+  const { t } = useTranslation();
   const { filteredStations } = useStations();
   const { favorites, setSelectedStation, toggleFavorite } = useUI();
 
@@ -28,10 +30,10 @@ export default function FavoritesScreen() {
         <View className="flex-1 justify-center items-center p-xl">
           <Icon name="star.fill" size={48} color="rgba(60, 60, 67, 0.3)" />
           <Text className="text-body text-secondary-label dark:text-secondary-label-dark mt-md">
-            No favorites yet
+            {t('favorites.empty_title')}
           </Text>
           <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-xs">
-            Tap the star on a station to add it here
+            {t('favorites.empty_subtitle')}
           </Text>
         </View>
       ) : (

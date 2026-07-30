@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 
 import type { FuelStationFeature } from '../api/siphonClient';
-import { fuelLabel } from '../utils/fuelNames';
+import { fuelLabel, fuelUnit } from '../utils/fuelNames';
 import { useUI } from '../hooks/useApp';
 
 function DetailContent({ station, onClose }: { station: FuelStationFeature; onClose: () => void }) {
+  const { t } = useTranslation();
   const { name, brand, address, fuels } = station.properties;
   const entries = Object.entries(fuels ?? {}) as [string, number][];
 
   return (
     <View className="gap-sm p-lg">
       <Text className="text-title-3 text-label dark:text-label-dark">
-        {brand || name || 'Unknown station'}
+        {brand || name || t('common.unknown_station')}
       </Text>
       <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark">{address}</Text>
 
@@ -23,7 +25,7 @@ function DetailContent({ station, onClose }: { station: FuelStationFeature; onCl
         {entries.map(([fuel, price]) => (
           <View key={fuel} className="bg-surface dark:bg-surface-dark rounded-sm px-sm py-xs">
             <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
-              {fuelLabel(fuel)}: {price.toFixed(3)}€
+              {fuelLabel(fuel)}: {price.toFixed(3)}{fuelUnit(fuel, station.properties.source)}
             </Text>
           </View>
         ))}
@@ -39,7 +41,7 @@ function DetailContent({ station, onClose }: { station: FuelStationFeature; onCl
           className="mt-lg bg-tint rounded-md py-md items-center"
         >
           <Text className="text-white font-semibold text-callout">
-            View Price History
+            {t('station.view_price_history')}
           </Text>
         </TouchableOpacity>
       )}
@@ -76,6 +78,9 @@ export function StationDetailSheet() {
       enableContentPanningGesture={false}
       enableDynamicSizing={false}
       onDismiss={handleDismiss}
+      backdropComponent={(props) => (
+        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
+      )}
       backgroundStyle={{
         backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
       }}

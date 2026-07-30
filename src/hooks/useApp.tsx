@@ -5,6 +5,7 @@ import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
 import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
+import i18n from '../i18n';
 
 interface StationState {
   stations: FuelStationFeature[];
@@ -98,25 +99,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSyncProgress(null);
 
     try {
-      setSyncProgress('Checking for updates…');
+      setSyncProgress(i18n.t('sync.checking_updates'));
       const result = await client.checkForUpdates();
       setOffline(result.offline);
       changedCountriesRef.current = result.changedCountries;
 
-      setSyncProgress('Syncing latest data…');
+      setSyncProgress(i18n.t('sync.syncing_data'));
       await client.syncAll(result.changedCountries, (loaded, total) => {
         if (total > 0 && result.changedCountries.length > 0) {
-          setSyncProgress(`Syncing ${loaded}/${total}…`);
+          setSyncProgress(i18n.t('sync.syncing_progress', { loaded, total }));
         }
       });
 
       await client.recordDailySnapshot();
 
       if (result.offline) {
-        setError('No internet connection. Connect to download station data on first use.');
+        setError(i18n.t('sync.no_connection'));
       }
     } catch (e: any) {
-      setError(e.message ?? 'Something went wrong');
+      setError(e.message ?? i18n.t('common.something_went_wrong'));
     } finally {
       setLoading(false);
       setSyncProgress(null);

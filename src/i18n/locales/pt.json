@@ -1,0 +1,88 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "done": "Concluído",
+    "station": "Estação",
+    "unknown_station": "Estação desconhecida",
+    "something_went_wrong": "Algo correu mal"
+  },
+  "tabs": {
+    "map": "Mapa",
+    "search": "Pesquisar",
+    "favorites": "Favoritos",
+    "settings": "Definições"
+  },
+  "map": {
+    "offline_banner": "A usar dados em cache — sem ligação",
+    "search_area": "Pesquisar esta área"
+  },
+  "search": {
+    "placeholder": "Pesquisar estações...",
+    "no_results": "Nenhuma estação encontrada",
+    "results_header": "Resultados da Pesquisa"
+  },
+  "favorites": {
+    "empty_title": "Ainda sem favoritos",
+    "empty_subtitle": "Toque na estrela de uma estação para a adicionar aqui"
+  },
+  "settings": {
+    "appearance": "Aparência",
+    "theme_system": "Sistema",
+    "theme_light": "Claro",
+    "theme_dark": "Escuro",
+    "price_history": "Histórico de Preços",
+    "trim_list": "Limpar lista (manter últimos 2 meses)",
+    "clear_history": "Apagar todo o histórico de preços",
+    "about": "Sobre",
+    "app_name": "Nome da App",
+    "data_source": "Fonte de dados",
+    "version": "Versão",
+    "clear_alert_title": "Apagar Histórico de Preços",
+    "clear_alert_message": "Isto irá apagar TODOS os registos diários de preços. Esta ação é irreversível.",
+    "delete_all": "Apagar Tudo",
+    "clear_failed": "Falha ao apagar o histórico",
+    "trim_alert_title": "Limpar Histórico de Preços",
+    "trim_alert_message": "Manter registos dos últimos 2 meses e apagar tudo mais antigo.",
+    "trim": "Limpar",
+    "trim_failed": "Falha ao limpar o histórico",
+    "deleted_snapshots": "{{count}} registo(s) apagado(s).",
+    "deleted_old_snapshots": "{{count}} registo(s) antigo(s) apagado(s).",
+    "language": "Idioma",
+    "english": "Inglês",
+    "portuguese": "Português",
+    "spanish": "Espanhol",
+    "french": "Francês",
+    "german": "Alemão"
+  },
+  "screen": {
+    "price_history": "Histórico de Preços"
+  },
+  "price_trends": {
+    "loading": "A carregar histórico de preços…"
+  },
+  "station": {
+    "view_price_history": "Ver Histórico de Preços"
+  },
+  "price_chart": {
+    "no_data": "Histórico de preços indisponível.",
+    "insufficient_data": "Apenas um ponto de dados — são necessários pelo menos 2 para um gráfico.",
+    "invalid_data": "Dados de preço inválidos."
+  },
+  "sync": {
+    "checking_updates": "A verificar atualizações…",
+    "syncing_data": "A sincronizar dados…",
+    "syncing_progress": "A sincronizar {{loaded}}/{{total}}…",
+    "no_connection": "Sem ligação à internet. Ligue-se para descarregar os dados das estações na primeira utilização."
+  },
+  "fuel": {
+    "gasoline95": "Gasolina 95",
+    "gasoline95Plus": "Gasolina 95+",
+    "gasoline98": "Gasolina 98",
+    "gasoline98Plus": "Gasolina 98+",
+    "diesel": "Gasóleo",
+    "dieselPremium": "Gasóleo Premium",
+    "dieselAgri": "Gasóleo Agrícola",
+    "lpg": "GPL",
+    "adblue": "AdBlue"
+  }
+}

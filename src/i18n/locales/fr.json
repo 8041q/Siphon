@@ -1,0 +1,88 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "done": "Terminé",
+    "station": "Station",
+    "unknown_station": "Station inconnue",
+    "something_went_wrong": "Quelque chose s'est mal passé"
+  },
+  "tabs": {
+    "map": "Carte",
+    "search": "Rechercher",
+    "favorites": "Favoris",
+    "settings": "Réglages"
+  },
+  "map": {
+    "offline_banner": "Utilisation des données en cache — pas de connexion",
+    "search_area": "Rechercher cette zone"
+  },
+  "search": {
+    "placeholder": "Rechercher des stations...",
+    "no_results": "Aucune station trouvée",
+    "results_header": "Résultats de recherche"
+  },
+  "favorites": {
+    "empty_title": "Pas encore de favoris",
+    "empty_subtitle": "Appuyez sur l'étoile d'une station pour l'ajouter ici"
+  },
+  "settings": {
+    "appearance": "Apparence",
+    "theme_system": "Système",
+    "theme_light": "Clair",
+    "theme_dark": "Sombre",
+    "price_history": "Historique des Prix",
+    "trim_list": "Nettoyer la liste (conserver les 2 derniers mois)",
+    "clear_history": "Effacer tout l'historique des prix",
+    "about": "À propos",
+    "app_name": "Nom de l'App",
+    "data_source": "Source de données",
+    "version": "Version",
+    "clear_alert_title": "Effacer l'Historique des Prix",
+    "clear_alert_message": "Cela supprimera TOUS les relevés de prix quotidiens. Cette action est irréversible.",
+    "delete_all": "Tout Supprimer",
+    "clear_failed": "Échec de l'effacement de l'historique",
+    "trim_alert_title": "Nettoyer l'Historique des Prix",
+    "trim_alert_message": "Conserver les relevés des 2 derniers mois et supprimer tout ce qui est plus ancien.",
+    "trim": "Nettoyer",
+    "trim_failed": "Échec du nettoyage de l'historique",
+    "deleted_snapshots": "{{count}} relevé(s) supprimé(s).",
+    "deleted_old_snapshots": "{{count}} relevé(s) ancien(s) supprimé(s).",
+    "language": "Langue",
+    "english": "Anglais",
+    "portuguese": "Portugais",
+    "spanish": "Espagnol",
+    "french": "Français",
+    "german": "Allemand"
+  },
+  "screen": {
+    "price_history": "Historique des Prix"
+  },
+  "price_trends": {
+    "loading": "Chargement de l'historique des prix…"
+  },
+  "station": {
+    "view_price_history": "Voir l'Historique des Prix"
+  },
+  "price_chart": {
+    "no_data": "Historique des prix indisponible.",
+    "insufficient_data": "Un seul point de données — il en faut au moins 2 pour un graphique.",
+    "invalid_data": "Données de prix invalides."
+  },
+  "sync": {
+    "checking_updates": "Vérification des mises à jour…",
+    "syncing_data": "Synchronisation des données…",
+    "syncing_progress": "Synchronisation {{loaded}}/{{total}}…",
+    "no_connection": "Pas de connexion internet. Connectez-vous pour télécharger les données des stations lors de la première utilisation."
+  },
+  "fuel": {
+    "gasoline95": "Essence 95",
+    "gasoline95Plus": "Essence 95+",
+    "gasoline98": "Essence 98",
+    "gasoline98Plus": "Essence 98+",
+    "diesel": "Diesel",
+    "dieselPremium": "Diesel Premium",
+    "dieselAgri": "Diesel Agricole",
+    "lpg": "GPL",
+    "adblue": "AdBlue"
+  }
+}

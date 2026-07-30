@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
@@ -8,6 +9,7 @@ import { Icon } from '../../src/components/ui/icon';
 import { useStations, useUI, useLocationState, useActions } from '../../src/hooks/useApp';
 
 export default function MapScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
 
   const { filteredStations, loading, syncProgress, error, offline } = useStations();
@@ -101,7 +103,7 @@ export default function MapScreen() {
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
           <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
             <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
-              Using cached data — no connection
+              {t('map.offline_banner')}
             </Text>
           </View>
         </View>
@@ -118,7 +120,7 @@ export default function MapScreen() {
           >
             <Icon name="magnifyingglass" size={17} color="#0C8599" />
             <Text className="text-footnote font-semibold text-tint">
-              Search this area
+              {t('map.search_area')}
             </Text>
           </View>
         </TouchableOpacity>

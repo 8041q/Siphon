@@ -1,0 +1,88 @@
+{
+  "common": {
+    "cancel": "Abbrechen",
+    "done": "Fertig",
+    "station": "Station",
+    "unknown_station": "Unbekannte Station",
+    "something_went_wrong": "Etwas ist schiefgelaufen"
+  },
+  "tabs": {
+    "map": "Karte",
+    "search": "Suchen",
+    "favorites": "Favoriten",
+    "settings": "Einstellungen"
+  },
+  "map": {
+    "offline_banner": "Verwende zwischengespeicherte Daten — keine Verbindung",
+    "search_area": "Diesen Bereich durchsuchen"
+  },
+  "search": {
+    "placeholder": "Stationen suchen...",
+    "no_results": "Keine Stationen gefunden",
+    "results_header": "Suchergebnisse"
+  },
+  "favorites": {
+    "empty_title": "Noch keine Favoriten",
+    "empty_subtitle": "Tippe auf den Stern einer Station, um sie hier hinzuzufügen"
+  },
+  "settings": {
+    "appearance": "Darstellung",
+    "theme_system": "System",
+    "theme_light": "Hell",
+    "theme_dark": "Dunkel",
+    "price_history": "Preisverlauf",
+    "trim_list": "Liste bereinigen (letzte 2 Monate behalten)",
+    "clear_history": "Gesamten Preisverlauf löschen",
+    "about": "Über",
+    "app_name": "App-Name",
+    "data_source": "Datenquelle",
+    "version": "Version",
+    "clear_alert_title": "Preisverlauf löschen",
+    "clear_alert_message": "Dies löscht ALLE täglichen Preisschnappschüsse. Dies kann nicht rückgängig gemacht werden.",
+    "delete_all": "Alles löschen",
+    "clear_failed": "Fehler beim Löschen des Verlaufs",
+    "trim_alert_title": "Preisverlauf bereinigen",
+    "trim_alert_message": "Schnappschüsse der letzten 2 Monate behalten und alles Ältere löschen.",
+    "trim": "Bereinigen",
+    "trim_failed": "Fehler beim Bereinigen des Verlaufs",
+    "deleted_snapshots": "{{count}} Schnappschuss/Schnappschüsse gelöscht.",
+    "deleted_old_snapshots": "{{count}} alter/n Schnappschuss/Schnappschüsse gelöscht.",
+    "language": "Sprache",
+    "english": "Englisch",
+    "portuguese": "Portugiesisch",
+    "spanish": "Spanisch",
+    "french": "Französisch",
+    "german": "Deutsch"
+  },
+  "screen": {
+    "price_history": "Preisverlauf"
+  },
+  "price_trends": {
+    "loading": "Lade Preisverlauf…"
+  },
+  "station": {
+    "view_price_history": "Preisverlauf anzeigen"
+  },
+  "price_chart": {
+    "no_data": "Kein Preisverlauf verfügbar.",
+    "insufficient_data": "Nur ein Datenpunkt — mindestens 2 für eine Grafik erforderlich.",
+    "invalid_data": "Ungültige Preisdaten."
+  },
+  "sync": {
+    "checking_updates": "Suche nach Updates…",
+    "syncing_data": "Synchronisiere Daten…",
+    "syncing_progress": "Synchronisiere {{loaded}}/{{total}}…",
+    "no_connection": "Keine Internetverbindung. Stelle eine Verbindung her, um die Stationsdaten beim ersten Gebrauch herunterzuladen."
+  },
+  "fuel": {
+    "gasoline95": "Benzin 95",
+    "gasoline95Plus": "Benzin 95+",
+    "gasoline98": "Benzin 98",
+    "gasoline98Plus": "Benzin 98+",
+    "diesel": "Diesel",
+    "dieselPremium": "Diesel Premium",
+    "dieselAgri": "Diesel Agrar",
+    "lpg": "Autogas",
+    "adblue": "AdBlue"
+  }
+}

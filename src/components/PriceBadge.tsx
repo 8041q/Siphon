@@ -1,15 +1,16 @@
 import { memo, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { fuelLabel } from '../utils/fuelNames';
+import { fuelLabel, fuelUnit } from '../utils/fuelNames';
 import { tokens } from '../theme/tokens';
 
 interface PriceBadgeProps {
   fuel: string;
   price: number;
+  source?: string;
 }
 
-function PriceBadgeComponent({ fuel, price }: PriceBadgeProps) {
+function PriceBadgeComponent({ fuel, price, source }: PriceBadgeProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = tokens.color[isDark ? 'dark' : 'light'];
@@ -26,7 +27,7 @@ function PriceBadgeComponent({ fuel, price }: PriceBadgeProps) {
         {fuelLabel(fuel)}
       </Text>
       <Text className={`text-subheadline font-normal ${priceColorClass}`}>
-        {price.toFixed(3)} ●
+        {price.toFixed(3)} {fuelUnit(fuel, source)}
       </Text>
     </View>
   );

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { PriceBadge } from './PriceBadge';
@@ -16,6 +17,7 @@ interface StationCardProps {
 }
 
 const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorites, onToggleFavorite }) => {
+  const { t } = useTranslation();
   const { name, brand, address, fuels } = station.properties;
   const entries = Object.entries(fuels ?? {});
   const favorite = favorites?.has(station.properties.id) ?? false;
@@ -35,7 +37,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
     >
       <View className="flex-row items-center justify-between">
         <Text className="text-headline text-label dark:text-label-dark">
-          {brand || name || 'Unknown station'}
+          {brand || name || t('common.unknown_station')}
         </Text>
         <Pressable onPress={handleToggleFavorite} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
@@ -51,7 +53,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
       {entries.length > 0 && (
         <View className="flex-row flex-wrap gap-sm mt-sm">
           {entries.map(([fuel, price]) => (
-            <PriceBadge key={fuel} fuel={fuel} price={Number(price)} />
+            <PriceBadge key={fuel} fuel={fuel} price={Number(price)} source={station.properties.source} />
           ))}
         </View>
       )}

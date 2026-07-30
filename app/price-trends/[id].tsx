@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 
 import { useApp } from '../../src/hooks/useApp';
 import { usePriceHistory } from '../../src/hooks/usePriceHistory';
@@ -10,6 +11,7 @@ import { fuelLabel } from '../../src/utils/fuelNames';
 import { tokens } from '../../src/theme/tokens';
 
 export default function PriceTrendsScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { stations } = useApp();
   
@@ -34,7 +36,7 @@ export default function PriceTrendsScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'Price History',
+          title: t('screen.price_history'),
           headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.tint,
           headerTitleStyle: { color: colors.label },
@@ -45,7 +47,7 @@ export default function PriceTrendsScreen() {
       {/* Screen Content */}
       <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
         <Text className="text-title-3 text-label dark:text-label-dark mb-xs">
-          {station?.properties.brand || station?.properties.name || 'Station'}
+          {station?.properties.brand || station?.properties.name || t('common.station')}
         </Text>
         <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark mb-lg">
           {station?.properties.address}
@@ -76,10 +78,15 @@ export default function PriceTrendsScreen() {
 
         {loading ? (
           <Text className="text-secondary-label dark:text-secondary-label-dark text-center">
-            Loading price history…
+            {t('price_trends.loading')}
           </Text>
         ) : (
-          <PriceChart data={data} fuelLabel={fuelLabel(selectedFuel ?? '')} />
+          <PriceChart
+            data={data}
+            fuelLabel={fuelLabel(selectedFuel ?? '')}
+            fuelKey={selectedFuel ?? undefined}
+            source={station?.properties.source}
+          />
         )}
       </ScrollView>
     </>

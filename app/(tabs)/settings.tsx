@@ -1,26 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Appearance, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setBackgroundColorAsync } from 'expo-system-ui';
+import { useTranslation } from 'react-i18next';
 
 import { client } from '../../src/hooks/useApp';
 import { ListItem } from '../../src/components/ui/list-item';
+import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
+const LANGUAGE_KEY = 'siphon:language';
+const THEME_STORAGE_KEY = 'siphon:theme';
+
 export default function SettingsScreen() {
+  const { t, i18n: i18nInstance } = useTranslation();
   const [clearing, setClearing] = useState(false);
   const [themePref, setThemePref] = useState<ThemePref>('system');
+  const [currentLang, setCurrentLang] = useState(i18nInstance.language);
+  const languageSheetRef = useRef<LanguageSheetHandle>(null);
+
+  const persistLanguage = useCallback(async (lng: string) => {
+    await i18nInstance.changeLanguage(lng);
+    setCurrentLang(lng);
+    await AsyncStorage.setItem(LANGUAGE_KEY, lng);
+  }, [i18nInstance]);
 
   useEffect(() => {
-    AsyncStorage.getItem('siphon:theme').then((val) => {
+    AsyncStorage.getItem(THEME_STORAGE_KEY).then((val) => {
       if (val === 'light' || val === 'dark' || val === 'system') {
         setThemePref(val);
       }
     });
-  }, []);
+    AsyncStorage.getItem(LANGUAGE_KEY).then((val) => {
+      if (val === 'en' || val === 'pt' || val === 'es' || val === 'fr' || val === 'de') {
+        i18nInstance.changeLanguage(val);
+        setCurrentLang(val);
+      }
+    });
+  }, [i18nInstance]);
 
   const handleThemeChange = (pref: ThemePref) => {
     setThemePref(pref);
@@ -32,25 +52,25 @@ export default function SettingsScreen() {
     }
     nativewindColorScheme.set(scheme);
     setBackgroundColorAsync(scheme === 'dark' ? '#1C1C1E' : '#FFFFFF');
-    AsyncStorage.setItem('siphon:theme', pref);
+    AsyncStorage.setItem(THEME_STORAGE_KEY, pref);
   };
 
   const handleClearHistory = () => {
     Alert.alert(
-      'Clear Price History',
-      'This will delete ALL daily price snapshots. This cannot be undone.',
+      t('settings.clear_alert_title'),
+      t('settings.clear_alert_message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete All',
+          text: t('settings.delete_all'),
           style: 'destructive',
           onPress: async () => {
             setClearing(true);
             try {
               const result = await client.clearPriceHistory();
-              Alert.alert('Done', `Deleted ${result.deleted} snapshot(s).`);
+              Alert.alert(t('common.done'), t('settings.deleted_snapshots', { count: result.deleted }));
             } catch (e: any) {
-              Alert.alert('Error', e.message ?? 'Failed to clear history');
+              Alert.alert(t('common.done'), e.message ?? t('settings.clear_failed'));
             } finally {
               setClearing(false);
             }
@@ -62,19 +82,19 @@ export default function SettingsScreen() {
 
   const handleTrimHistory = () => {
     Alert.alert(
-      'Trim Price History',
-      'Keep snapshots from the last 2 months and delete everything older.',
+      t('settings.trim_alert_title'),
+      t('settings.trim_alert_message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Trim',
+          text: t('settings.trim'),
           onPress: async () => {
             setClearing(true);
             try {
               const result = await client.trimPriceHistory(2);
-              Alert.alert('Done', `Deleted ${result.deleted} old snapshot(s).`);
+              Alert.alert(t('common.done'), t('settings.deleted_old_snapshots', { count: result.deleted }));
             } catch (e: any) {
-              Alert.alert('Error', e.message ?? 'Failed to trim history');
+              Alert.alert(t('common.done'), e.message ?? t('settings.trim_failed'));
             } finally {
               setClearing(false);
             }
@@ -84,22 +104,24 @@ export default function SettingsScreen() {
     );
   };
 
+  const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
+
   const themeOptions: { label: string; value: ThemePref }[] = [
-    { label: 'System', value: 'system' },
-    { label: 'Light', value: 'light' },
-    { label: 'Dark', value: 'dark' },
+    { label: t('settings.theme_system'), value: 'system' },
+    { label: t('settings.theme_light'), value: 'light' },
+    { label: t('settings.theme_dark'), value: 'dark' },
   ];
 
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
       <View className="flex-1 gap-lg">
-        
+
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
-            Appearance
+            {t('settings.appearance')}
           </Text>
           {themeOptions.map((option) => (
-            <View key={option.label}>
+            <View key={option.value}>
               <ListItem
                 onPress={() => handleThemeChange(option.value)}
                 trailing={themePref === option.value ? '✓' : undefined}
@@ -113,32 +135,46 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
-            Price History
+            {t('settings.language')}
           </Text>
-          <ListItem onPress={handleTrimHistory}>
-            Trim list (keep last 2 months)
-          </ListItem>
-          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
-          <ListItem onPress={handleClearHistory}>
-            Clear all price history
+          <ListItem onPress={() => languageSheetRef.current?.present()} trailing={langLabel}>
+            {t('settings.language')}
           </ListItem>
         </View>
 
-        
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
-            About
+            {t('settings.price_history')}
           </Text>
-          <ListItem trailing="Siphon">App Name</ListItem>
+          <ListItem onPress={handleTrimHistory}>
+            {t('settings.trim_list')}
+          </ListItem>
           <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
-          <ListItem trailing="SiphonAPI">Data source</ListItem>
+          <ListItem onPress={handleClearHistory}>
+            {t('settings.clear_history')}
+          </ListItem>
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.about')}
+          </Text>
+          <ListItem trailing="Siphon">{t('settings.app_name')}</ListItem>
           <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
-          <ListItem trailing="1.0.0">Version</ListItem>
+          <ListItem trailing="SiphonAPI">{t('settings.data_source')}</ListItem>
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+          <ListItem trailing="1.0.0">{t('settings.version')}</ListItem>
         </View>
       </View>
+
+      <LanguageSheet
+        ref={languageSheetRef}
+        currentLang={currentLang}
+        onSelectLanguage={persistLanguage}
+        onDismiss={() => {}}
+      />
     </SafeAreaView>
   );
 }

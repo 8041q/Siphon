@@ -1,0 +1,88 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "done": "Done",
+    "station": "Station",
+    "unknown_station": "Unknown station",
+    "something_went_wrong": "Something went wrong"
+  },
+  "tabs": {
+    "map": "Map",
+    "search": "Search",
+    "favorites": "Favorites",
+    "settings": "Settings"
+  },
+  "map": {
+    "offline_banner": "Using cached data — no connection",
+    "search_area": "Search this area"
+  },
+  "search": {
+    "placeholder": "Search stations...",
+    "no_results": "No stations found",
+    "results_header": "Search Results"
+  },
+  "favorites": {
+    "empty_title": "No favorites yet",
+    "empty_subtitle": "Tap the star on a station to add it here"
+  },
+  "settings": {
+    "appearance": "Appearance",
+    "theme_system": "System",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "price_history": "Price History",
+    "trim_list": "Trim list (keep last 2 months)",
+    "clear_history": "Clear all price history",
+    "about": "About",
+    "app_name": "App Name",
+    "data_source": "Data source",
+    "version": "Version",
+    "clear_alert_title": "Clear Price History",
+    "clear_alert_message": "This will delete ALL daily price snapshots. This cannot be undone.",
+    "delete_all": "Delete All",
+    "clear_failed": "Failed to clear history",
+    "trim_alert_title": "Trim Price History",
+    "trim_alert_message": "Keep snapshots from the last 2 months and delete everything older.",
+    "trim": "Trim",
+    "trim_failed": "Failed to trim history",
+    "deleted_snapshots": "Deleted {{count}} snapshot(s).",
+    "deleted_old_snapshots": "Deleted {{count}} old snapshot(s).",
+    "language": "Language",
+    "english": "English",
+    "portuguese": "Portuguese",
+    "spanish": "Spanish",
+    "french": "French",
+    "german": "German"
+  },
+  "screen": {
+    "price_history": "Price History"
+  },
+  "price_trends": {
+    "loading": "Loading price history…"
+  },
+  "station": {
+    "view_price_history": "View Price History"
+  },
+  "price_chart": {
+    "no_data": "No price history available.",
+    "insufficient_data": "Only one data point — need at least 2 for a chart.",
+    "invalid_data": "Invalid price data."
+  },
+  "sync": {
+    "checking_updates": "Checking for updates…",
+    "syncing_data": "Syncing latest data…",
+    "syncing_progress": "Syncing {{loaded}}/{{total}}…",
+    "no_connection": "No internet connection. Connect to download station data on first use."
+  },
+  "fuel": {
+    "gasoline95": "Gasoline 95",
+    "gasoline95Plus": "Gasoline 95+",
+    "gasoline98": "Gasoline 98",
+    "gasoline98Plus": "Gasoline 98+",
+    "diesel": "Diesel",
+    "dieselPremium": "Diesel Premium",
+    "dieselAgri": "Diesel Agricultural",
+    "lpg": "LPG",
+    "adblue": "AdBlue"
+  }
+}

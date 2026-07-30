@@ -2,15 +2,16 @@ import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../src/components/ui/icon';
 import { tokens } from '../../src/theme/tokens';
 
 const TABS = [
-  { name: 'index', href: '/', label: 'Map', icon: 'map.fill' },
-  { name: 'search', href: '/search', label: 'Search', icon: 'magnifyingglass' },
-  { name: 'favorites', href: '/favorites', label: 'Favorites', icon: 'star.fill' },
-  { name: 'settings', href: '/settings', label: 'Settings', icon: 'gearshape.fill' },
+  { name: 'index', href: '/', labelKey: 'tabs.map', icon: 'map.fill' },
+  { name: 'search', href: '/search', labelKey: 'tabs.search', icon: 'magnifyingglass' },
+  { name: 'favorites', href: '/favorites', labelKey: 'tabs.favorites', icon: 'star.fill' },
+  { name: 'settings', href: '/settings', labelKey: 'tabs.settings', icon: 'gearshape.fill' },
 ];
 
 type TabItemProps = {
@@ -56,6 +57,7 @@ const TAB_BAR_CONTENT_HEIGHT = Platform.OS === 'ios' ? 52 : 70;
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
+  const { t } = useTranslation();
   const currentTheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = tokens.color[currentTheme];
 
@@ -73,7 +75,7 @@ export default function TabLayout() {
       >
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href as any} asChild>
-            <TabItem icon={tab.icon} label={tab.label} colorScheme={currentTheme} bottomInset={insets.bottom} />
+            <TabItem icon={tab.icon} label={t(tab.labelKey)} colorScheme={currentTheme} bottomInset={insets.bottom} />
           </TabTrigger>
         ))}
       </TabList>

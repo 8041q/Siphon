@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.8041q.Siphon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Siphon uses your location to show nearby fuel stations."
+        "NSLocationWhenInUseUsageDescription": "Siphon uses your location to show nearby fuel stations.",
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
@@ -46,6 +47,12 @@
           "android": {
             "cmakeVersion": "4.1.2"
           }
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["en", "pt", "es", "fr", "de"]
         }
       ]
     ],

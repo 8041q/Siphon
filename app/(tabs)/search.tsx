@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../src/components/ui/icon';
 import { StationCard } from '../../src/components/StationCard';
@@ -9,6 +10,7 @@ import { useStations, useUI } from '../../src/hooks/useApp';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 
 export default function SearchScreen() {
+  const { t } = useTranslation();
   const { stations } = useStations();
   const { setSelectedStation, favorites, toggleFavorite } = useUI();
   const colorScheme = useColorScheme();
@@ -50,13 +52,14 @@ export default function SearchScreen() {
 }
 
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg px-3 py-2">
       <Icon name="magnifyingglass" size={17} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
         onChangeText={setBrandQuery}
-        placeholder="Search stations..."
+        placeholder={t('search.placeholder')}
         placeholderTextColor={secondaryLabel}
         className="flex-1 ml-2 text-label dark:text-label-dark"
       />
@@ -65,11 +68,12 @@ function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: 
 }
 
 function StationList({ results, handleStationPress, favorites, onToggleFavorite }: { results: FuelStationFeature[]; handleStationPress: (station: FuelStationFeature) => void; favorites?: Set<string>; onToggleFavorite?: (station: FuelStationFeature) => void }) {
+  const { t } = useTranslation();
   if (!results || results.length === 0) {
     return (
       <View className="flex-1 items-center justify-center">
         <Text className="text-title-3 text-secondary-label dark:text-secondary-label-dark">
-          No stations found
+          {t('search.no_results')}
         </Text>
       </View>
     );
@@ -79,7 +83,7 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
     <View className="flex-1">
       {/* Added px-4 to match the horizontal layout */}
       <Text className="text-headline text-label dark:text-label-dark mb-sm px-4">
-        Search Results
+        {t('search.results_header')}
       </Text>
       <FlashList
         data={results}

@@ -13,13 +13,14 @@ import { setBackgroundColorAsync } from 'expo-system-ui';
 
 import { StationDetailSheet } from '../src/components/StationDetailSheet';
 import { AppProvider } from '../src/hooks/useApp';
+import '../src/i18n';
 
 function ThemeInit() {
   useEffect(() => {
     AsyncStorage.getItem('siphon:theme').then((val) => {
       if (val === 'light' || val === 'dark') {
         colorScheme.set(val);
-        
+
         setBackgroundColorAsync(val === 'dark' ? '#1C1C1E' : '#FFFFFF');
       }
     });
@@ -40,7 +41,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen
                   name="price-trends/[id]"
-                  options={{ headerShown: true, title: 'Price History', presentation: 'modal' }}
+                  options={{ headerShown: true, presentation: 'modal' }}
                 />
               </Stack>
               <StationDetailSheet />
