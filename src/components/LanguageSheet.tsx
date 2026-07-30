@@ -48,7 +48,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
         ref={bottomSheetRef}
         snapPoints={snapPoints}
         enablePanDownToClose
-        enableContentPanningGesture={false}
+        enableContentPanningGesture
         enableDynamicSizing={false}
         onDismiss={onDismiss}
         backdropComponent={(props) => (
