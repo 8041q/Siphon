@@ -142,11 +142,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadStationsForRegion = useCallback(async (lat: number, lng: number, bounds?: [number, number, number, number]) => {
     if (regionTimerRef.current) clearTimeout(regionTimerRef.current);
     regionTimerRef.current = setTimeout(async () => {
+      console.warn('[loadStationsForRegion] lat/lng/bounds:', { lat, lng, bounds, changedCountries: changedCountriesRef.current });
       try {
         const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
+        console.warn('[loadStationsForRegion] got', nearby.length, 'stations');
         if (unmountedRef.current) return;
         setStations(nearby);
-      } catch {}
+      } catch (e) {
+        console.warn('[loadStationsForRegion] failed:', e);
+      }
     }, 50);
   }, []);
 

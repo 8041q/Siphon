@@ -19,6 +19,10 @@ export default function MapScreen() {
 
   const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+  const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
+  const searchVersionRef = useRef(0);
+  const stationsLenRef = useRef(filteredStations.length);
+  stationsLenRef.current = filteredStations.length;
 
   const onMarkerPress = useCallback(
     (station: (typeof filteredStations)[number]) => {
@@ -51,8 +55,16 @@ export default function MapScreen() {
   }, [loadStationsForRegion]);
 
   const handleSearchArea = useCallback(() => {
+    const thisVersion = ++searchVersionRef.current;
+    const prevLen = stationsLenRef.current;
     loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
-  }, [loadStationsForRegion]);
+    setTimeout(() => {
+      if (searchVersionRef.current === thisVersion && stationsLenRef.current === prevLen) {
+        setSearchFeedback(t('map.empty_search'));
+        setTimeout(() => setSearchFeedback(null), 3000);
+      }
+    }, 3000);
+  }, [loadStationsForRegion, t]);
 
   const handleLocate = useCallback(async () => {
     const gps = await locateWithGps();
@@ -125,6 +137,22 @@ export default function MapScreen() {
           </View>
         </TouchableOpacity>
       </View>
+
+      {/* Search feedback */}
+      {searchFeedback && (
+        <View style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
+          <View
+            className="px-lg py-1.5 rounded-full"
+            style={{
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+            }}
+          >
+            <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+              {searchFeedback}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Locate me button */}
       <TouchableOpacity

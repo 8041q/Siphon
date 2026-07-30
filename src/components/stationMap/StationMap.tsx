@@ -50,8 +50,29 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         doubleTapZoom
         onRegionDidChange={(event) => {
           if (onRegionChange) {
-            const [lng, lat] = event.nativeEvent.center;
-            const bounds = (event.nativeEvent as any).bounds as [number, number, number, number] | undefined;
+            const center = (event.nativeEvent as any).center;
+            let lng: number;
+            let lat: number;
+            if (Array.isArray(center)) {
+              lng = center[0];
+              lat = center[1];
+            } else if (center && typeof center === 'object') {
+              lng = center.longitude ?? center[0];
+              lat = center.latitude ?? center[1];
+            } else {
+              return;
+            }
+            if (!isFinite(lat) || !isFinite(lng)) return;
+
+            const rawBounds = (event.nativeEvent as any).bounds;
+            let bounds: [number, number, number, number] | undefined;
+            if (Array.isArray(rawBounds)) {
+              if (Array.isArray(rawBounds[0]) && rawBounds.length === 2) {
+                bounds = [rawBounds[0][0], rawBounds[0][1], rawBounds[1][0], rawBounds[1][1]];
+              } else if (rawBounds.length === 4) {
+                bounds = [rawBounds[0], rawBounds[1], rawBounds[2], rawBounds[3]];
+              }
+            }
             onRegionChange(lat, lng, bounds);
           }
         }}
