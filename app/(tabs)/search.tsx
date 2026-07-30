@@ -51,7 +51,7 @@ export default function SearchScreen() {
     [setSelectedStation]
   );
 
-  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.6)' : 'rgba(60, 60, 67, 0.6)';
+  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
 
   const results = useMemo(() => {
     let filtered = allStations;
@@ -210,7 +210,7 @@ const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>(
     const snapPoints = useMemo(() => ['90%'], []);
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
-    const secondaryLabel = isDark ? 'rgba(235, 235, 245, 0.6)' : 'rgba(60, 60, 67, 0.6)';
+    const secondaryLabel = isDark ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
 
     const [localFilters, setLocalFilters] = useState(searchFilter);
 
@@ -285,7 +285,7 @@ const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>(
           backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
         }}
         handleIndicatorStyle={{
-          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)',
+          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
         }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>

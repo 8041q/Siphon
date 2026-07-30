@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
@@ -27,6 +28,8 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const locationParts = getLocationParts(station.properties);
   const { stationDistances } = useStations();
   const distanceKm = stationDistances.get(station.properties.id);
+  const { colorScheme } = useColorScheme();
+  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
 
   const handleToggleFavorite = (e: any) => {
     e.stopPropagation();
@@ -42,8 +45,6 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
     const url = getMapsUrl(station);
     Linking.openURL(url);
   }, [station]);
-
-  const secondaryLabel = 'rgba(60, 60, 67, 0.6)';
 
   return (
     <TouchableOpacity

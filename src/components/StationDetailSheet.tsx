@@ -9,6 +9,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
+import { formatSchedule, marginLabel } from '../utils/schedule';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { Icon } from '../theme/Icon';
 import { useUI, useStations } from '../hooks/useApp';
@@ -36,7 +37,8 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
     Linking.openURL(url);
   }, [station]);
 
-  const secondaryLabel = 'rgba(60, 60, 67, 0.6)';
+  const { colorScheme } = useColorScheme();
+  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
 
   return (
     <View className="gap-md p-lg">
@@ -127,13 +129,15 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
                   {t('station.hours')}
                 </Text>
                 {schedule ? (
-                  <Text className="text-callout text-secondary-label">{schedule}</Text>
+                  <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+                    {formatSchedule(schedule)}
+                  </Text>
                 ) : (
                   <>
-                    {hours.weekdays && <Text className="text-callout text-secondary-label">{t('station.weekdays')}: {hours.weekdays}</Text>}
-                    {hours.saturday && <Text className="text-callout text-secondary-label">{t('station.saturday')}: {hours.saturday}</Text>}
-                    {hours.sunday && <Text className="text-callout text-secondary-label">{t('station.sunday')}: {hours.sunday}</Text>}
-                    {hours.holiday && <Text className="text-callout text-secondary-label">{t('station.holiday')}: {hours.holiday}</Text>}
+                    {hours.weekdays && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.weekdays')}: {hours.weekdays}</Text>}
+                    {hours.saturday && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.saturday')}: {hours.saturday}</Text>}
+                    {hours.sunday && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.sunday')}: {hours.sunday}</Text>}
+                    {hours.holiday && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.holiday')}: {hours.holiday}</Text>}
                   </>)}
               </View>
             ) : null}
@@ -143,9 +147,9 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
                 <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
                   {t('station.services')}
                 </Text>
-                <Text className="text-callout text-secondary-label">
-                  {Array.isArray(services) ? services.join(', ') : services}
-                </Text>
+<Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+                   {Array.isArray(services) ? services.join(', ') : services}
+                 </Text>
               </View>
             )}
 
@@ -155,7 +159,7 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
                   {t('station.payment_methods')}
                 </Text>
                 <View className="flex-row items-center">
-                  <Text className="text-callout text-secondary-label flex-1">
+                  <Text className="text-callout text-secondary-label dark:text-secondary-label-dark flex-1">
                     {Array.isArray(paymentMethods) ? paymentMethods.map((pm: string) => `${t(`station.payment_${pm.toLowerCase()}`, { defaultValue: pm })}`).join(', ') : `${t(`station.payment_${(paymentMethods as string).toLowerCase()}`, { defaultValue: paymentMethods })}`}
                   </Text>
                   <Pressable onPress={() => setShowPaymentTip(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -165,7 +169,7 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
                 {showPaymentTip && (
                   <Pressable onPress={() => setShowPaymentTip(false)}>
                     <View className="mt-2 p-md bg-surface dark:bg-surface-dark rounded-md border border-separator dark:border-separator-dark">
-                      <Text className="text-footnote text-tertiary-label">{t('station.payment_disclaimer')}</Text>
+                      <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">{t('station.payment_disclaimer')}</Text>
                     </View>
                   </Pressable>
                 )}
@@ -177,11 +181,11 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
                 <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
                   {t('common.station')}
                 </Text>
-                {extra?.stationType && <Text className="text-callout text-secondary-label">{t('station.station_type')}: {extra?.stationType}</Text>}
-                {otherServices && <Text className="text-callout text-secondary-label">{t('station.other_services')}: {otherServices}</Text>}
-                {extra?.margin && <Text className="text-callout text-secondary-label">{t('station.margin')}: {extra?.margin}</Text>}
-                {observations && <Text className="text-callout text-secondary-label">{observations}</Text>}
-                {lastUpdated && <Text className="text-callout text-secondary-label">{t('station.last_updated')}: {lastUpdated}</Text>}
+                {extra?.stationType && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.station_type')}: {extra?.stationType}</Text>}
+                {otherServices && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.other_services')}: {otherServices}</Text>}
+                {extra?.margin && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.margin')}: {marginLabel(extra.margin)}</Text>}
+                {observations && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{observations}</Text>}
+                {lastUpdated && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.last_updated')}: {lastUpdated}</Text>}
               </View>
             )}
 
@@ -238,7 +242,7 @@ export function StationDetailSheet() {
         backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
       }}
       handleIndicatorStyle={{ 
-        backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)' 
+        backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)' 
       }}
     >
       <BottomSheetScrollView>
