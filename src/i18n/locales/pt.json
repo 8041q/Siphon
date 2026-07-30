@@ -20,7 +20,23 @@
   "search": {
     "placeholder": "Pesquisar estações...",
     "no_results": "Nenhuma estação encontrada",
-    "results_header": "Resultados da Pesquisa"
+    "results_header": "Resultados da Pesquisa",
+    "filters": "Filtros",
+    "active_filters": "{{count}} filtro(s)",
+    "clear_filters": "Limpar todos os filtros",
+    "country": "País",
+    "portugal": "Portugal",
+    "spain": "Espanha",
+    "fuel_type": "Tipo de Combustível",
+    "any_fuel": "Qualquer combustível",
+    "price_range": "Faixa de Preço",
+    "any_price": "Qualquer preço",
+    "under": "Até €{{max}}",
+    "apply": "Aplicar",
+    "city": "Cidade",
+    "city_placeholder": "Filtrar por cidade, município...",
+    "distance": "Distância",
+    "any_distance": "Qualquer"
   },
   "favorites": {
     "empty_title": "Ainda sem favoritos",
@@ -79,7 +95,14 @@
     "weekdays": "Dias úteis",
     "saturday": "Sábado",
     "sunday": "Domingo",
-    "holiday": "Feriado"
+    "holiday": "Feriado",
+    "from_location": "da sua localização",
+    "open_in_maps": "Abrir nos Mapas",
+    "payment_dinheiro": "Dinheiro",
+    "payment_multibanco": "Multibanco",
+    "payment_mbway": "MbWay",
+    "payment_outros": "Outros",
+    "payment_disclaimer": "Informação de pagamentos do registo oficial — pode estar incompleta"
   },
   "price_chart": {
     "no_data": "Histórico de preços indisponível.",

@@ -296,6 +296,58 @@ export class FuelDataClient {
     return { deleted };
   }
 
+  // ---------- All-stations cache ----------
+
+  async getAllCachedStations(): Promise<FuelStationFeature[]> {
+    const es = await this.getSpainManifest(false);
+    const pt = await this.getPortugalManifest(false);
+
+    const seen = new Set<string>();
+    const features: FuelStationFeature[] = [];
+
+    if (es) {
+      const entries = Object.values(es.tiles);
+      const geojsons = await Promise.all(entries.map((e) => this.fetchIfChanged(e)));
+      for (const geojson of geojsons) {
+        if (!geojson) continue;
+        for (const f of geojson.features) {
+          if (f.properties.id && seen.has(f.properties.id)) continue;
+          if (f.properties.id) seen.add(f.properties.id);
+          features.push(f);
+        }
+      }
+    }
+
+    if (pt) {
+      const entries = Object.values(pt.districts);
+      const geojsons = await Promise.all(entries.map((e) => this.fetchIfChanged(e)));
+      for (const geojson of geojsons) {
+        if (!geojson) continue;
+        for (const f of geojson.features) {
+          if (f.properties.id && seen.has(f.properties.id)) continue;
+          if (f.properties.id) seen.add(f.properties.id);
+          features.push(f);
+        }
+      }
+    }
+
+    return features;
+  }
+
+  async saveAllStationsCache(stations: FuelStationFeature[]): Promise<void> {
+    await this.store.setItem('siphon:data:allStations', JSON.stringify(stations));
+  }
+
+  async loadAllStationsCache(): Promise<FuelStationFeature[] | null> {
+    const raw = await this.store.getItem('siphon:data:allStations');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as FuelStationFeature[];
+    } catch {
+      return null;
+    }
+  }
+
   // ---------- Spatial helpers ----------
 
   // Same formula as grid_key() in fetch_spain.py - no bbox lookup needed.

@@ -20,7 +20,23 @@
   "search": {
     "placeholder": "Search stations...",
     "no_results": "No stations found",
-    "results_header": "Search Results"
+    "results_header": "Search Results",
+    "filters": "Filters",
+    "active_filters": "{{count}} filter(s)",
+    "clear_filters": "Clear all filters",
+    "country": "Country",
+    "portugal": "Portugal",
+    "spain": "Spain",
+    "fuel_type": "Fuel Type",
+    "any_fuel": "Any fuel",
+    "price_range": "Price Range",
+    "any_price": "Any price",
+    "under": "Under €{{max}}",
+    "apply": "Apply",
+    "city": "City",
+    "city_placeholder": "Filter by city, municipality...",
+    "distance": "Distance",
+    "any_distance": "Any"
   },
   "favorites": {
     "empty_title": "No favorites yet",
@@ -79,7 +95,14 @@
     "weekdays": "Weekdays",
     "saturday": "Saturday",
     "sunday": "Sunday",
-    "holiday": "Holiday"
+    "holiday": "Holiday",
+    "from_location": "from your location",
+    "open_in_maps": "Open in Maps",
+    "payment_dinheiro": "Cash",
+    "payment_multibanco": "Card",
+    "payment_mbway": "Mobile",
+    "payment_outros": "Other",
+    "payment_disclaimer": "Payment info from official registry — may be incomplete"
   },
   "price_chart": {
     "no_data": "No price history available.",

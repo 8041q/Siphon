@@ -17,6 +17,8 @@ const MAPPING: Record<string, IoniconsName> = {
   'my_location': 'locate',
   'filter_list': 'filter',
   'directions': 'navigate',
+  'copy': 'copy-outline',
+  'info.circle': 'information-circle-outline',
 };
 
 type IconProps = {
