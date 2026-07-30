@@ -75,12 +75,12 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
         <View className="flex-row items-center gap-1">
           <Pressable onPress={handleOpenInMaps} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
-              <Icon name="directions" size={14} color={secondaryLabel} />
+              <Icon name="directions" size={19} color={secondaryLabel} />
             </View>
           </Pressable>
           <Pressable onPress={handleCopyAddress} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
-              <Icon name="copy" size={14} color={secondaryLabel} />
+              <Icon name="copy" size={19} color={secondaryLabel} />
             </View>
           </Pressable>
         </View>
@@ -203,7 +203,13 @@ export function StationDetailSheet() {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const isPresentedRef = useRef(false);
   const [snapIndex, setSnapIndex] = useState(0);
-  const snapPoints = useMemo(() => ['50%', '90%'], []);
+  const snapPoints = useMemo(() => {
+    const entries = Object.keys(selectedStation?.properties.fuels ?? {}).length;
+    const rows = Math.ceil(entries / 2);
+    const extraRows = Math.max(0, rows - 2);
+    const firstSnap = Math.min(50 + extraRows * 7, 85);
+    return [`${firstSnap}%`, '90%'];
+  }, [selectedStation]);
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -232,7 +238,7 @@ export function StationDetailSheet() {
       snapPoints={snapPoints}
       enablePanDownToClose
       enableContentPanningGesture
-      enableDynamicSizing={false}
+      enableDynamicSizing
       onChange={handleChange}
       onDismiss={handleDismiss}
       backdropComponent={(props) => (

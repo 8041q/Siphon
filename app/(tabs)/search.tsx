@@ -131,7 +131,7 @@ export default function SearchScreen() {
             className="bg-grouped-background dark:bg-grouped-background-dark rounded-md p-3"
           >
             <View className="relative">
-              <Icon name="line.3.horizontal.decrease" size={20} color={secondaryLabel} />
+              <Icon name="filter_list" size={20} color={secondaryLabel} />
               {filterCount > 0 && (
                 <View className="absolute -top-1.5 -right-1.5 bg-tint rounded-full min-w-[16px] h-4 items-center justify-center px-1">
                   <Text className="text-[10px] text-white font-bold">{filterCount}</Text>
@@ -155,14 +155,15 @@ export default function SearchScreen() {
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
   const { t } = useTranslation();
   return (
-    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md mb-lg px-3 py-2">
-      <Icon name="magnifyingglass" size={17} color={secondaryLabel} />
+    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md px-3 py-3">
+      <Icon name="magnifyingglass" size={20} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
         onChangeText={setBrandQuery}
         placeholder={t('search.placeholder')}
         placeholderTextColor={secondaryLabel}
-        className="flex-1 ml-2 text-label dark:text-label-dark"
+        className="flex-1 ml-2 text-label dark:text-label-dark py-0"
+        style={{ textAlignVertical: 'center' }}
       />
     </View>
   );

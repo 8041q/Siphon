@@ -30,6 +30,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const distanceKm = stationDistances.get(station.properties.id);
   const { colorScheme } = useColorScheme();
   const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
+  const tertiaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
 
   const handleToggleFavorite = (e: any) => {
     e.stopPropagation();
@@ -66,11 +67,11 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
           )}
         </View>
         <Pressable onPress={handleToggleFavorite} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
+          <View className="rounded-sm p-1.5">
             <Icon
               name={favorite ? 'star.fill' : 'star'}
               size={18}
-              color={favorite ? FAVORITE_COLOR : undefined}
+              color={favorite ? FAVORITE_COLOR : tertiaryLabel}
             />
           </View>
         </Pressable>
@@ -84,7 +85,6 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
             <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-0.5">
               {locationParts.join(', ')}
               {(schedule || hours) ? ' · ' : ''}
-              {(schedule || hours) ? t('station.hours') : ''}
             </Text>
           )}
           {distanceKm !== undefined && (
@@ -97,13 +97,8 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
         </View>
         <View className="flex-row items-center gap-1">
           <Pressable onPress={handleOpenInMaps} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
-              <Icon name="directions" size={14} color={secondaryLabel} />
-            </View>
-          </Pressable>
-          <Pressable onPress={handleCopyAddress} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
-              <Icon name="copy" size={14} color={secondaryLabel} />
+            <View className="  rounded-sm p-1.5">
+              <Icon name="directions" size={19} color={secondaryLabel} />
             </View>
           </Pressable>
         </View>

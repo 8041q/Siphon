@@ -130,7 +130,7 @@ export default function MapScreen() {
               backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
             }}
           >
-            <Icon name="magnifyingglass" size={17} color="#0C8599" />
+            <Icon name="magnifyingglass" size={20} color="#0C8599" />
             <Text className="text-footnote font-semibold text-tint">
               {t('map.search_area')}
             </Text>
