@@ -11,13 +11,24 @@ function ensureDir(dir: Directory): void {
   dir.create({ intermediates: true, idempotent: true });
 }
 
+function assertSafeRelative(relative: string): void {
+  if (relative.startsWith('/')) {
+    throw new Error('Unsafe key path (absolute): ' + relative);
+  }
+  if (relative.split('/').includes('..')) {
+    throw new Error('Unsafe key path (.. traversal): ' + relative);
+  }
+}
+
 function tileFilePath(key: string): File {
   const tilePath = key.slice('siphon:data:'.length);
+  assertSafeRelative(tilePath);
   return new File(TILES_DIR, tilePath);
 }
 
 function historyFilePath(key: string): File {
   const historyPath = key.slice('siphon:history:'.length);
+  assertSafeRelative(historyPath);
   return new File(HISTORY_DIR, historyPath);
 }
 

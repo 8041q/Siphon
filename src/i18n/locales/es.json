@@ -78,6 +78,7 @@
   },
   "station": {
     "view_price_history": "Ver Historial de Precios",
+    "report_incorrect_info": "Notificar información incorrecta",
     "hours": "Horario",
     "schedule": "Horario",
     "services": "Servicios",

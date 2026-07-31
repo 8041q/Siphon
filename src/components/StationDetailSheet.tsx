@@ -14,6 +14,8 @@ import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from
 import { Icon } from '../theme/Icon';
 import { useUI, useStations } from '../hooks/useApp';
 
+const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
+
 function priceColorClass(price: number): string {
   if (price < 1.65) return 'text-price-low dark:text-price-low-dark';
   if (price < 1.87) return 'text-price-mid dark:text-price-mid-dark';
@@ -213,6 +215,11 @@ export function StationDetailSheet() {
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { t } = useTranslation();
+
+  const handleReport = useCallback(() => {
+    Linking.openURL(REPORT_ISSUE_URL);
+  }, []);
 
   useEffect(() => {
     if (selectedStation && !isPresentedRef.current) {
@@ -251,18 +258,34 @@ export function StationDetailSheet() {
         backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)' 
       }}
     >
-      <BottomSheetScrollView>
-        {selectedStation ? (
-          <DetailContent
-            station={selectedStation}
-            snapIndex={snapIndex}
-            distanceKm={distanceKm}
-            onClose={() => bottomSheetRef.current?.dismiss()}
-          />
-        ) : (
-          <View />
+      <View className="flex-1">
+        <BottomSheetScrollView>
+          {selectedStation ? (
+            <DetailContent
+              station={selectedStation}
+              snapIndex={snapIndex}
+              distanceKm={distanceKm}
+              onClose={() => bottomSheetRef.current?.dismiss()}
+            />
+          ) : (
+            <View />
+          )}
+        </BottomSheetScrollView>
+        {selectedStation && snapIndex >= 1 && (
+          <View className="border-t border-separator dark:border-separator-dark px-lg pt-sm pb-lg">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleReport}
+              className="bg-surface dark:bg-surface-dark border border-separator dark:border-separator-dark rounded-md py-md items-center flex-row justify-center gap-sm"
+            >
+              <Icon name="flag" size={16} color={isDark ? '#22B8CD' : '#0C8599'} />
+              <Text className="text-tint dark:text-tint-dark font-semibold text-callout">
+                {t('station.report_incorrect_info')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
-      </BottomSheetScrollView>
+      </View>
     </BottomSheetModal>
   );
 }

@@ -95,6 +95,17 @@ const KEYS = {
 // at launch; the server keeps the full history.
 const HISTORY_DAYS_WINDOW = 90;
 
+// Safe JSON read for cached blobs: corrupt or partial data returns null
+// instead of throwing up into the caller.
+function tryParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 export class FuelDataClient {
   private baseUrl: string;
   private store: KeyValueStore;
@@ -126,7 +137,7 @@ export class FuelDataClient {
       if (newEtag) await this.store.setItem(KEYS.rootEtag, newEtag);
 
       const cachedRootRaw = await this.store.getItem(KEYS.rootManifest);
-      const cachedRoot: RootManifest | null = cachedRootRaw ? JSON.parse(cachedRootRaw) : null;
+      const cachedRoot = tryParse<RootManifest>(cachedRootRaw);
 
       const changedCountries = (Object.keys(root.countries) as CountryCode[]).filter(
         (code) => root.countries[code].hash !== cachedRoot?.countries?.[code]?.hash
@@ -150,7 +161,10 @@ export class FuelDataClient {
   // briefly lost connectivity.
   private async getCountryManifest<T>(code: CountryCode, path: string, changed: boolean): Promise<T | null> {
     const cached = await this.store.getItem(KEYS.countryManifest(code));
-    if (!changed && cached) return JSON.parse(cached) as T;
+    if (!changed) {
+      const parsed = tryParse<T>(cached);
+      if (parsed) return parsed;
+    }
 
     try {
       const res = await fetch(`${this.baseUrl}/${path}`);
@@ -180,8 +194,10 @@ export class FuelDataClient {
   async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection | null> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
     if (cachedHash === entry.hash) {
-      const cached = await this.store.getItem(KEYS.tileData(entry.path));
-      if (cached) return JSON.parse(cached);
+      const cached = tryParse<GeoJsonFeatureCollection>(
+        await this.store.getItem(KEYS.tileData(entry.path))
+      );
+      if (cached) return cached;
     }
 
     try {
@@ -192,9 +208,9 @@ export class FuelDataClient {
       await this.store.setItem(KEYS.tileData(entry.path), JSON.stringify(geojson));
       return geojson;
     } catch (e) {
-      const cached = await this.store.getItem(KEYS.tileData(entry.path));
-      if (cached) return JSON.parse(cached);
-      return null;
+      return tryParse<GeoJsonFeatureCollection>(
+        await this.store.getItem(KEYS.tileData(entry.path))
+      );
     }
   }
 
@@ -242,9 +258,8 @@ export class FuelDataClient {
   // Day files older than HISTORY_DAYS_WINDOW are pruned from the device.
   async checkHistoryUpdates(): Promise<{ changed: boolean; downloadedDays: number; offline: boolean }> {
     try {
-      const rootRaw = await this.store.getItem(KEYS.rootManifest);
-      if (!rootRaw) return { changed: false, downloadedDays: 0, offline: false };
-      const root: RootManifest = JSON.parse(rootRaw);
+      const root = tryParse<RootManifest>(await this.store.getItem(KEYS.rootManifest));
+      if (!root) return { changed: false, downloadedDays: 0, offline: false };
       if (!root.history) return { changed: false, downloadedDays: 0, offline: false };
 
       const cachedHash = await this.store.getItem(KEYS.historyIndexHash);

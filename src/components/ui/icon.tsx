@@ -22,6 +22,7 @@ const MAPPING: Record<string, IoniconsName> = {
   'location_pin': 'location',
   'copy': 'copy-outline',
   'info.circle': 'information-circle-outline',
+  'flag': 'flag-outline',
 };
 
 type IconProps = {

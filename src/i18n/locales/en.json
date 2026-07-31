@@ -79,6 +79,7 @@
   },
   "station": {
     "view_price_history": "View Price History",
+    "report_incorrect_info": "Report Incorrect Info",
     "hours": "Opening Hours",
     "schedule": "Schedule",
     "services": "Services",
