@@ -31,7 +31,7 @@ interface LocationState {
 export type SearchFilter = {
   brand?: string;
   countries?: CountryCode[];
-  fuelType?: string;
+  fuelTypes?: string[];
   priceRange?: { max: number } | null;
   city?: string;
   maxDistance?: number;
@@ -114,6 +114,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (val) {
           try {
             const parsed = JSON.parse(val) as SearchFilter;
+            if ('fuelType' in parsed && !('fuelTypes' in parsed)) {
+              (parsed as any).fuelTypes = parsed.fuelType ? [parsed.fuelType] : undefined;
+              delete (parsed as any).fuelType;
+            }
             setSearchFilter(parsed);
           } catch {}
         }
@@ -235,8 +239,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           (s.properties.name ?? '').toLowerCase().includes(q)
       );
     }
-    if (searchFilter.fuelType) {
-      result = result.filter((s) => searchFilter.fuelType! in (s.properties.fuels ?? {}));
+    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
+      result = result.filter((s) => {
+        const fuels = s.properties.fuels ?? {};
+        return searchFilter.fuelTypes!.some((key) => key in fuels);
+      });
     }
     return result;
   }, [stations, searchFilter]);

@@ -1,17 +1,21 @@
 import { memo, useEffect, useMemo, useRef } from 'react';
-import { View, useColorScheme } from 'react-native';
-import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { Image, View, useColorScheme } from 'react-native';
+import { Map, Camera, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
+import { Icon } from '../../theme/Icon';
 
 import type { StationMapProps } from './types';
 import { tokens } from '../../theme/tokens';
+import { useUserLocationMarker } from '../../hooks/useUserLocationMarker';
+import { svgMarkers } from '../userLocationMarkers';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
-function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, flyToCoords }: StationMapProps) {
+function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, flyToCoords, userLocation }: StationMapProps) {
   const colorScheme = useColorScheme();
   const tint = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'].tint;
   const cameraRef = useRef<CameraRef>(null);
+  const { marker: markerConfig } = useUserLocationMarker();
 
   useEffect(() => {
     if (flyToCoords) {
@@ -82,7 +86,59 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         center={[initialRegion.longitude, initialRegion.latitude]}
         zoom={12}
       />
-      <UserLocation animated />
+      {userLocation && (
+        <Marker
+          id="mlrn-user-location"
+          lngLat={[userLocation.longitude, userLocation.latitude]}
+          anchor="center"
+        >
+          {markerConfig.type === 'image' ? (
+            <View style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              overflow: 'hidden',
+              borderWidth: 2.5,
+              borderColor: '#FFFFFF',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 5,
+            }}>
+              <Image
+                source={{ uri: markerConfig.value }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </View>
+          ) : (
+            <View style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 5,
+            }}>
+              {markerConfig.type === 'icon' && (
+                <Icon name={markerConfig.value} size={24} color={tint} />
+              )}
+              {markerConfig.type === 'svg' && (() => {
+                const SvgComp = svgMarkers[markerConfig.value];
+                return SvgComp ? <SvgComp size={24} color={tint} /> : null;
+              })()}
+            </View>
+          )}
+        </Marker>
+      )}
+
+
       {markers}
       </Map>
   );

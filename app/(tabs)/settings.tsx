@@ -7,8 +7,10 @@ import { setBackgroundColorAsync } from 'expo-system-ui';
 import { useTranslation } from 'react-i18next';
 
 import { client } from '../../src/hooks/useApp';
+import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
+import { LocationMarkerSheet, LocationMarkerSheetHandle } from '../../src/components/LocationMarkerSheet';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -21,6 +23,7 @@ export default function SettingsScreen() {
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
+  const locationMarkerSheetRef = useRef<LocationMarkerSheetHandle>(null);
 
   const persistLanguage = useCallback(async (lng: string) => {
     await i18nInstance.changeLanguage(lng);
@@ -105,6 +108,12 @@ export default function SettingsScreen() {
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
+  const { marker: currentMarker } = useUserLocationMarker();
+  const markerLabel = currentMarker.type === 'icon'
+    ? currentMarker.value.replace('_', ' ')
+    : currentMarker.type === 'svg'
+      ? currentMarker.value
+      : t('settings.marker_custom_image');
 
   const themeOptions: { label: string; value: ThemePref }[] = [
     { label: t('settings.theme_system'), value: 'system' },
@@ -146,6 +155,15 @@ export default function SettingsScreen() {
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.location_marker')}
+          </Text>
+          <ListItem onPress={() => locationMarkerSheetRef.current?.present()} trailing={markerLabel}>
+            {t('settings.marker_style')}
+          </ListItem>
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.price_history')}
           </Text>
           <ListItem onPress={handleTrimHistory}>
@@ -174,6 +192,9 @@ export default function SettingsScreen() {
         currentLang={currentLang}
         onSelectLanguage={persistLanguage}
         onDismiss={() => {}}
+      />
+      <LocationMarkerSheet
+        ref={locationMarkerSheetRef}
       />
     </SafeAreaView>
   );

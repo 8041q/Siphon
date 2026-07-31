@@ -37,7 +37,7 @@ export default function SearchScreen() {
   const filterCount = useMemo(() => {
     let count = 0;
     if (searchFilter.countries && searchFilter.countries.length > 0) count++;
-    if (searchFilter.fuelType) count++;
+    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) count++;
     if (searchFilter.priceRange) count++;
     if (searchFilter.city?.trim()) count++;
     if (searchFilter.maxDistance) count++;
@@ -71,16 +71,19 @@ export default function SearchScreen() {
       );
     }
 
-    if (searchFilter.fuelType) {
-      filtered = filtered.filter((s) => searchFilter.fuelType! in (s.properties.fuels ?? {}));
+    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
+      filtered = filtered.filter((s) => {
+        const fuels = s.properties.fuels ?? {};
+        return searchFilter.fuelTypes!.some((key) => key in fuels);
+      });
     }
 
     if (searchFilter.priceRange) {
       const max = searchFilter.priceRange.max;
       filtered = filtered.filter((s) => {
         const fuels = s.properties.fuels ?? {};
-        if (searchFilter.fuelType) {
-          return typeof fuels[searchFilter.fuelType] === 'number' && fuels[searchFilter.fuelType] < max;
+        if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
+          return searchFilter.fuelTypes.some((key) => typeof fuels[key] === 'number' && fuels[key] < max);
         }
         return Object.values(fuels).some((p) => Number(p) < max);
       });
@@ -155,7 +158,7 @@ export default function SearchScreen() {
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
   const { t } = useTranslation();
   return (
-    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md px-3 py-3">
+    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md px-3 h-11">
       <Icon name="magnifyingglass" size={20} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
@@ -182,7 +185,7 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
   }
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 gap-1 pt-lg">
       <Text className="text-headline text-label dark:text-label-dark mb-sm px-4">
         {t('search.results_header')} ({results.length})
       </Text>
@@ -230,8 +233,12 @@ const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>(
       setLocalFilters({ ...localFilters, countries: next.length > 0 ? next : undefined });
     };
 
-    const setFuelType = (key: string | undefined) => {
-      setLocalFilters({ ...localFilters, fuelType: key });
+    const toggleFuelType = (key: string) => {
+      const current = localFilters.fuelTypes ?? [];
+      const next = current.includes(key)
+        ? current.filter((k) => k !== key)
+        : [...current, key];
+      setLocalFilters({ ...localFilters, fuelTypes: next.length > 0 ? next : undefined });
     };
 
     const setPriceRange = (max: number | undefined) => {
@@ -260,7 +267,7 @@ const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>(
     const filterCount = useMemo(() => {
       let count = 0;
       if (localFilters.countries && localFilters.countries.length > 0) count++;
-      if (localFilters.fuelType) count++;
+      if (localFilters.fuelTypes && localFilters.fuelTypes.length > 0) count++;
       if (localFilters.priceRange) count++;
       if (localFilters.city?.trim()) count++;
       if (localFilters.maxDistance) count++;
@@ -323,20 +330,20 @@ const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>(
               <View className="flex-row flex-wrap gap-2">
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => setFuelType(undefined)}
-                  className={`px-4 py-2 rounded-full ${chipBg(!localFilters.fuelType)}`}
+                  onPress={() => setLocalFilters({ ...localFilters, fuelTypes: undefined })}
+                  className={`px-4 py-2 rounded-full ${chipBg(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}
                 >
-                  <Text className={`text-subheadline ${chipText(!localFilters.fuelType)}`}>
+                  <Text className={`text-subheadline ${chipText(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}>
                     {t('search.any_fuel')}
                   </Text>
                 </TouchableOpacity>
                 {FUEL_KEYS.map((key) => {
-                  const selected = localFilters.fuelType === key;
+                  const selected = (localFilters.fuelTypes ?? []).includes(key);
                   return (
                     <TouchableOpacity
                       key={key}
                       activeOpacity={0.7}
-                      onPress={() => setFuelType(selected ? undefined : key)}
+                      onPress={() => toggleFuelType(key)}
                       className={`px-4 py-2 rounded-full ${chipBg(selected)}`}
                     >
                       <Text className={`text-subheadline ${chipText(selected)}`}>

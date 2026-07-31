@@ -69,7 +69,15 @@
     "portuguese": "Portugués",
     "spanish": "Español",
     "french": "Francés",
-    "german": "Alemán"
+    "german": "Alemán",
+    "location_marker": "Location Marker",
+    "marker_style": "Style",
+    "marker_icons": "Icons",
+    "marker_svg": "Custom SVG",
+    "marker_image": "Custom Image",
+    "marker_import_image": "Import from Gallery",
+    "marker_change_image": "Change Image",
+    "marker_custom_image": "Custom Image"
   },
   "screen": {
     "price_history": "Historial de Precios"

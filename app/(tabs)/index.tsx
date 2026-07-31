@@ -108,6 +108,7 @@ export default function MapScreen() {
         onMarkerPress={onMarkerPress}
         onRegionChange={handleRegionChange}
         flyToCoords={flyToCoords}
+        userLocation={location}
       />
 
       {/* Offline Banner positioning below status bar */}
