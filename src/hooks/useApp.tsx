@@ -49,7 +49,7 @@ interface UIState {
 }
 
 interface Actions {
-  loadStationsForRegion: (lat: number, lng: number, bounds?: [number, number, number, number]) => Promise<void>;
+  loadStationsForRegion: (lat: number, lng: number, bounds?: [number, number, number, number]) => Promise<FuelStationFeature[]>;
 }
 
 const StationContext = createContext<StationState | null>(null);
@@ -85,6 +85,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const started = useRef(false);
   const changedCountriesRef = useRef<CountryCode[]>([]);
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const regionWaiterRef = useRef<((stations: FuelStationFeature[]) => void) | null>(null);
   const unmountedRef = useRef(false);
 
   const handleSetSearchFilter = useCallback((f: SearchFilter) => {
@@ -112,6 +113,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    unmountedRef.current = false;
     return () => { unmountedRef.current = true; };
   }, []);
 
@@ -229,22 +231,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(regionTimerRef.current);
         regionTimerRef.current = null;
       }
+      regionWaiterRef.current?.([]);
+      regionWaiterRef.current = null;
     };
   }, []);
 
-  const loadStationsForRegion = useCallback(async (lat: number, lng: number, bounds?: [number, number, number, number]) => {
-    if (regionTimerRef.current) clearTimeout(regionTimerRef.current);
-    regionTimerRef.current = setTimeout(async () => {
-      console.warn('[loadStationsForRegion] lat/lng/bounds:', { lat, lng, bounds, changedCountries: changedCountriesRef.current });
-      try {
-        const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
-        console.warn('[loadStationsForRegion] got', nearby.length, 'stations');
-        if (unmountedRef.current) return;
-        setStations(nearby);
-      } catch (e) {
-        console.warn('[loadStationsForRegion] failed:', e);
+  const loadStationsForRegion = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
+    return new Promise<FuelStationFeature[]>((resolve) => {
+      if (regionTimerRef.current) {
+        clearTimeout(regionTimerRef.current);
+        regionTimerRef.current = null;
       }
-    }, 50);
+      regionWaiterRef.current?.([]);
+      regionWaiterRef.current = resolve;
+
+      regionTimerRef.current = setTimeout(async () => {
+        regionWaiterRef.current = null;
+        try {
+          const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
+          if (unmountedRef.current) {
+            resolve([]);
+            return;
+          }
+          setStations(nearby);
+          resolve(nearby);
+        } catch (e) {
+          console.warn('[loadStationsForRegion] failed:', e);
+          resolve([]);
+        }
+      }, 50);
+    });
   }, []);
 
   const filteredStations = useMemo(() => {

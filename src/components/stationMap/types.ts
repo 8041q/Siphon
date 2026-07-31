@@ -10,6 +10,7 @@ export interface StationMapProps {
   stations: FuelStationFeature[];
   onMarkerPress: (station: FuelStationFeature) => void;
   onRegionChange?: (lat: number, lng: number, bounds?: [number, number, number, number]) => void;
+  onMapReady?: () => void;
   flyToCoords?: [number, number] | null;
   userLocation?: { latitude: number; longitude: number; approximate: boolean };
 }

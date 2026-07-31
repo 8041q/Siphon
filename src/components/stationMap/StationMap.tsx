@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { Image, View, useColorScheme } from 'react-native';
-import { Map, Camera, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { Map, Camera, Marker, GeoJSONSource, Layer, type CameraRef} from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '../../theme/Icon';
 
@@ -11,11 +11,12 @@ import { svgMarkers } from '../userLocationMarkers';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
-function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, flyToCoords, userLocation }: StationMapProps) {
+function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, flyToCoords, userLocation }: StationMapProps) {
   const colorScheme = useColorScheme();
   const tint = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'].tint;
   const cameraRef = useRef<CameraRef>(null);
   const { marker: markerConfig } = useUserLocationMarker();
+  const onMapReadyFired = useRef(false);
 
   useEffect(() => {
     if (flyToCoords) {
@@ -23,26 +24,20 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     }
   }, [flyToCoords]);
 
-  const markers = useMemo(() => stations.map((station) => {
-    const [lng, lat] = station.geometry.coordinates;
-    return (
-      <Marker
-        key={station.properties.id}
-        id={station.properties.id}
-        lngLat={[lng, lat]}
-        anchor="center"
-        offset={[0, 0]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onMarkerPress(station);
-        }}
-      >
-        <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: tint, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.5)' }} />
-        </View>
-      </Marker>
-    );
-  }), [stations, tint]);
+  const stationsSourceData = useMemo<GeoJSON.FeatureCollection>(() => {
+    if (__DEV__) {
+      for (const f of stations) {
+        const [lng, lat] = f.geometry.coordinates;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+          console.warn('[StationMap] BAD COORDS', f.properties.id, f.geometry.coordinates);
+        }
+        try { JSON.stringify(f); } catch (e) {
+          console.warn('[StationMap] UNSERIALIZABLE FEATURE', f.properties.id, e);
+        }
+      }
+    }
+    return { type: 'FeatureCollection', features: stations };
+  }, [stations]);
 
   return (
     <Map
@@ -78,6 +73,12 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
               }
             }
             onRegionChange(lat, lng, bounds);
+          }
+        }}
+        onDidFinishRenderingMapFully={() => {
+          if (!onMapReadyFired.current) {
+            onMapReadyFired.current = true;
+            onMapReady?.();
           }
         }}
     >
@@ -139,7 +140,33 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
       )}
 
 
-      {markers}
+      <GeoJSONSource
+        id="station-points"
+        data={stationsSourceData}
+        onPress={(event) => {
+          const feature = event.nativeEvent.features?.[0];
+          const featureId = feature?.properties?.id;
+          if (featureId) {
+            const station = stations.find((s) => s.properties.id === featureId);
+            if (station) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onMarkerPress(station);
+            }
+          }
+        }}
+      >
+        <Layer
+          id="station-dots"
+          type="circle"
+          source="station-points"
+          paint={{
+            'circle-radius': 6,
+            'circle-color': tint,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': 'rgba(255, 255, 255, 0.5)',
+          }}
+        />
+      </GeoJSONSource>
       </Map>
   );
 }

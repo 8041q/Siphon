@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
+import { FilterSheet } from '../../src/components/FilterSheet';
 import { Icon } from '../../src/components/ui/icon';
 import { useStations, useUI, useLocationState, useActions } from '../../src/hooks/useApp';
 
@@ -14,8 +15,20 @@ export default function MapScreen() {
 
   const { filteredStations, loading, syncProgress, error, offline } = useStations();
   const { location, requestingLocation, locateWithGps } = useLocationState();
-  const { setSelectedStation } = useUI();
+  const { setSelectedStation, searchFilter, setSearchFilter } = useUI();
   const { loadStationsForRegion } = useActions();
+
+  const filterSheetRef = useRef<{ present: () => void }>(null);
+  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
+  const filterCount = useMemo(() => {
+    let count = 0;
+    if (searchFilter.countries && searchFilter.countries.length > 0) count++;
+    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) count++;
+    if (searchFilter.priceRange) count++;
+    if (searchFilter.city?.trim()) count++;
+    if (searchFilter.maxDistance) count++;
+    return count;
+  }, [searchFilter]);
 
   const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
@@ -48,23 +61,34 @@ export default function MapScreen() {
 
   const handleRegionChange = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
     mapCenterRef.current = { lat, lng, bounds };
-    if (bounds && !firstBoundsRef.current) {
+    if (!bounds) return;
+    const [west, south, east, north] = bounds;
+    // Ignore the initial pre-camera world view (centered 0,0 with global bounds) —
+    // it's not a real map region and would load bogus grid_0_0 stations.
+    if (east - west >= 180 || north - south >= 160) return;
+    if (!firstBoundsRef.current) {
       firstBoundsRef.current = true;
       loadStationsForRegion(lat, lng, bounds);
     }
   }, [loadStationsForRegion]);
 
-  const handleSearchArea = useCallback(() => {
+  const handleSearchArea = useCallback(async () => {
     const thisVersion = ++searchVersionRef.current;
-    const prevLen = stationsLenRef.current;
-    loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
-    setTimeout(() => {
-      if (searchVersionRef.current === thisVersion && stationsLenRef.current === prevLen) {
-        setSearchFeedback(t('map.empty_search'));
-        setTimeout(() => setSearchFeedback(null), 3000);
-      }
-    }, 3000);
+    const result = await loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
+    if (searchVersionRef.current === thisVersion && result?.length === 0) {
+      setSearchFeedback(t('map.empty_search'));
+      setTimeout(() => setSearchFeedback(null), 3000);
+    }
   }, [loadStationsForRegion, t]);
+
+  const mapReadyRef = useRef(false);
+  const handleMapReady = useCallback(() => {
+    if (mapReadyRef.current) return;
+    mapReadyRef.current = true;
+    if (stationsLenRef.current === 0) {
+      loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
+    }
+  }, [loadStationsForRegion]);
 
   const handleLocate = useCallback(async () => {
     const gps = await locateWithGps();
@@ -107,6 +131,7 @@ export default function MapScreen() {
         stations={filteredStations}
         onMarkerPress={onMarkerPress}
         onRegionChange={handleRegionChange}
+        onMapReady={handleMapReady}
         flyToCoords={flyToCoords}
         userLocation={location}
       />
@@ -155,6 +180,36 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* Filters button */}
+      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10 }}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => filterSheetRef.current?.present()}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 4,
+            elevation: 5,
+          }}
+        >
+          <View className="relative">
+            <Icon name="filter_list" size={20} color={secondaryLabel} />
+            {filterCount > 0 && (
+              <View className="absolute -top-1.5 -right-1.5 bg-tint rounded-full min-w-[16px] h-4 items-center justify-center px-1">
+                <Text className="text-[10px] text-white font-bold">{filterCount}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Locate me button */}
       <TouchableOpacity
         activeOpacity={0.7}
@@ -184,6 +239,12 @@ export default function MapScreen() {
           <Icon name="my_location" size={20} color="#0C8599" />
         )}
       </TouchableOpacity>
+
+      <FilterSheet
+        ref={filterSheetRef}
+        searchFilter={searchFilter}
+        onApply={setSearchFilter}
+      />
     </View>
   );
 }
