@@ -1,17 +1,17 @@
 # Siphon Client — Public API Reference
 
-All calls go through the `FuelDataClient` instance exported from `src/api/siphonClient.ts`:
+All calls go through the `FuelDataClient` class exported from `src/api/siphonClient.ts` (the app's singleton `client` instance is exported from `src/hooks/useApp.tsx`):
 
 ```ts
 const client = new FuelDataClient({
-  store: hybridStore,   // injected in App.tsx
+  store: hybridStore,   // the app's exported instance lives in src/hooks/useApp.tsx
   baseUrl: 'https://raw.githubusercontent.com/8041q/SiphonAPI/main',
 });
 ```
 
 ---
 
-## Already wired in App.tsx
+## Already wired in src/hooks/useApp.tsx (AppProvider)
 
 These run automatically on launch in this order:
 
@@ -19,44 +19,77 @@ These run automatically on launch in this order:
 |---|---|---|
 | `client.checkForUpdates()` | Conditional GET on root manifest (sends `If-None-Match`). Returns `{ changedCountries, root, offline }`. | 304 = zero tile downloads are needed. On failure returns `offline: true` so the app falls back to cache. |
 | `client.syncAll(changedCountries, onProgress)` | Downloads/refreshes every single tile for both countries. | On first launch it's a full download (~113 files). On subsequent 304 it's instant (all hash matches, zero network). `onProgress(loaded, total)` fires per tile. |
-| `client.recordDailySnapshot()` | Extracts `{ id, brand, fuels }` from every station and writes a daily snapshot file. | No-op if today's snapshot already exists. One file per day, accumulates forever. |
-| `client.getStationsNear(lat, lng, changedCountries)` | Returns nearby stations from both Spain and Portugal, deduplicated. | After `syncAll()` this is pure cache — zero network. Near-border users get stations from both sides. |
+| `client.checkHistoryUpdates()` | Compares the root manifest's history hash against the last-seen one; only when it differs, downloads the index + missing day files and prunes day files older than 90 days. | Gated by the "Save price history on device" setting — when disabled the app never checks the hash nor pulls. Runs exactly once per launch; there is no manual refresh. |
+| `client.getStationsNear(lat, lng, changedCountries)` | Returns nearby stations from both Spain and Portugal, deduplicated. | After `syncAll()` this is pure cache when nothing changed — zero network. On a day a country changed it re-fetches that country's manifest + changed tiles. Near-border users get stations from both sides. |
 
 ---
 
-## Available for UI (not yet wired)
+## Price history (server-side)
 
-These are ready to call — you just need a button or gesture to trigger them.
+The full daily price-history archive is kept server-side (only a rolling 90-day window is cached on the device). The API publishes one file per date plus an index:
 
-### `client.clearPriceHistory()`
-
-```ts
-const { deleted } = await client.clearPriceHistory();
+```
+data/history/2026/2026-07-30.json   # flat array of { id, brand, fuels }
+data/history/2027/2027-01-05.json
+data/history/index.json             # { lastUpdated, days: [{ date, path, hash }...] }
 ```
 
-Deletes **every** daily snapshot ever recorded. All historical price data is gone.
+Ffiles use the same schema:
 
-| Returns | |
-|---|---|
-| `deleted: number` | How many snapshot files were removed |
-
-### `client.trimPriceHistory(keepMonths?: number)`
-
-```ts
-const { deleted } = await client.trimPriceHistory(2);
-// or with default (2 months):
-const { deleted } = await client.trimPriceHistory();
+```json
+[
+  { "id": "es-10203", "brand": "REPSOL", "fuels": { "gasoline95": 1.829, "diesel": 1.709 } },
+  { "id": "pt-65074", "brand": "GALP", "fuels": { "gasoline95": 2.031, "diesel": 2.098 } }
+]
 ```
 
-Removes snapshots older than `keepMonths` months. Defaults to 2 months.
+The root manifest carries a hash of the index: `manifest.json → history: { path, hash, lastUpdated }`.
 
-| Parameter | Default | |
-|---|---|---|
-| `keepMonths` | `2` | Keep this many months of history, delete everything older |
+The device keeps only the newest **90 days** of day files (rolling window, pruned at launch). A station's chart is read straight from those files, so every station gets up to 90 days of history; results are memoized in memory for the session.
 
-| Returns | |
-|---|---|
-| `deleted: number` | How many old snapshot files were removed |
+### `client.checkHistoryUpdates()`
+
+```ts
+const { changed, downloadedDays, offline } = await client.checkHistoryUpdates();
+```
+
+Called once per launch. Zero network when the index hash hasn't moved; downloads only missing/changed files when it has. Purges files older than 90 days. On failure returns `offline: true` and leaves the cache untouched.
+
+### `client.getPriceHistory(stationId, fuelType)`
+
+```ts
+const points = await client.getPriceHistory('es-10203', 'gasoline95');
+// [{ date: '2026-07-30', price: 1.829 }, ...]  sorted by date
+```
+
+Reads a station's series for one fuel from the cached day files. Returns `[]` when the station has no data.
+
+### `client.clearHistoryCache()`
+
+```ts
+const { deleted } = await client.clearHistoryCache();
+```
+
+Deletes every cached file and the index hash. Called automatically when the user turns the "Save price history on device" setting off.
+
+---
+
+## Crowdsourced station overrides
+
+Station payment methods / services / hours / brand / address come from government feeds and can be stale. Users report corrections through the SiphonAPI repo's **"Report incorrect station info"** issue template; after manual validation entries are moved into `data/overrides/{es,pt}.json`:
+
+```json
+{
+  "es-10203": {
+    "brand": "REPSOL EXPRESS",
+    "paymentMethods": ["dinheiro", "multibanco"],
+    "appliedAt": "2026-07-31T00:00:00Z",
+    "note": "issue #12"
+  }
+}
+```
+
+The API applies them as a final pass when building tiles, so the app receives them through the normal sync - no app-side handling. Fuel prices are never overridable.
 
 ---
 
@@ -64,9 +97,10 @@ Removes snapshots older than `keepMonths` months. Defaults to 2 months.
 
 | Method | Why it's internal |
 |---|---|
-| `getSpainManifest(changed, path?)` | Called by `syncAll`, `getStationsNear`, `recordDailySnapshot`. Fetch-or-cache the Spain manifest. |
+| `getSpainManifest(changed, path?)` | Called by `syncAll`, `getStationsNear`. Fetch-or-cache the Spain manifest. |
 | `getPortugalManifest(changed, path?)` | Same for Portugal. |
 | `fetchIfChanged(entry)` | Core fetch-or-cache for a single tile/district geojson. Hash comparison avoids re-download. |
+| `fetchHistoryDay(entry)` | Same pattern for history day files (AsyncStorage hash + file-backed data under the `siphon:history:` prefix). |
 | `spainGridKey(lat, lng)` | Compute the 1°×1° grid key for a point. Used by `getStationsNear`. |
 | `spainNeighborGridKeys(lat, lng)` | 3×3 block of grid keys around a point. Used by `getStationsNear` so boundary-area users get adjacent tiles. |
 | `portugalDistrictsNear(manifest, lat, lng, padDegrees?)` | Bbox prefilter for Portugal districts near a point. Used by `getStationsNear`. |
@@ -76,7 +110,7 @@ Removes snapshots older than `keepMonths` months. Defaults to 2 months.
 ## Types you'll use in UI code
 
 ```ts
-import type { FuelStationFeature } from './src/api/siphonClient';
+import type { FuelStationFeature } from '../../src/api/siphonClient';
 ```
 
 A `FuelStationFeature` looks like:
@@ -99,47 +133,41 @@ A `FuelStationFeature` looks like:
 
 ### `fuels` keys you'll encounter
 
-Common fuel types in the data:
+The full set of fuel keys (in `src/utils/fuelNames.ts`), used both in station data and as filter chips:
 
-| Key | Display |
+| Key | Display (en) |
 |---|---|
-| `gasoline95` | Gasolina 95 |
-| `gasoline95Plus` | Gasolina 95+ |
-| `gasoline98` | Gasolina 98 |
-| `gasoline98Plus` | Gasolina 98+ |
-| `diesel` | Gasóleo |
-| `dieselPremium` | Gasóleo Premium |
-| `dieselAgri` | Gasóleo Agrícola |
-| `lpg` | GPL |
+| `gasoline95` | Gasoline 95 |
+| `gasoline95Plus` | Gasoline 95+ |
+| `gasoline95Premium` | Gasoline 95 Premium |
+| `gasoline98` | Gasoline 98 |
+| `gasoline98Plus` | Gasoline 98+ |
+| `diesel` | Diesel |
+| `dieselPremium` | Diesel Premium |
+| `dieselAgri` | Diesel Agricultural |
+| `dieselB` | Discounted Diesel |
+| `dieselRenewable` | Renewable Diesel |
+| `dieselHeating` | Heating Diesel |
+| `bioDiesel` | Biodiesel |
+| `bioCng` | Bio-CNG |
+| `bioLng` | Bio-LNG |
+| `cng` | CNG |
+| `cngkg` | CNG (kg) |
+| `cngm3` | CNG (m³) |
+| `lng` | LNG |
+| `lpg` | LPG |
+| `gasolineMix` | Mixed Gasoline |
 | `adblue` | AdBlue |
+
+Display names are localized via i18n (`fuel.*` keys); the column above shows the English strings. Not every station carries every fuel.
 
 ---
 
-## Price snapshot file (read directly for charts/trends)
+## Price history settings toggle
 
-Snapshots are stored at (inside the app's document directory):
+`app/(tabs)/settings.tsx` shows a **"Save price history on device"** switch:
 
-```
-siphon/snapshots/2026-07-27.json
-siphon/snapshots/2026-07-26.json
-…
-```
+- **On (default)**: `checkHistoryUpdates()` runs once per launch; the last 90 days are cached on the device and charts read from them.
+- **Off**: the app never checks the history hash nor pulls anything; turning it off immediately deletes the cached history. The price-trends screen shows a "history is disabled" message.
 
-Each file is a flat JSON array with no geometry:
-
-```json
-[
-  { "id": "es-10203", "brand": "REPSOL", "fuels": { "gasoline95": 1.829, "diesel": 1.709 } },
-  { "id": "pt-65074", "brand": "GALP", "fuels": { "gasoline95": 2.031, "diesel": 2.098 } }
-]
-```
-
-You can read these directly via `expo-file-system` for price comparison charts or trend views:
-
-```ts
-import * as FileSystem from 'expo-file-system/legacy';
-const snapshot = await FileSystem.readAsStringAsync(
-  FileSystem.documentDirectory + 'siphon/snapshots/2026-07-27.json'
-);
-const stations = JSON.parse(snapshot);
-```
+The preference is stored in AsyncStorage under `siphon:settings:historyEnabled` (the same key the app checks at launch).

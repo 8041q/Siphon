@@ -44,6 +44,8 @@ interface UIState {
   setSearchFilter: (f: SearchFilter) => void;
   favorites: Set<string>;
   toggleFavorite: (station: FuelStationFeature) => void;
+  historyEnabled: boolean;
+  setHistoryEnabled: (enabled: boolean) => void;
 }
 
 interface Actions {
@@ -61,6 +63,7 @@ export const client = new FuelDataClient({
 });
 
 const SEARCH_FILTER_KEY = 'siphon:search:filters';
+const HISTORY_ENABLED_KEY = 'siphon:settings:historyEnabled';
 
 function defaultSearchFilter(): SearchFilter {
   return {};
@@ -78,6 +81,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
   const [searchFilter, setSearchFilter] = useState<SearchFilter>(defaultSearchFilter());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [historyEnabled, setHistoryEnabledState] = useState(true);
   const started = useRef(false);
   const changedCountriesRef = useRef<CountryCode[]>([]);
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +106,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setHistoryEnabled = useCallback(async (enabled: boolean) => {
+    setHistoryEnabledState(enabled);
+    await AsyncStorage.setItem(HISTORY_ENABLED_KEY, String(enabled));
+  }, []);
+
   useEffect(() => {
     return () => { unmountedRef.current = true; };
   }, []);
@@ -110,6 +119,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!started.current) {
       started.current = true;
       refreshLocation();
+      AsyncStorage.getItem(HISTORY_ENABLED_KEY).then((val) => {
+        if (val === 'false') setHistoryEnabledState(false);
+      });
       AsyncStorage.getItem(SEARCH_FILTER_KEY).then((val) => {
         if (val) {
           try {
@@ -160,7 +172,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      await client.recordDailySnapshot();
+      // Price history: gated by the settings toggle. Reads the stored flag
+      // directly so the check is strictly skipped when disabled, regardless
+      // of state hydration timing. Runs exactly once per launch — there is
+      // no manual refresh path that could spam the API.
+      if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY)) !== 'false') {
+        await client.checkHistoryUpdates();
+      }
       await loadAllStationsData();
 
       if (result.offline) {
@@ -281,8 +299,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSearchFilter: handleSetSearchFilter,
       favorites,
       toggleFavorite,
+      historyEnabled,
+      setHistoryEnabled,
     }),
-    [selectedStation, searchFilter, favorites, toggleFavorite, handleSetSearchFilter]
+    [selectedStation, searchFilter, favorites, toggleFavorite, handleSetSearchFilter, historyEnabled, setHistoryEnabled]
   );
 
   const actionsValue = useMemo<Actions>(

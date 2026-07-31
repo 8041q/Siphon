@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Appearance, Text, View } from 'react-native';
+import { Appearance, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setBackgroundColorAsync } from 'expo-system-ui';
 import { useTranslation } from 'react-i18next';
 
-import { client } from '../../src/hooks/useApp';
+import { client, useUI } from '../../src/hooks/useApp';
 import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
@@ -19,7 +19,7 @@ const THEME_STORAGE_KEY = 'siphon:theme';
 
 export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
-  const [clearing, setClearing] = useState(false);
+  const { historyEnabled, setHistoryEnabled } = useUI();
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
@@ -58,53 +58,13 @@ export default function SettingsScreen() {
     AsyncStorage.setItem(THEME_STORAGE_KEY, pref);
   };
 
-  const handleClearHistory = () => {
-    Alert.alert(
-      t('settings.clear_alert_title'),
-      t('settings.clear_alert_message'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('settings.delete_all'),
-          style: 'destructive',
-          onPress: async () => {
-            setClearing(true);
-            try {
-              const result = await client.clearPriceHistory();
-              Alert.alert(t('common.done'), t('settings.deleted_snapshots', { count: result.deleted }));
-            } catch (e: any) {
-              Alert.alert(t('common.done'), e.message ?? t('settings.clear_failed'));
-            } finally {
-              setClearing(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleTrimHistory = () => {
-    Alert.alert(
-      t('settings.trim_alert_title'),
-      t('settings.trim_alert_message'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('settings.trim'),
-          onPress: async () => {
-            setClearing(true);
-            try {
-              const result = await client.trimPriceHistory(2);
-              Alert.alert(t('common.done'), t('settings.deleted_old_snapshots', { count: result.deleted }));
-            } catch (e: any) {
-              Alert.alert(t('common.done'), e.message ?? t('settings.trim_failed'));
-            } finally {
-              setClearing(false);
-            }
-          },
-        },
-      ]
-    );
+  const handleToggleHistory = async (value: boolean) => {
+    if (!value) {
+      try {
+        await client.clearHistoryCache();
+      } catch {}
+    }
+    setHistoryEnabled(value);
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
@@ -166,13 +126,16 @@ export default function SettingsScreen() {
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.price_history')}
           </Text>
-          <ListItem onPress={handleTrimHistory}>
-            {t('settings.trim_list')}
-          </ListItem>
+          <View className="flex-row items-center justify-between px-lg py-md">
+            <Text className="text-callout text-label dark:text-label-dark flex-1 mr-2">
+              {t('settings.save_history')}
+            </Text>
+            <Switch value={historyEnabled} onValueChange={handleToggleHistory} />
+          </View>
           <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
-          <ListItem onPress={handleClearHistory}>
-            {t('settings.clear_history')}
-          </ListItem>
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
+            {t('settings.save_history_caption')}
+          </Text>
         </View>
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">

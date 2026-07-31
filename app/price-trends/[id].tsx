@@ -30,7 +30,7 @@ export default function PriceTrendsScreen() {
   }, [station]);
 
   const [selectedFuel, setSelectedFuel] = useState<string | null>(fuels[0] ?? null);
-  const { data, loading } = usePriceHistory(id ?? '', selectedFuel ?? '');
+  const { data, loading, enabled } = usePriceHistory(id ?? '', selectedFuel ?? '');
 
   return (
     <>
@@ -79,6 +79,10 @@ export default function PriceTrendsScreen() {
         {loading ? (
           <Text className="text-secondary-label dark:text-secondary-label-dark text-center">
             {t('price_trends.loading')}
+          </Text>
+        ) : !enabled ? (
+          <Text className="text-secondary-label dark:text-secondary-label-dark text-center">
+            {t('price_trends.history_disabled')}
           </Text>
         ) : (
           <PriceChart

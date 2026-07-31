@@ -48,22 +48,12 @@
     "theme_light": "Claro",
     "theme_dark": "Oscuro",
     "price_history": "Historial de Precios",
-    "trim_list": "Limpiar lista (conservar últimos 2 meses)",
-    "clear_history": "Borrar todo el historial de precios",
+    "save_history": "Guardar historial de precios en el dispositivo",
+    "save_history_caption": "Busca el historial actualizado una vez al iniciar y guarda en caché los últimos 90 días. Desactívalo para no almacenar datos de historial en tu dispositivo.",
     "about": "Acerca de",
     "app_name": "Nombre de la App",
     "data_source": "Fuente de datos",
     "version": "Versión",
-    "clear_alert_title": "Borrar Historial de Precios",
-    "clear_alert_message": "Esto eliminará TODOS los registros diarios de precios. Esta acción no se puede deshacer.",
-    "delete_all": "Borrar Todo",
-    "clear_failed": "Error al borrar el historial",
-    "trim_alert_title": "Limpiar Historial de Precios",
-    "trim_alert_message": "Conservar registros de los últimos 2 meses y borrar todo lo anterior.",
-    "trim": "Limpiar",
-    "trim_failed": "Error al limpiar el historial",
-    "deleted_snapshots": "{{count}} registro(s) eliminado(s).",
-    "deleted_old_snapshots": "{{count}} registro(s) antiguo(s) eliminado(s).",
     "language": "Idioma",
     "english": "Inglés",
     "portuguese": "Portugués",
@@ -83,7 +73,8 @@
     "price_history": "Historial de Precios"
   },
   "price_trends": {
-    "loading": "Cargando historial de precios…"
+    "loading": "Cargando historial de precios…",
+    "history_disabled": "El historial de precios está desactivado. Actívalo en Ajustes."
   },
   "station": {
     "view_price_history": "Ver Historial de Precios",

@@ -13,6 +13,24 @@ export interface RootManifest {
   version: number;
   generatedAt: string;
   countries: Record<CountryCode, { manifest: string; hash: string; lastUpdated: string | null }>;
+  // Present on server version 2+. Optional so older roots keep working.
+  history?: { path: string; hash: string; lastUpdated: string | null };
+}
+
+export interface HistoryDayEntry {
+  date: string;
+  path: string;
+  hash: string;
+}
+
+export interface HistoryIndex {
+  lastUpdated: string;
+  days: HistoryDayEntry[];
+}
+
+export interface PriceHistoryPoint {
+  date: string;
+  price: number;
 }
 
 export interface SpainTile {
@@ -70,7 +88,12 @@ const KEYS = {
   countryManifest: (c: CountryCode) => `siphon:manifest:${c}`,
   tileHash: (path: string) => `siphon:hash:${path}`,
   tileData: (path: string) => `siphon:data:${path}`,
+  historyIndexHash: 'siphon:etag:historyIndex',
 };
+
+// How many recent day files the device keeps locally. Older ones are pruned
+// at launch; the server keeps the full history.
+const HISTORY_DAYS_WINDOW = 90;
 
 export class FuelDataClient {
   private baseUrl: string;
@@ -207,92 +230,148 @@ export class FuelDataClient {
     return { tileCount: total };
   }
 
-  // ---------- Price history ----------
+  // ---------- Price history (server-side) ----------
 
-  // Walk every cached tile/district for both countries, extract station
-  // identity + current fuel prices, and write a daily snapshot.
-  // Only the first call per calendar day actually writes — repeated calls
-  // the same day are no-ops. This keeps history compact while giving you
-  // a full price picture every day.
+  // Daily price history lives on the server as one day file per date
+  // (data/history/{YYYY}/{YYYY-MM-DD}.json) plus an index with per-day
+  // hashes. The root manifest carries a hash of that index.
   //
-  // Spain tiles and Portugal districts are structurally different in how
-  // they partition data, but each feature in the geojson carries the same
-  // {id, brand, fuels} property shape, so the extraction is identical.
-  // For Portugal we fall back from `brand` to `name` when brand is empty.
-  async recordDailySnapshot(): Promise<{ recorded: boolean; stationCount: number }> {
-    const today = new Date().toISOString().split('T')[0];
-    const key = `siphon:snapshot:${today}`;
+  // Called exactly once per app launch (inside the same load() that runs
+  // checkForUpdates). When the index hash hasn't moved there is zero network
+  // traffic; when it has, only the missing/changed day files are downloaded.
+  // Day files older than HISTORY_DAYS_WINDOW are pruned from the device.
+  async checkHistoryUpdates(): Promise<{ changed: boolean; downloadedDays: number; offline: boolean }> {
+    try {
+      const rootRaw = await this.store.getItem(KEYS.rootManifest);
+      if (!rootRaw) return { changed: false, downloadedDays: 0, offline: false };
+      const root: RootManifest = JSON.parse(rootRaw);
+      if (!root.history) return { changed: false, downloadedDays: 0, offline: false };
 
-    if (await this.store.getItem(key)) {
-      return { recorded: false, stationCount: 0 };
-    }
-
-    const es = await this.getSpainManifest(false);
-    const pt = await this.getPortugalManifest(false);
-
-    const stations: Array<{ id: string; brand: string | null; fuels: Record<string, number> }> = [];
-
-    if (es) {
-      for (const tile of Object.values(es.tiles)) {
-        const geojson = await this.fetchIfChanged(tile);
-        if (!geojson) continue;
-        for (const f of geojson.features) {
-          stations.push({
-            id: f.properties.id,
-            brand: f.properties.brand ?? null,
-            fuels: f.properties.fuels ?? {},
-          });
-        }
+      const cachedHash = await this.store.getItem(KEYS.historyIndexHash);
+      if (cachedHash === root.history.hash) {
+        return { changed: false, downloadedDays: 0, offline: false };
       }
-    }
 
-    if (pt) {
-      for (const district of Object.values(pt.districts)) {
-        const geojson = await this.fetchIfChanged(district);
-        if (!geojson) continue;
-        for (const f of geojson.features) {
-          stations.push({
-            id: f.properties.id,
-            brand: f.properties.brand ?? f.properties.name ?? null,
-            fuels: f.properties.fuels ?? {},
-          });
-        }
+      const res = await fetch(`${this.baseUrl}/${root.history.path}`);
+      if (!res.ok) throw new Error(`History index fetch failed: ${res.status}`);
+      const index: HistoryIndex = await res.json();
+      await this.store.setItem(KEYS.historyIndexHash, root.history.hash);
+
+      let downloadedDays = 0;
+      for (const day of index.days) {
+        const outcome = await this.fetchHistoryDay(day);
+        if (outcome === 'fetched') downloadedDays++;
       }
+
+      await this.pruneOldHistoryDays();
+      this.historyMemo.clear();
+      return { changed: true, downloadedDays, offline: false };
+    } catch {
+      return { changed: false, downloadedDays: 0, offline: true };
     }
-
-    if (stations.length === 0) return { recorded: false, stationCount: 0 };
-
-    await this.store.setItem(key, JSON.stringify(stations));
-    return { recorded: true, stationCount: stations.length };
   }
 
-  // Delete every daily snapshot ever recorded. All historical data is gone.
-  async clearPriceHistory(): Promise<{ deleted: number }> {
-    if (!this.store.listKeys || !this.store.removeItem) return { deleted: 0 };
-    const keys = await this.store.listKeys('siphon:snapshot:');
-    for (const key of keys) {
-      await this.store.removeItem(key);
-    }
-    return { deleted: keys.length };
+  // History data keys live under the file-backed 'siphon:history:' prefix;
+  // hashes reuse the AsyncStorage-backed 'siphon:hash:' prefix (paths differ
+  // from tiles, so there is no collision).
+  private historyDayKey(path: string): string {
+    return 'siphon:history:' + path.slice('data/history/'.length);
   }
 
-  // Remove snapshots older than `keepMonths` months. Useful when you want
-  // to free space without wiping everything.
-  async trimPriceHistory(keepMonths: number = 2): Promise<{ deleted: number }> {
-    if (!this.store.listKeys || !this.store.removeItem) return { deleted: 0 };
-    const keys = await this.store.listKeys('siphon:snapshot:');
+  private dateFromHistoryKey(key: string): string | null {
+    const match = key.match(/(\d{4}-\d{2}-\d{2})\.json$/);
+    return match ? match[1] : null;
+  }
+
+  private async fetchHistoryDay(entry: HistoryDayEntry): Promise<'fetched' | 'cached' | 'failed'> {
+    const key = this.historyDayKey(entry.path);
+    const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
+    if (cachedHash === entry.hash) {
+      const cached = await this.store.getItem(key);
+      if (cached) return 'cached';
+    }
+
+    try {
+      const res = await fetch(`${this.baseUrl}/${entry.path}`);
+      if (!res.ok) throw new Error(`History day fetch failed: ${entry.path} (${res.status})`);
+      const data = await res.text();
+      await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
+      await this.store.setItem(key, data);
+      return 'fetched';
+    } catch {
+      const cached = await this.store.getItem(key);
+      return cached ? 'cached' : 'failed';
+    }
+  }
+
+  private async pruneOldHistoryDays(): Promise<void> {
+    if (!this.store.listKeys || !this.store.removeItem) return;
     const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - keepMonths);
+    cutoff.setDate(cutoff.getDate() - HISTORY_DAYS_WINDOW);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
 
-    let deleted = 0;
+    const keys = await this.store.listKeys('siphon:history:');
     for (const key of keys) {
-      const dateStr = key.split(':').pop()!;
-      const snapshotDate = new Date(dateStr + 'T00:00:00Z');
-      if (snapshotDate < cutoff) {
+      const date = this.dateFromHistoryKey(key);
+      if (date && date < cutoffStr) {
+        await this.store.removeItem(key);
+      }
+    }
+  }
+
+  // Reads a station's price series for one fuel from the cached day files.
+  // Results are memoized in memory for the session (bounded; cleared whenever
+  // history updates or the cache is cleared), so repeated opens of the same
+  // chart are instant.
+  private historyMemo = new Map<string, PriceHistoryPoint[]>();
+
+  private memoizeHistory(key: string, points: PriceHistoryPoint[]): void {
+    if (this.historyMemo.size > 50) this.historyMemo.clear();
+    this.historyMemo.set(key, points);
+  }
+
+  async getPriceHistory(stationId: string, fuelType: string): Promise<PriceHistoryPoint[]> {
+    const memoKey = `${stationId}:${fuelType}`;
+    const memoized = this.historyMemo.get(memoKey);
+    if (memoized) return memoized;
+
+    const keys = (await this.store.listKeys?.('siphon:history:')) ?? [];
+    const points: PriceHistoryPoint[] = [];
+
+    for (const key of keys) {
+      const date = this.dateFromHistoryKey(key);
+      if (!date) continue;
+      const raw = await this.store.getItem(key);
+      if (!raw) continue;
+      try {
+        const entries: Array<{ id: string; fuels: Record<string, number> }> = JSON.parse(raw);
+        const entry = entries.find((e) => e.id === stationId);
+        if (entry && fuelType in entry.fuels) {
+          points.push({ date, price: entry.fuels[fuelType] });
+        }
+      } catch {
+        // skip corrupt day files
+      }
+    }
+
+    points.sort((a, b) => a.date.localeCompare(b.date));
+    this.memoizeHistory(memoKey, points);
+    return points;
+  }
+
+  // Deletes every cached history day file and the index hash. Called when the
+  // user turns the "save price history on device" toggle off.
+  async clearHistoryCache(): Promise<{ deleted: number }> {
+    let deleted = 0;
+    if (this.store.listKeys && this.store.removeItem) {
+      const keys = await this.store.listKeys('siphon:history:');
+      for (const key of keys) {
         await this.store.removeItem(key);
         deleted++;
       }
     }
+    await this.store.removeItem?.(KEYS.historyIndexHash);
+    this.historyMemo.clear();
     return { deleted };
   }
 

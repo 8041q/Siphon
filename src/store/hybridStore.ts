@@ -5,7 +5,7 @@ import type { KeyValueStore } from '../api/siphonClient';
 
 const DATA_DIR = new Directory(Paths.document, 'siphon');
 const TILES_DIR = new Directory(DATA_DIR, 'tiles');
-const SNAPSHOTS_DIR = new Directory(DATA_DIR, 'snapshots');
+const HISTORY_DIR = new Directory(DATA_DIR, 'history');
 
 function ensureDir(dir: Directory): void {
   dir.create({ intermediates: true, idempotent: true });
@@ -16,19 +16,26 @@ function tileFilePath(key: string): File {
   return new File(TILES_DIR, tilePath);
 }
 
-function snapshotFilePath(key: string): File {
-  const date = key.slice('siphon:snapshot:'.length);
-  return new File(SNAPSHOTS_DIR, date + '.json');
+function historyFilePath(key: string): File {
+  const historyPath = key.slice('siphon:history:'.length);
+  return new File(HISTORY_DIR, historyPath);
 }
 
 function isFileKey(key: string): boolean {
-  return key.startsWith('siphon:data:') || key.startsWith('siphon:snapshot:');
+  return key.startsWith('siphon:data:') || key.startsWith('siphon:history:');
 }
 
 function filePathForKey(key: string): File {
   if (key.startsWith('siphon:data:')) return tileFilePath(key);
-  if (key.startsWith('siphon:snapshot:')) return snapshotFilePath(key);
+  if (key.startsWith('siphon:history:')) return historyFilePath(key);
   throw new Error('Unsupported key: ' + key);
+}
+
+function ensureNestedDir(base: Directory, subPath: string): void {
+  const lastSlash = subPath.lastIndexOf('/');
+  if (lastSlash > 0) {
+    ensureDir(new Directory(base, subPath.slice(0, lastSlash)));
+  }
 }
 
 function listFilesRecursive(dir: Directory, prefix: string): string[] {
@@ -62,32 +69,26 @@ export const hybridStore: KeyValueStore = {
     ensureDir(DATA_DIR);
     if (key.startsWith('siphon:data:')) {
       ensureDir(TILES_DIR);
-      const tilePath = key.slice('siphon:data:'.length);
-      const lastSlash = tilePath.lastIndexOf('/');
-      if (lastSlash > 0) {
-        ensureDir(new Directory(TILES_DIR, tilePath.slice(0, lastSlash)));
-      }
+      ensureNestedDir(TILES_DIR, key.slice('siphon:data:'.length));
     }
-    if (key.startsWith('siphon:snapshot:')) {
-      ensureDir(SNAPSHOTS_DIR);
+    if (key.startsWith('siphon:history:')) {
+      ensureDir(HISTORY_DIR);
+      ensureNestedDir(HISTORY_DIR, key.slice('siphon:history:'.length));
     }
     filePathForKey(key).write(value);
   },
 
   async listKeys(prefix: string): Promise<string[]> {
-    if (prefix === 'siphon:snapshot:') {
+    if (prefix === 'siphon:data:') {
       try {
-        ensureDir(SNAPSHOTS_DIR);
-        return SNAPSHOTS_DIR.list()
-          .filter((item): item is File => item instanceof File && item.extension === '.json')
-          .map(item => 'siphon:snapshot:' + item.name.replace(/\.json$/, ''));
+        return listFilesRecursive(TILES_DIR, 'siphon:data:');
       } catch {
         return [];
       }
     }
-    if (prefix === 'siphon:data:') {
+    if (prefix === 'siphon:history:') {
       try {
-        return listFilesRecursive(TILES_DIR, 'siphon:data:');
+        return listFilesRecursive(HISTORY_DIR, 'siphon:history:');
       } catch {
         return [];
       }

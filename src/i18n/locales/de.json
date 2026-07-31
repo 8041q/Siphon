@@ -48,22 +48,12 @@
     "theme_light": "Hell",
     "theme_dark": "Dunkel",
     "price_history": "Preisverlauf",
-    "trim_list": "Liste kürzen (nur letzte 2 Monate behalten)",
-    "clear_history": "Gesamten Preisverlauf löschen",
+    "save_history": "Preisverlauf auf dem Gerät speichern",
+    "save_history_caption": "Prüft den aktualisierten Preisverlauf einmal beim Start und speichert die letzten 90 Tage lokal. Deaktivieren, um keine Verlaufsdaten auf dem Gerät zu speichern.",
     "about": "Über",
     "app_name": "App-Name",
     "data_source": "Datenquelle",
     "version": "Version",
-    "clear_alert_title": "Preisverlauf löschen",
-    "clear_alert_message": "Dadurch werden ALLE täglichen Preisaufzeichnungen gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.",
-    "delete_all": "Alle löschen",
-    "clear_failed": "Löschen des Verlaufs fehlgeschlagen",
-    "trim_alert_title": "Preisverlauf kürzen",
-    "trim_alert_message": "Behalte die Aufzeichnungen der letzten 2 Monate und lösche alles Ältere.",
-    "trim": "Kürzen",
-    "trim_failed": "Kürzen des Verlaufs fehlgeschlagen",
-    "deleted_snapshots": "{{count}} Aufzeichnung(en) gelöscht.",
-    "deleted_old_snapshots": "{{count}} alte Aufzeichnung(en) gelöscht.",
     "language": "Sprache",
     "english": "Englisch",
     "portuguese": "Portugiesisch",
@@ -83,7 +73,8 @@
     "price_history": "Preisverlauf"
   },
   "price_trends": {
-    "loading": "Lade Preisverlauf..."
+    "loading": "Lade Preisverlauf...",
+    "history_disabled": "Preisverlauf ist deaktiviert. Aktivieren Sie ihn in den Einstellungen."
   },
   "station": {
     "view_price_history": "Preisverlauf anzeigen",

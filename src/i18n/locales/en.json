@@ -49,22 +49,12 @@
     "theme_light": "Light",
     "theme_dark": "Dark",
     "price_history": "Price History",
-    "trim_list": "Trim list (keep last 2 months)",
-    "clear_history": "Clear all price history",
+    "save_history": "Save price history on device",
+    "save_history_caption": "Checks for updated price history once per launch and caches the last 90 days locally. Disable to keep your device free of history data.",
     "about": "About",
     "app_name": "App Name",
     "data_source": "Data source",
     "version": "Version",
-    "clear_alert_title": "Clear Price History",
-    "clear_alert_message": "This will delete ALL daily price snapshots. This cannot be undone.",
-    "delete_all": "Delete All",
-    "clear_failed": "Failed to clear history",
-    "trim_alert_title": "Trim Price History",
-    "trim_alert_message": "Keep snapshots from the last 2 months and delete everything older.",
-    "trim": "Trim",
-    "trim_failed": "Failed to trim history",
-    "deleted_snapshots": "Deleted {{count}} snapshot(s).",
-    "deleted_old_snapshots": "Deleted {{count}} old snapshot(s).",
     "language": "Language",
     "english": "English",
     "portuguese": "Portuguese",
@@ -84,7 +74,8 @@
     "price_history": "Price History"
   },
   "price_trends": {
-    "loading": "Loading price history…"
+    "loading": "Loading price history…",
+    "history_disabled": "Price history is disabled. Turn it on in Settings."
   },
   "station": {
     "view_price_history": "View Price History",

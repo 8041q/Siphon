@@ -1,19 +1,12 @@
 import { useEffect, useState } from 'react';
 
-import { hybridStore } from '../store/hybridStore';
+import { client, useApp } from './useApp';
 
-interface SnapshotEntry {
-  id: string;
-  brand: string | null;
-  fuels: Record<string, number>;
-}
-
-export interface PriceHistoryPoint {
-  date: string;
-  price: number;
-}
+export type { PriceHistoryPoint } from '../api/siphonClient';
+import type { PriceHistoryPoint } from '../api/siphonClient';
 
 export function usePriceHistory(stationId: string, fuelType: string) {
+  const { historyEnabled } = useApp();
   const [data, setData] = useState<PriceHistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,22 +16,10 @@ export function usePriceHistory(stationId: string, fuelType: string) {
     async function load() {
       setLoading(true);
       try {
-        const keys = await hybridStore.listKeys?.('siphon:snapshot:') ?? [];
-        const points: PriceHistoryPoint[] = [];
-
-        for (const key of keys) {
-          const raw = await hybridStore.getItem(key);
-          if (!raw) continue;
-          const date = key.split(':').pop()!;
-          const entries: SnapshotEntry[] = JSON.parse(raw);
-          const entry = entries.find((e) => e.id === stationId);
-          if (entry && fuelType in entry.fuels) {
-            points.push({ date, price: entry.fuels[fuelType] });
-          }
-        }
-
-        points.sort((a, b) => a.date.localeCompare(b.date));
-
+        const points =
+          historyEnabled && stationId && fuelType
+            ? await client.getPriceHistory(stationId, fuelType)
+            : [];
         if (!cancelled) setData(points);
       } catch {
         if (!cancelled) setData([]);
@@ -49,7 +30,7 @@ export function usePriceHistory(stationId: string, fuelType: string) {
 
     load();
     return () => { cancelled = true; };
-  }, [stationId, fuelType]);
+  }, [stationId, fuelType, historyEnabled]);
 
-  return { data, loading };
+  return { data, loading, enabled: historyEnabled };
 }

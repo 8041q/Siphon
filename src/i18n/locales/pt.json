@@ -49,22 +49,12 @@
     "theme_light": "Claro",
     "theme_dark": "Escuro",
     "price_history": "Histórico de Preços",
-    "trim_list": "Limpar lista (manter últimos 2 meses)",
-    "clear_history": "Apagar todo o histórico de preços",
+    "save_history": "Guardar histórico de preços no dispositivo",
+    "save_history_caption": "Verifica o histórico atualizado uma vez por arranque e guarda em cache os últimos 90 dias. Desative para não armazenar dados de histórico no dispositivo.",
     "about": "Sobre",
     "app_name": "Nome da App",
     "data_source": "Fonte de dados",
     "version": "Versão",
-    "clear_alert_title": "Apagar Histórico de Preços",
-    "clear_alert_message": "Isto irá apagar TODOS os registos diários de preços. Esta ação é irreversível.",
-    "delete_all": "Apagar Tudo",
-    "clear_failed": "Falha ao apagar o histórico",
-    "trim_alert_title": "Limpar Histórico de Preços",
-    "trim_alert_message": "Manter registos dos últimos 2 meses e apagar tudo mais antigo.",
-    "trim": "Limpar",
-    "trim_failed": "Falha ao limpar o histórico",
-    "deleted_snapshots": "{{count}} registo(s) apagado(s).",
-    "deleted_old_snapshots": "{{count}} registo(s) antigo(s) apagado(s).",
     "language": "Idioma",
     "english": "Inglês",
     "portuguese": "Português",
@@ -84,7 +74,8 @@
     "price_history": "Histórico de Preços"
   },
   "price_trends": {
-    "loading": "A carregar histórico de preços…"
+    "loading": "A carregar histórico de preços…",
+    "history_disabled": "O histórico de preços está desativado. Ative-o nas Definições."
   },
   "station": {
     "view_price_history": "Ver Histórico de Preços",
