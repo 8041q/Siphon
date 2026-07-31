@@ -6,6 +6,7 @@ import type { KeyValueStore } from '../api/siphonClient';
 const DATA_DIR = new Directory(Paths.document, 'siphon');
 const TILES_DIR = new Directory(DATA_DIR, 'tiles');
 const HISTORY_DIR = new Directory(DATA_DIR, 'history');
+const RATE_DIR = new Directory(DATA_DIR, 'rate');
 
 function ensureDir(dir: Directory): void {
   dir.create({ intermediates: true, idempotent: true });
@@ -32,13 +33,24 @@ function historyFilePath(key: string): File {
   return new File(HISTORY_DIR, historyPath);
 }
 
+function rateFilePath(key: string): File {
+  const ratePath = key.slice('siphon:rate:'.length);
+  assertSafeRelative(ratePath);
+  return new File(RATE_DIR, ratePath);
+}
+
 function isFileKey(key: string): boolean {
-  return key.startsWith('siphon:data:') || key.startsWith('siphon:history:');
+  return (
+    key.startsWith('siphon:data:') ||
+    key.startsWith('siphon:history:') ||
+    key.startsWith('siphon:rate:')
+  );
 }
 
 function filePathForKey(key: string): File {
   if (key.startsWith('siphon:data:')) return tileFilePath(key);
   if (key.startsWith('siphon:history:')) return historyFilePath(key);
+  if (key.startsWith('siphon:rate:')) return rateFilePath(key);
   throw new Error('Unsupported key: ' + key);
 }
 
@@ -85,6 +97,9 @@ export const hybridStore: KeyValueStore = {
     if (key.startsWith('siphon:history:')) {
       ensureDir(HISTORY_DIR);
       ensureNestedDir(HISTORY_DIR, key.slice('siphon:history:'.length));
+    }
+    if (key.startsWith('siphon:rate:')) {
+      ensureDir(RATE_DIR);
     }
     filePathForKey(key).write(value);
   },

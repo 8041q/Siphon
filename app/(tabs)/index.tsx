@@ -13,7 +13,7 @@ export default function MapScreen() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
 
-  const { filteredStations, loading, syncProgress, error, offline } = useStations();
+  const { filteredStations, loading, syncProgress, error, offline, rateLimited } = useStations();
   const { location, requestingLocation, locateWithGps } = useLocationState();
   const { setSelectedStation, searchFilter, setSearchFilter } = useUI();
   const { loadStationsForRegion } = useActions();
@@ -32,6 +32,7 @@ export default function MapScreen() {
 
   const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+  const [showRateLimitedBanner, setShowRateLimitedBanner] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
   const searchVersionRef = useRef(0);
   const stationsLenRef = useRef(filteredStations.length);
@@ -53,6 +54,16 @@ export default function MapScreen() {
       setShowOfflineBanner(false);
     }
   }, [offline]);
+
+  useEffect(() => {
+    if (rateLimited) {
+      setShowRateLimitedBanner(true);
+      const timer = setTimeout(() => setShowRateLimitedBanner(false), 8000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowRateLimitedBanner(false);
+    }
+  }, [rateLimited]);
 
   const insets = useSafeAreaInsets();
 
@@ -142,6 +153,17 @@ export default function MapScreen() {
           <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
             <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
               {t('map.offline_banner')}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Rate-limit notice — sync was paused to avoid hitting GitHub limits */}
+      {showRateLimitedBanner && (
+        <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
+          <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
+            <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
+              {t('sync.rate_limited')}
             </Text>
           </View>
         </View>

@@ -191,6 +191,15 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
               </View>
             )}
 
+            <View>
+              <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+                {t('station.id')}
+              </Text>
+              <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+                {station.properties.id}
+              </Text>
+            </View>
+
           </View>
         </Animated.View>
       )}
@@ -283,6 +292,9 @@ export function StationDetailSheet() {
                 {t('station.report_incorrect_info')}
               </Text>
             </TouchableOpacity>
+            <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark text-center mt-xs">
+              {t('station.report_hint')}
+            </Text>
           </View>
         )}
       </View>

@@ -95,6 +95,8 @@
     "margin_n": "Non-distributeur",
     "margin_i": "Indépendant",
     "last_updated": "Dernière Mise à Jour",
+    "id": "Identifiant de la station",
+    "report_hint": "Incluez l'identifiant de la station (dans les détails ci-dessus) lors du signalement.",
     "weekdays": "En semaine",
     "saturday": "Samedi",
     "sunday": "Dimanche",
@@ -123,7 +125,8 @@
     "checking_updates": "Vérification des mises à jour…",
     "syncing_data": "Synchronisation des données…",
     "syncing_progress": "Synchronisation {{loaded}}/{{total}}…",
-    "no_connection": "Pas de connexion internet. Connectez-vous pour télécharger les données des stations lors de la première utilisation."
+    "no_connection": "Pas de connexion internet. Connectez-vous pour télécharger les données des stations lors de la première utilisation.",
+    "rate_limited": "Synchronisation en pause pour éviter d'atteindre les limites de GitHub. Réessayez plus tard."
   },
   "fuel": {
     "gasoline95": "Essence 95",

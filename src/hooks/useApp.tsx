@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { FuelDataClient, FuelStationFeature, CountryCode } from '../api/siphonClient';
+import { RateLimitedError } from '../api/rateLimit';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
 import { haversineKm } from '../utils/location';
@@ -16,6 +17,7 @@ interface StationState {
   loading: boolean;
   error: string | null;
   offline: boolean;
+  rateLimited: boolean;
   syncProgress: string | null;
   filteredStations: FuelStationFeature[];
   reload: () => void;
@@ -77,6 +79,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
   const [searchFilter, setSearchFilter] = useState<SearchFilter>(defaultSearchFilter());
@@ -159,9 +162,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(null);
     setOffline(false);
+    setRateLimited(false);
     setSyncProgress(null);
 
     try {
+      // Hard guard: if we're inside a GitHub backoff window or the hourly
+      // budget is gone, run entirely from cache. Cooldown (we just synced)
+      // is silent — data is already fresh. Blocked surfaces a notice.
+      const gate = await client.rateLimiter.shouldRunSync();
+      if (gate === 'blocked') {
+        setRateLimited(true);
+        await loadAllStationsData();
+        return;
+      }
+      if (gate === 'cooldown') {
+        await loadAllStationsData();
+        return;
+      }
+
+      await client.rateLimiter.recordSyncStarted();
+
       setSyncProgress(i18n.t('sync.checking_updates'));
       const result = await client.checkForUpdates();
       setOffline(result.offline);
@@ -187,12 +207,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setError(i18n.t('sync.no_connection'));
       }
     } catch (e: any) {
-      setError(e.message ?? i18n.t('common.something_went_wrong'));
+      if (e instanceof RateLimitedError) {
+        setRateLimited(true);
+      } else {
+        setError(e.message ?? i18n.t('common.something_went_wrong'));
+      }
     } finally {
       setLoading(false);
       setSyncProgress(null);
     }
-  }, []);
+  }, [loadAllStationsData]);
 
   useEffect(() => {
     if (started.current && !requestingLocation) {
@@ -290,11 +314,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       offline,
+      rateLimited,
       syncProgress,
       filteredStations,
       reload: load,
     }),
-    [stations, allStations, stationDistances, loading, error, offline, syncProgress, filteredStations, load]
+    [stations, allStations, stationDistances, loading, error, offline, rateLimited, syncProgress, filteredStations, load]
   );
 
   const locationValue = useMemo<LocationState>(

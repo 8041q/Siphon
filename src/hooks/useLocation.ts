@@ -22,23 +22,6 @@ async function fetchGpsLocation(): Promise<LocationState | null> {
   }
 }
 
-async function fetchIpLocation(): Promise<LocationState | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch('https://ip-api.com/json/', { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.status === 'success' && typeof data.lat === 'number' && typeof data.lon === 'number') {
-      return { latitude: data.lat, longitude: data.lon, approximate: true };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 export function useLocation() {
   const [loc, setLoc] = useState<LocationState>({
     ...DEFAULT_COORDS,
@@ -52,13 +35,6 @@ export function useLocation() {
     started.current = true;
     setRequesting(true);
     try {
-      const ip = await fetchIpLocation();
-      if (ip) {
-        setLoc(ip);
-        await AsyncStorage.setItem(LOCATION_KEY, JSON.stringify({ latitude: ip.latitude, longitude: ip.longitude }));
-        return;
-      }
-
       const saved = await AsyncStorage.getItem(LOCATION_KEY);
       if (saved) {
         try {

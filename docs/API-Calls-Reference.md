@@ -24,6 +24,20 @@ These run automatically on launch in this order:
 
 ---
 
+## Anti-spam guard (GitHub rate limits)
+
+Every GitHub request goes through `client.fetchRateLimited()`. A persistent guard (stored under `siphon:rate:*` in the file-backed store, so clearing the app cache doesn't reset it) enforces three layers:
+
+| Layer | Default | Effect |
+|---|---|---|
+| Hourly request budget | 300 requests/hr | Refuses new requests once the rolling 1-hour window is full (a cold sync is ~200; a no-change launch is 1). |
+| Min interval between syncs | 10 min | Skips the whole sync cycle if one just ran — blocks rapid relaunch/cache-clear loops. |
+| Server backoff | 5 min (or `Retry-After`/`X-RateLimit-Reset`) | On 429/403, persists a "blocked until" timestamp and refuses requests until it passes. |
+
+When a limit is hit, the sync degrades to cache-only and the map shows a short `sync.rate_limited` notice instead of hammering GitHub. The cooldown layer is silent (data is already fresh); the budget/backoff layers surface the notice.
+
+---
+
 ## Price history (server-side)
 
 The full daily price-history archive is kept server-side (only a rolling 90-day window is cached on the device). The API publishes one file per date plus an index:

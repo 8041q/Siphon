@@ -7,6 +7,8 @@
  */
 // ---------- Types matching the documented schemas ----------
 
+import { RateLimiter, RateLimitedError, DEFAULT_BACKOFF_MS } from './rateLimit';
+
 export type CountryCode = 'ES' | 'PT';
 
 export interface RootManifest {
@@ -109,10 +111,45 @@ function tryParse<T>(raw: string | null): T | null {
 export class FuelDataClient {
   private baseUrl: string;
   private store: KeyValueStore;
+  readonly rateLimiter: RateLimiter;
 
   constructor(opts: { store: KeyValueStore; baseUrl?: string }) {
     this.store = opts.store;
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+    this.rateLimiter = new RateLimiter(this.store);
+  }
+
+  // Single choke point for every GitHub request. Enforces the rate-limit guard
+  // before firing, records the request afterwards, and persists a backoff when
+  // GitHub answers 429/403.
+  private async fetchRateLimited(
+    path: string,
+    opts?: { method?: string; headers?: Record<string, string> }
+  ): Promise<Response> {
+    await this.rateLimiter.assertCanRequest();
+    const res = await fetch(`${this.baseUrl}/${path}`, opts);
+    this.rateLimiter.recordRequest().catch(() => {});
+    await this.handleRateLimitHeaders(res);
+    return res;
+  }
+
+  private async handleRateLimitHeaders(res: Response): Promise<void> {
+    const retryAfter = res.headers.get('retry-after');
+    const resetSec = res.headers.get('x-ratelimit-reset');
+    const remaining = res.headers.get('x-ratelimit-remaining');
+
+    const isExhausted = res.status === 429 || (res.status === 403 && remaining === '0');
+    if (!isExhausted && !retryAfter && !(remaining === '0' && resetSec)) return;
+
+    let untilMs: number;
+    if (resetSec && Number.isFinite(Number(resetSec))) {
+      untilMs = Number(resetSec) * 1000;
+    } else if (retryAfter && Number.isFinite(Number(retryAfter))) {
+      untilMs = Date.now() + Number(retryAfter) * 1000;
+    } else {
+      untilMs = Date.now() + DEFAULT_BACKOFF_MS;
+    }
+    await this.rateLimiter.recordBlocked(untilMs);
   }
 
   // Step 1+2: conditional GET the root manifest, diff country hashes.
@@ -121,7 +158,7 @@ export class FuelDataClient {
   async checkForUpdates(): Promise<{ changedCountries: CountryCode[]; root: RootManifest | null; offline: boolean }> {
     try {
       const etag = await this.store.getItem(KEYS.rootEtag);
-      const res = await fetch(`${this.baseUrl}/manifest.json`, {
+      const res = await this.fetchRateLimited('manifest.json', {
         headers: etag ? { 'If-None-Match': etag } : {},
       });
 
@@ -145,7 +182,8 @@ export class FuelDataClient {
 
       await this.store.setItem(KEYS.rootManifest, JSON.stringify(root));
       return { changedCountries, root, offline: false };
-    } catch {
+    } catch (e) {
+      if (e instanceof RateLimitedError) throw e;
       return { changedCountries: [], root: null, offline: true };
     }
   }
@@ -167,12 +205,13 @@ export class FuelDataClient {
     }
 
     try {
-      const res = await fetch(`${this.baseUrl}/${path}`);
+      const res = await this.fetchRateLimited(path);
       if (!res.ok) throw new Error(`${code} manifest fetch failed: ${res.status}`);
       const manifest: T = await res.json();
       await this.store.setItem(KEYS.countryManifest(code), JSON.stringify(manifest));
       return manifest;
     } catch (e) {
+      if (e instanceof RateLimitedError) throw e;
       if (cached) return JSON.parse(cached) as T;
       return null;
     }
@@ -201,13 +240,14 @@ export class FuelDataClient {
     }
 
     try {
-      const res = await fetch(`${this.baseUrl}/${entry.path}`);
+      const res = await this.fetchRateLimited(entry.path);
       if (!res.ok) throw new Error(`Tile fetch failed: ${entry.path} (${res.status})`);
       const geojson: GeoJsonFeatureCollection = await res.json();
       await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
       await this.store.setItem(KEYS.tileData(entry.path), JSON.stringify(geojson));
       return geojson;
     } catch (e) {
+      if (e instanceof RateLimitedError) throw e;
       return tryParse<GeoJsonFeatureCollection>(
         await this.store.getItem(KEYS.tileData(entry.path))
       );
@@ -267,7 +307,7 @@ export class FuelDataClient {
         return { changed: false, downloadedDays: 0, offline: false };
       }
 
-      const res = await fetch(`${this.baseUrl}/${root.history.path}`);
+      const res = await this.fetchRateLimited(root.history.path);
       if (!res.ok) throw new Error(`History index fetch failed: ${res.status}`);
       const index: HistoryIndex = await res.json();
       await this.store.setItem(KEYS.historyIndexHash, root.history.hash);
@@ -281,7 +321,8 @@ export class FuelDataClient {
       await this.pruneOldHistoryDays();
       this.historyMemo.clear();
       return { changed: true, downloadedDays, offline: false };
-    } catch {
+    } catch (e) {
+      if (e instanceof RateLimitedError) throw e;
       return { changed: false, downloadedDays: 0, offline: true };
     }
   }
@@ -307,13 +348,14 @@ export class FuelDataClient {
     }
 
     try {
-      const res = await fetch(`${this.baseUrl}/${entry.path}`);
+      const res = await this.fetchRateLimited(entry.path);
       if (!res.ok) throw new Error(`History day fetch failed: ${entry.path} (${res.status})`);
       const data = await res.text();
       await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
       await this.store.setItem(key, data);
       return 'fetched';
-    } catch {
+    } catch (e) {
+      if (e instanceof RateLimitedError) throw e;
       const cached = await this.store.getItem(key);
       return cached ? 'cached' : 'failed';
     }

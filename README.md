@@ -23,7 +23,7 @@ Everything else — features, UI, logic — lives in shared code. No double work
 - Customizable location marker (4 built-in icons, SVGs, or a custom image) - Placeholders still
 - Price-history charts per fuel type, 90-day rolling window (live in server - cached on device, max 100mb for 90 days)
 - Station detail sheet — prices per fuel unit (€/L, €/kg, €/m³), opening schedule, services, payment methods, margin, directions, copy address, distance (API source & Crowdsource)
-- GPS and IP-based location with cached last known location, doesn't follow user. Used only when requested, so no battery drained continually
+- GPS-based location with cached last known location, doesn't follow user. Used only when requested, so no battery drained continually
 
 ## Prerequisites
 
@@ -84,6 +84,8 @@ On app launch, sync runs once, in order:
 
 All three steps only touch the network when something actually changed — on a no-change day, the app runs entirely from cache.
 
+To protect the GitHub data source, sync is guarded client-side (persisted in file-backed storage so it survives cache clears): a rolling **hourly request budget** (~300), a **minimum interval between sync cycles** (10 min), and **backoff on 429/403** responses. When a limit is hit, the app runs from cache and shows a short "sync paused" notice instead of spamming GitHub.
+
 The **"Search this area"** button reads from the cached data for the current map region, and only hits the network if that country was flagged as changed at launch.
 
 Tiles for Spain use a 3×3 grid-key lookup to handle boundary/edge cases between regions.
@@ -94,7 +96,7 @@ Fuel prices come from the Spanish and Portuguese government fuel-price feeds, pr
 
 ## Location & GPS
 
-On launch, the app resolves a starting location via IP lookup & GPS. Precise GPS (`getCurrentPositionAsync`) is only requested once automatically at launch, and again whenever you tap **My Location** - it does not track your position continuously, so it won't drain your battery.
+On launch, the app resolves a starting location via GPS, falling back to the last known location when GPS is unavailable or permission is denied. Precise GPS (`getCurrentPositionAsync`) is only requested once automatically at launch, and again whenever you tap **My Location** - it does not track your position continuously, so it won't drain your battery.
 
 ## Troubleshooting (Android)
 

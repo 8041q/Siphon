@@ -95,6 +95,8 @@
     "margin_n": "Nicht-Verteiler",
     "margin_i": "Unabhängig",
     "last_updated": "Zuletzt aktualisiert",
+    "id": "Stations-ID",
+    "report_hint": "Gib beim Melden die Stations-ID aus den Details oben an.",
     "weekdays": "Wochentage",
     "saturday": "Samstag",
     "sunday": "Sonntag",
@@ -123,7 +125,8 @@
     "checking_updates": "Suche nach Updates...",
     "syncing_data": "Synchronisiere Daten...",
     "syncing_progress": "Synchronisiere {{loaded}}/{{total}}...",
-    "no_connection": "Keine Internetverbindung. Stelle eine Verbindung her, um beim ersten Mal die Tankstellendaten herunterzuladen."
+    "no_connection": "Keine Internetverbindung. Stelle eine Verbindung her, um beim ersten Mal die Tankstellendaten herunterzuladen.",
+    "rate_limited": "Synchronisierung pausiert, um GitHub-Limits zu vermeiden. Versuch es später erneut."
   },
   "fuel": {
     "gasoline95": "Benzin 95",
