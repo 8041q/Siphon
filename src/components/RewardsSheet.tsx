@@ -3,13 +3,14 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 
 import { useSupport, ALL_REWARDS } from '../hooks/useSupport';
 import { useUserLocationMarker } from '../hooks/useUserLocationMarker';
 import { PALETTES, PALETTE_ORDER } from '../theme/palettes';
 import type { PaletteId } from '../theme/palettes';
 import { PALETTE_REWARDS, SVG_REWARDS, rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
-import { svgRewards, SVG_REWARD_NAMES } from './userLocationMarkers/rewards';
+import { svgRewards, SVG_REWARD_NAMES, type SvgMarkerRewardId } from './userLocationMarkers/rewards';
 import { Button } from './ui/button';
 
 export type RewardsSheetHandle = { present: () => void };
@@ -76,6 +77,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
         const ok = await watchToUnlock(reward.id);
         if (!ok) return;
       }
+      Haptics.selectionAsync();
       setPaletteId(id);
       bottomSheetRef.current?.dismiss();
     },
@@ -84,11 +86,12 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
 
   const handleSelectSvg = useCallback(
     async (name: string) => {
-      const reward = rewardForSvg(name);
+      const reward = rewardForSvg(name as SvgMarkerRewardId);
       if (reward && !isUnlocked(reward.id)) {
         const ok = await watchToUnlock(reward.id);
         if (!ok) return;
       }
+      Haptics.selectionAsync();
       setMarker({ type: 'svg', value: name });
       bottomSheetRef.current?.dismiss();
     },

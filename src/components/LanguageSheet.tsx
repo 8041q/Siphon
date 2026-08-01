@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
@@ -39,6 +40,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
     }));
 
     const handleSelect = useCallback((code: string) => {
+      Haptics.selectionAsync();
       onSelectLanguage(code);
       bottomSheetRef.current?.dismiss();
     }, [onSelectLanguage]);

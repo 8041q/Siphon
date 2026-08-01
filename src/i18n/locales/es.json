@@ -15,7 +15,9 @@
   },
   "map": {
     "offline_banner": "Usando datos en caché — sin conexión",
-    "search_area": "Buscar esta área"
+    "search_area": "Buscar esta área",
+    "empty_search": "No se encontraron estaciones",
+    "stations_found": "Gasolineras: {{count}}"
   },
   "search": {
     "placeholder": "Buscar estaciones...",

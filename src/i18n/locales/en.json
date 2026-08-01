@@ -16,7 +16,8 @@
   "map": {
     "offline_banner": "Using cached data — no connection",
     "search_area": "Search this area",
-    "empty_search": "No stations found"
+    "empty_search": "No stations found",
+    "stations_found": "Stations: {{count}}"
   },
   "search": {
     "placeholder": "Search stations...",

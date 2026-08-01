@@ -1,4 +1,5 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +40,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     }), []);
 
     const toggleCountry = (code: CountryCode) => {
+      Haptics.selectionAsync();
       const current = localFilters.countries ?? [];
       const next = current.includes(code)
         ? current.filter((c) => c !== code)
@@ -47,6 +49,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     };
 
     const toggleFuelType = (key: string) => {
+      Haptics.selectionAsync();
       const current = localFilters.fuelTypes ?? [];
       const next = current.includes(key)
         ? current.filter((k) => k !== key)
@@ -71,6 +74,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     };
 
     const handleApply = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       pendingApplyRef.current = localFilters;
       bottomSheetRef.current?.dismiss();
     };

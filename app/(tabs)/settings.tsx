@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Appearance, Linking, ScrollView, Switch, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -86,6 +87,7 @@ export default function SettingsScreen() {
   };
 
   const handleToggleHistory = async (value: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!value) {
       try {
         await client.clearHistoryCache();

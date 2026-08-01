@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
@@ -33,6 +34,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     }));
 
     const handleSelectIcon = useCallback((name: string) => {
+      Haptics.selectionAsync();
       setMarker({ type: 'icon', value: name });
       bottomSheetRef.current?.dismiss();
     }, [setMarker]);

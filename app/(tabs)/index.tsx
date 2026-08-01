@@ -1,3 +1,4 @@
+import { BlurView } from 'expo-blur';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,8 +87,12 @@ export default function MapScreen() {
   const handleSearchArea = useCallback(async () => {
     const thisVersion = ++searchVersionRef.current;
     const result = await loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
-    if (searchVersionRef.current === thisVersion && result?.length === 0) {
-      setSearchFeedback(t('map.empty_search'));
+    if (searchVersionRef.current === thisVersion) {
+      setSearchFeedback(
+        result.length === 0
+          ? t('map.empty_search')
+          : t('map.stations_found', { count: result.length }),
+      );
       setTimeout(() => setSearchFeedback(null), 3000);
     }
   }, [loadStationsForRegion, t]);
@@ -150,117 +155,103 @@ export default function MapScreen() {
       {/* Offline Banner positioning below status bar */}
       {showOfflineBanner && (
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
-          <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
-            <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
-              {t('map.offline_banner')}
-            </Text>
-          </View>
+          <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
+            <View className="py-1.5 px-lg" pointerEvents="box-none">
+              <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
+                {t('map.offline_banner')}
+              </Text>
+            </View>
+          </BlurView>
         </View>
       )}
 
       {/* Rate-limit notice — sync was paused to avoid hitting GitHub limits */}
       {showRateLimitedBanner && (
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
-          <View className="bg-surface dark:bg-surface-dark py-1.5 px-lg" pointerEvents="box-none">
-            <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
-              {t('sync.rate_limited')}
-            </Text>
-          </View>
+          <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
+            <View className="py-1.5 px-lg" pointerEvents="box-none">
+              <Text className="text-secondary-label dark:text-secondary-label-dark text-footnote text-center">
+                {t('sync.rate_limited')}
+              </Text>
+            </View>
+          </BlurView>
         </View>
       )}
 
       {/* Floating search pill */}
       <View style={{ position: 'absolute', top: insets.top + 12, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
-        <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
-          <View
-            className="flex-row items-center gap-xs px-lg py-sm rounded-full"
-            style={{
-              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-            }}
-          >
-            <Icon name="magnifyingglass" size={20} color="#0C8599" />
-            <Text className="text-footnote font-semibold text-tint">
-              {t('map.search_area')}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 999, overflow: 'hidden' }}>
+          <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
+            <View className="flex-row items-center gap-xs px-lg py-sm">
+              <Icon name="magnifyingglass" size={20} color="#0C8599" />
+              <Text className="text-footnote font-semibold text-tint">
+                {t('map.search_area')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </BlurView>
       </View>
 
       {/* Search feedback */}
       {searchFeedback && (
         <View style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
-          <View
-            className="px-lg py-1.5 rounded-full"
-            style={{
-              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-            }}
-          >
-            <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
-              {searchFeedback}
-            </Text>
-          </View>
+          <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 999, overflow: 'hidden' }}>
+            <View className="px-lg py-1.5">
+              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+                {searchFeedback}
+              </Text>
+            </View>
+          </BlurView>
         </View>
       )}
 
       {/* Filters button */}
       <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10 }}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => filterSheetRef.current?.present()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 4,
-            elevation: 5,
-          }}
-        >
-          <View className="relative">
-            <Icon name="filter_list" size={20} color={secondaryLabel} />
-            {filterCount > 0 && (
-              <View className="absolute -top-1.5 -right-1.5 bg-tint rounded-full min-w-[16px] h-4 items-center justify-center px-1">
-                <Text className="text-[10px] text-white font-bold">{filterCount}</Text>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
+        <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 22, overflow: 'hidden' }}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => filterSheetRef.current?.present()}
+            style={{
+              width: 44,
+              height: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View className="relative">
+              <Icon name="filter_list" size={20} color={secondaryLabel} />
+              {filterCount > 0 && (
+                <View className="absolute -top-1.5 -right-1.5 bg-tint rounded-full min-w-[16px] h-4 items-center justify-center px-1">
+                  <Text className="text-[10px] text-white font-bold">{filterCount}</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        </BlurView>
       </View>
 
       {/* Locate me button */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={handleLocate}
-        disabled={requestingLocation}
-        style={{
-          position: 'absolute',
-          bottom: 88,
-          right: 16,
-          zIndex: 10,
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 4,
-          elevation: 5,
-        }}
-      >
-        {requestingLocation ? (
-          <ActivityIndicator size="small" color="#0C8599" />
-        ) : (
-          <Icon name="my_location" size={20} color="#0C8599" />
-        )}
-      </TouchableOpacity>
+      <View style={{ position: 'absolute', bottom: 88, right: 16, zIndex: 10 }}>
+        <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 22, overflow: 'hidden' }}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleLocate}
+            disabled={requestingLocation}
+            style={{
+              width: 44,
+              height: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {requestingLocation ? (
+              <ActivityIndicator size="small" color="#0C8599" />
+            ) : (
+              <Icon name="my_location" size={20} color="#0C8599" />
+            )}
+          </TouchableOpacity>
+        </BlurView>
+      </View>
 
       <FilterSheet
         ref={filterSheetRef}

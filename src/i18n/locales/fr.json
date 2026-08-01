@@ -15,7 +15,9 @@
   },
   "map": {
     "offline_banner": "Utilisation des données en cache — pas de connexion",
-    "search_area": "Rechercher cette zone"
+    "search_area": "Rechercher cette zone",
+    "empty_search": "Aucune station trouvée",
+    "stations_found": "Stations: {{count}}"
   },
   "search": {
     "placeholder": "Rechercher des stations...",

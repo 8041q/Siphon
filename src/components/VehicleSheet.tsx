@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
@@ -116,18 +117,21 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
 
     const markTouched = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
 
-    const toggleFuel = useCallback((key: string) => {
-      setFuels((prev) => {
-        const exists = prev.some((f) => f.fuelType === key);
-        if (exists) {
-          if (prev.length <= 1) return prev;
-          return prev.filter((f) => f.fuelType !== key);
-        }
-        if (prev.length >= MAX_FUELS) return prev;
-        return [...prev, { fuelType: key, consumption: '', capacity: '' }];
-      });
-      setTouched((prev) => ({ ...prev, [`fuel:${key}`]: true }));
-    }, []);
+    const toggleFuel = useCallback(
+      (key: string) => {
+        Haptics.selectionAsync();
+        setFuels((prev) => {
+          const exists = prev.some((f) => f.fuelType === key);
+          if (exists) {
+            if (prev.length <= 1) return prev;
+            return prev.filter((f) => f.fuelType !== key);
+          }
+          if (prev.length >= MAX_FUELS) return prev;
+          return [...prev, { fuelType: key, consumption: '', capacity: '' }];
+        });
+      },
+      [],
+    );
 
     const updateFuelConsumption = useCallback((key: string, text: string) => {
       setFuels((prev) => prev.map((f) => (f.fuelType === key ? { ...f, consumption: text } : f)));

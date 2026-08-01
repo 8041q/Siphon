@@ -15,7 +15,9 @@
   },
   "map": {
     "offline_banner": "Verwende zwischengespeicherte Daten — keine Verbindung",
-    "search_area": "Diesen Bereich durchsuchen"
+    "search_area": "Diesen Bereich durchsuchen",
+    "empty_search": "Keine Tankstellen gefunden",
+    "stations_found": "Tankstellen: {{count}}"
   },
   "search": {
     "placeholder": "Tankstellen suchen...",
