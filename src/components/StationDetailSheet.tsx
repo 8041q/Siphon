@@ -13,6 +13,7 @@ import { formatSchedule, marginLabel } from '../utils/schedule';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { Icon } from '../theme/Icon';
 import { useUI, useStations } from '../hooks/useApp';
+import { WorthTheDrive } from './WorthTheDrive';
 
 const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
 
@@ -118,6 +119,9 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
           </Text>
         </TouchableOpacity>
       )}
+
+      {/* === Drive cost & emissions for the user's cars === */}
+      {distanceKm !== undefined && <WorthTheDrive station={station} distanceKm={distanceKm} />}
 
       {/* === FULL CARD DETAILS — animated fade in/out === */}
       {snapIndex >= 1 && (

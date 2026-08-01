@@ -9,10 +9,17 @@ import { useTranslation } from 'react-i18next';
 import { client, useUI } from '../../src/hooks/useApp';
 import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
 import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
+import { useVehicles } from '../../src/hooks/useVehicles';
+import { useEvConfig } from '../../src/hooks/useEvConfig';
 import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
 import { LocationMarkerSheet, LocationMarkerSheetHandle } from '../../src/components/LocationMarkerSheet';
+import { VehicleSheet, VehicleSheetHandle } from '../../src/components/VehicleSheet';
+import { EvBreakevenSheet, EvBreakevenSheetHandle } from '../../src/components/EvBreakevenSheet';
+import { fuelLabel } from '../../src/utils/fuelNames';
+import { evBreakeven } from '../../src/utils/vehicles';
+import type { Vehicle } from '../../src/utils/vehicles';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -27,6 +34,12 @@ export default function SettingsScreen() {
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
   const locationMarkerSheetRef = useRef<LocationMarkerSheetHandle>(null);
+  const vehicleSheetRef = useRef<VehicleSheetHandle>(null);
+  const evSheetRef = useRef<EvBreakevenSheetHandle>(null);
+
+  const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
+  const { config: evConfig, setEvConfig } = useEvConfig();
+  const evResult = evBreakeven(evConfig);
 
   const handleDownloadUpdate = () => {
     Linking.openURL(getUpdateUrl()).catch(() => {});
@@ -72,6 +85,11 @@ export default function SettingsScreen() {
       } catch {}
     }
     setHistoryEnabled(value);
+  };
+
+  const handleSaveVehicle = (data: Omit<Vehicle, 'id'>, id?: string) => {
+    if (id) updateVehicle({ ...data, id });
+    else addVehicle(data);
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
@@ -127,6 +145,57 @@ export default function SettingsScreen() {
           <ListItem onPress={() => locationMarkerSheetRef.current?.present()} trailing={markerLabel}>
             {t('settings.marker_style')}
           </ListItem>
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.my_vehicles')}
+          </Text>
+          {vehicles.length === 0 ? (
+            <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md">
+              {t('settings.no_vehicles')}
+            </Text>
+          ) : (
+            vehicles.map((vehicle, idx) => (
+              <View key={vehicle.id}>
+                <ListItem
+                  onPress={() => vehicleSheetRef.current?.present(vehicle)}
+                  trailing={`${fuelLabel(vehicle.fuelType)} · ${vehicle.consumption} L/100km`}
+                >
+                  {vehicle.name}
+                </ListItem>
+                {idx < vehicles.length - 1 && (
+                  <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+                )}
+              </View>
+            ))
+          )}
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+          <ListItem onPress={() => vehicleSheetRef.current?.present(null)} trailing="+">
+            {t('settings.add_vehicle')}
+          </ListItem>
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
+            {t('settings.vehicles_caption')}
+          </Text>
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.ev_vs_gas')}
+          </Text>
+          <ListItem
+            onPress={() => evSheetRef.current?.present()}
+            trailing={
+              evResult.breakEvenYears !== null
+                ? t('settings.ev_break_even_short', { years: evResult.breakEvenYears.toFixed(1) })
+                : t('settings.ev_no_break_even_short')
+            }
+          >
+            {t('settings.ev_vs_gas')}
+          </ListItem>
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
+            {t('settings.ev_caption')}
+          </Text>
         </View>
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
@@ -192,6 +261,16 @@ export default function SettingsScreen() {
       />
       <LocationMarkerSheet
         ref={locationMarkerSheetRef}
+      />
+      <VehicleSheet
+        ref={vehicleSheetRef}
+        onSave={handleSaveVehicle}
+        onRemove={removeVehicle}
+      />
+      <EvBreakevenSheet
+        ref={evSheetRef}
+        config={evConfig}
+        onSave={setEvConfig}
       />
     </SafeAreaView>
   );

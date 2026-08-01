@@ -39,8 +39,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <BottomSheetModalProvider>
-          <AppProvider>
+        <AppProvider>
+          <BottomSheetModalProvider>
             <ThemeInit />
             <UpdateWatcher />
             <View className="flex-1">
@@ -54,8 +54,8 @@ export default function RootLayout() {
               </Stack>
               <StationDetailSheet />
             </View>
-          </AppProvider>
-        </BottomSheetModalProvider>
+          </BottomSheetModalProvider>
+        </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -13,13 +13,14 @@ interface PriceChartProps {
   fuelLabel: string;
   fuelKey?: string;
   source?: string;
+  forecast?: PriceHistoryPoint[];
   width?: number;
   height?: number;
 }
 
 const PADDING = { top: 20, right: 16, bottom: 32, left: 50 };
 
-const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, width = 350, height = 220 }: PriceChartProps) => {
+const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, forecast, width = 350, height = 220 }: PriceChartProps) => {
   const { t: translate } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -40,7 +41,9 @@ const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, width = 350, he
   const chartW = width - PADDING.left - PADDING.right;
   const chartH = height - PADDING.top - PADDING.bottom;
 
-  const prices = data.map((d) => d.price);
+  const forecastData = forecast ?? [];
+  const combined = [...data, ...forecastData];
+  const prices = combined.map((d) => d.price);
   const minP = Math.min(...prices);
   const maxP = Math.max(...prices);
 
@@ -54,11 +57,14 @@ const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, width = 350, he
 
   const range = maxP - minP || 1;
 
-  const xScale = (i: number) => PADDING.left + (i / (data.length - 1)) * chartW;
+  const xScale = (i: number) => PADDING.left + (i / (combined.length - 1)) * chartW;
   const yScale = (v: number) => PADDING.top + chartH - ((v - minP) / range) * chartH;
 
-  const points = data.map((d, i) => `${xScale(i)},${yScale(d.price)}`);
-  const linePath = `M ${points.join(' L ')}`;
+  const solidPoints = data.map((d, i) => `${xScale(i)},${yScale(d.price)}`);
+  const solidPath = `M ${solidPoints.join(' L ')}`;
+
+  const forecastPoints = combined.slice(data.length - 1).map((d, i) => `${xScale(data.length - 1 + i)},${yScale(d.price)}`);
+  const forecastPath = `M ${forecastPoints.join(' L ')}`;
 
   const yLabels = [minP, (minP + maxP) / 2, maxP];
 
@@ -90,7 +96,10 @@ const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, width = 350, he
               </SvgText>
             </G>
           ))}
-          <Path d={linePath} fill="none" stroke={colors.tint} strokeWidth={2} />
+          <Path d={solidPath} fill="none" stroke={colors.tint} strokeWidth={2} />
+          {forecastData.length > 0 && (
+            <Path d={forecastPath} fill="none" stroke={colors.tint} strokeWidth={2} strokeDasharray="6 4" opacity={0.7} />
+          )}
           {data.map((d, i) => (
             <Circle
               key={d.date}
@@ -98,6 +107,18 @@ const PriceChartComponent = ({ data, fuelLabel, fuelKey, source, width = 350, he
               cy={yScale(d.price)}
               r={3}
               fill={colors.tint}
+            />
+          ))}
+          {forecastData.map((d, i) => (
+            <Circle
+              key={d.date}
+              cx={xScale(data.length + i)}
+              cy={yScale(d.price)}
+              r={3}
+              fill="none"
+              stroke={colors.tint}
+              strokeWidth={2}
+              opacity={0.8}
             />
           ))}
           {data
