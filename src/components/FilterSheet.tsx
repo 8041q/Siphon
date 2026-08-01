@@ -103,17 +103,23 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         ref={bottomSheetRef}
         snapPoints={snapPoints}
         enablePanDownToClose
-        enableContentPanningGesture
+        enableContentPanningGesture={false}
         enableDynamicSizing={false}
+        handleStyle={{ marginVertical: 8 }}
+        handleIndicatorStyle={{
+          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
+          width: 40,
+          height: 5,
+          borderRadius: 3,
+          alignSelf: 'center',
+          marginVertical: 8,
+        }}
         onDismiss={handleDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
         backgroundStyle={{
           backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
         }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
