@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
@@ -257,8 +257,9 @@ export function StationDetailSheet() {
       ref={bottomSheetRef}
       snapPoints={snapPoints}
       enablePanDownToClose
-      enableContentPanningGesture
+      enableContentPanningGesture={false}
       enableDynamicSizing
+      maxDynamicContentSize={Math.round(Dimensions.get('window').height * 0.9)}
       onChange={handleChange}
       onDismiss={handleDismiss}
       backdropComponent={(props) => (

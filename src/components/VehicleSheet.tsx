@@ -200,6 +200,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         ref={bottomSheetRef}
         snapPoints={snapPoints}
         enablePanDownToClose
+        enableContentPanningGesture={false}
         enableDynamicSizing={false}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />

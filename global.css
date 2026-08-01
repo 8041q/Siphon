@@ -1,3 +1,57 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-background: #FFFFFF;
+  --color-background-dark: #FFFFFF;
+  --color-grouped-background: #F2F2F7;
+  --color-grouped-background-dark: #F2F2F7;
+  --color-surface: #FFFFFF;
+  --color-surface-dark: #FFFFFF;
+  --color-label: #000000;
+  --color-label-dark: #000000;
+  --color-secondary-label: rgba(60, 60, 67, 0.8);
+  --color-secondary-label-dark: rgba(60, 60, 67, 0.8);
+  --color-tertiary-label: rgba(60, 60, 67, 0.8);
+  --color-tertiary-label-dark: rgba(60, 60, 67, 0.8);
+  --color-separator: rgba(60, 60, 67, 0.21);
+  --color-separator-dark: rgba(60, 60, 67, 0.21);
+  --color-tint: #0C8599;
+  --color-tint-dark: #0C8599;
+  --color-price-low: #22A559;
+  --color-price-low-dark: #22A559;
+  --color-price-low-tint: rgba(34, 165, 89, 0.1);
+  --color-price-low-tint-dark: rgba(34, 165, 89, 0.1);
+  --color-price-mid: #F2A93B;
+  --color-price-mid-dark: #F2A93B;
+  --color-price-high: #E5484D;
+  --color-price-high-dark: #E5484D;
+  --color-price-high-tint: rgba(229, 72, 77, 0.1);
+  --color-price-high-tint-dark: rgba(229, 72, 77, 0.1);
+  --color-destructive: #FF3B30;
+  --color-destructive-dark: #FF3B30;
+  --color-field-background: #FFFFFF;
+  --color-field-background-dark: #FFFFFF;
+  --color-field-border: rgba(60, 60, 67, 0.21);
+  --color-field-border-dark: rgba(60, 60, 67, 0.21);
+}
+
+.dark:root {
+  --color-background-dark: #1C1C1E;
+  --color-grouped-background-dark: #2C2C2E;
+  --color-surface-dark: #3A3A3C;
+  --color-label-dark: #FFFFFF;
+  --color-secondary-label-dark: rgba(235, 235, 245, 0.75);
+  --color-tertiary-label-dark: rgba(235, 235, 245, 0.5);
+  --color-separator-dark: rgba(84, 84, 88, 0.6);
+  --color-tint-dark: #22B8CD;
+  --color-price-low-dark: #30D158;
+  --color-price-low-tint-dark: rgba(48, 209, 88, 0.1);
+  --color-price-mid-dark: #FFD60A;
+  --color-price-high-dark: #FF453A;
+  --color-price-high-tint-dark: rgba(255, 69, 58, 0.1);
+  --color-destructive-dark: #FF453A;
+  --color-field-background-dark: #3A3A3C;
+  --color-field-border-dark: rgba(84, 84, 88, 0.6);
+}

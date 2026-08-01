@@ -99,7 +99,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
                     if (costToCheapest !== undefined) {
                       const worth = saving > costToCheapest;
                       return (
-                        <View className={`flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs ${worth ? 'bg-price-low/10 dark:bg-price-low-dark/10' : 'bg-price-high/10 dark:bg-price-high-dark/10'}`}>
+                        <View className={`flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs ${worth ? 'bg-price-low-tint dark:bg-price-low-tint-dark' : 'bg-price-high-tint dark:bg-price-high-tint-dark'}`}>
                           <Text className={`text-subheadline font-semibold ${worth ? 'text-price-low dark:text-price-low-dark' : 'text-price-high dark:text-price-high-dark'}`}>
                             {worth ? '✓ ' : '✕ '}
                           </Text>

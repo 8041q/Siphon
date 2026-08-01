@@ -7,16 +7,20 @@ import { setBackgroundColorAsync } from 'expo-system-ui';
 import { useTranslation } from 'react-i18next';
 
 import { client, useUI } from '../../src/hooks/useApp';
+import { useSupport } from '../../src/hooks/useSupport';
 import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
 import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
+import { getPalette } from '../../src/theme/palettes';
 import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
 import { LocationMarkerSheet, LocationMarkerSheetHandle } from '../../src/components/LocationMarkerSheet';
 import { VehicleSheet, VehicleSheetHandle } from '../../src/components/VehicleSheet';
 import { EvBreakevenSheet, EvBreakevenSheetHandle } from '../../src/components/EvBreakevenSheet';
+import { RewardsSheet, RewardsSheetHandle } from '../../src/components/RewardsSheet';
+import { DonationSheet, DonationSheetHandle } from '../../src/components/DonationSheet';
 import { fuelLabel } from '../../src/utils/fuelNames';
 import { evBreakeven, consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
 import type { Vehicle } from '../../src/utils/vehicles';
@@ -36,7 +40,10 @@ export default function SettingsScreen() {
   const locationMarkerSheetRef = useRef<LocationMarkerSheetHandle>(null);
   const vehicleSheetRef = useRef<VehicleSheetHandle>(null);
   const evSheetRef = useRef<EvBreakevenSheetHandle>(null);
+  const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
+  const donationSheetRef = useRef<DonationSheetHandle>(null);
 
+  const { watchedCount, isUnlocked, watchToUnlock, paletteId } = useSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const evResult = evBreakeven(evConfig);
@@ -74,7 +81,7 @@ export default function SettingsScreen() {
       scheme = pref;
     }
     nativewindColorScheme.set(scheme);
-    setBackgroundColorAsync(scheme === 'dark' ? '#1C1C1E' : '#FFFFFF');
+    setBackgroundColorAsync(getPalette(paletteId)[scheme].background);
     AsyncStorage.setItem(THEME_STORAGE_KEY, pref);
   };
 
@@ -93,7 +100,7 @@ export default function SettingsScreen() {
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
-  const { marker: currentMarker } = useUserLocationMarker();
+  const { marker: currentMarker, setMarker } = useUserLocationMarker();
   const markerLabel = currentMarker.type === 'icon'
     ? currentMarker.value.replace('_', ' ')
     : currentMarker.type === 'svg'
@@ -127,6 +134,10 @@ export default function SettingsScreen() {
               )}
             </View>
           ))}
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+          <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.palette_${paletteId}`)}>
+            {t('settings.color_palette')}
+          </ListItem>
         </View>
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
@@ -254,6 +265,22 @@ export default function SettingsScreen() {
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.support')}
+          </Text>
+          <ListItem
+            onPress={() => rewardsSheetRef.current?.present()}
+            trailing={t('settings.support_rewards_trailing', { count: watchedCount })}
+          >
+            {t('settings.support_rewards')}
+          </ListItem>
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+          <ListItem onPress={() => donationSheetRef.current?.present()}>
+            {t('settings.support_donate')}
+          </ListItem>
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.about')}
           </Text>
           <ListItem trailing="Siphon">{t('settings.app_name')}</ListItem>
@@ -272,6 +299,12 @@ export default function SettingsScreen() {
       />
       <LocationMarkerSheet
         ref={locationMarkerSheetRef}
+        isSvgUnlocked={isUnlocked}
+        onRequestUnlockSvg={(name) => {
+          watchToUnlock(name).then((ok) => {
+            if (ok) setMarker({ type: 'svg', value: name });
+          });
+        }}
       />
       <VehicleSheet
         ref={vehicleSheetRef}
@@ -283,6 +316,8 @@ export default function SettingsScreen() {
         config={evConfig}
         onSave={setEvConfig}
       />
+      <RewardsSheet ref={rewardsSheetRef} />
+      <DonationSheet ref={donationSheetRef} />
     </SafeAreaView>
   );
 }

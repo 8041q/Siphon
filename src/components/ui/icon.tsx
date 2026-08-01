@@ -23,6 +23,10 @@ const MAPPING: Record<string, IoniconsName> = {
   'copy': 'copy-outline',
   'info.circle': 'information-circle-outline',
   'flag': 'flag-outline',
+  'github': 'logo-github',
+  'kofi': 'cafe',
+  'lock': 'lock-closed',
+  'gift': 'gift-outline',
 };
 
 type IconProps = {

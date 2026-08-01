@@ -18,7 +18,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Siphon uses your location to show nearby fuel stations.",
-        "CFBundleAllowMixedLocalizations": true
+        "NSUserTrackingUsageDescription": "Your data is used to keep Siphon free. Enabling tracking lets us show you relevant ads and supports development."
       }
     },
     "android": {
@@ -52,9 +52,25 @@
       [
         "expo-localization",
         {
-          "supportedLocales": ["en", "pt", "es", "fr", "de"]
+          "supportedLocales": [
+            "en",
+            "pt",
+            "es",
+            "fr",
+            "de"
+          ]
         }
-      ]
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "Your data is used to keep Siphon free. Enabling tracking lets us show you relevant ads and supports development."
+        }
+      ],
+      "expo-tracking-transparency"
     ],
     "scheme": "siphon",
     "experiments": {

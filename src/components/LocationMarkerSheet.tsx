@@ -7,12 +7,17 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { Icon } from '../theme/Icon';
 import { useUserLocationMarker, type UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
-import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
+import { svgMarkers, SVG_MARKER_NAMES, SVG_REWARD_NAMES } from './userLocationMarkers';
 
 export type LocationMarkerSheetHandle = { present: () => void };
 
-export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, object>(
-  function LocationMarkerSheet(_props, ref) {
+interface LocationMarkerSheetProps {
+  isSvgUnlocked?: (name: string) => boolean;
+  onRequestUnlockSvg?: (name: string) => void;
+}
+
+export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, LocationMarkerSheetProps>(
+  function LocationMarkerSheet({ isSvgUnlocked, onRequestUnlockSvg }, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['50%'], []);
@@ -59,7 +64,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, object>
         ref={bottomSheetRef}
         snapPoints={snapPoints}
         enablePanDownToClose
-        enableContentPanningGesture
+        enableContentPanningGesture={false}
         enableDynamicSizing={false}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
@@ -124,11 +129,13 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, object>
                 {SVG_MARKER_NAMES.map((name) => {
                   const SvgComponent = svgMarkers[name];
                   const selected = isSelected({ type: 'svg', value: name });
+                  const isReward = SVG_REWARD_NAMES.includes(name as (typeof SVG_REWARD_NAMES)[number]);
+                  const unlocked = !isReward || (isSvgUnlocked ? isSvgUnlocked(name) : true);
                   return (
                     <TouchableOpacity
                       key={name}
                       activeOpacity={0.7}
-                      onPress={() => handleSelectSvg(name)}
+                      onPress={() => (unlocked ? handleSelectSvg(name) : onRequestUnlockSvg?.(name))}
                       className="items-center gap-xs"
                       style={{ width: '22%' }}
                     >
@@ -146,8 +153,24 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, object>
                         elevation: 3,
                         borderWidth: selected ? 2.5 : 0,
                         borderColor: selected ? tint : 'transparent',
+                        opacity: unlocked ? 1 : 0.4,
                       }}>
                         {SvgComponent && <SvgComponent size={26} color={tint} />}
+                        {!unlocked && (
+                          <View style={{
+                            position: 'absolute',
+                            right: 4,
+                            bottom: 4,
+                            width: 18,
+                            height: 18,
+                            borderRadius: 9,
+                            backgroundColor: isDark ? '#3A3A3C' : '#FFFFFF',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                            <Icon name="lock" size={11} color={tint} />
+                          </View>
+                        )}
                       </View>
                       <Text className="text-caption1 text-secondary-label dark:text-secondary-label-dark text-center">
                         {name}
