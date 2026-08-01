@@ -18,7 +18,7 @@ import { LocationMarkerSheet, LocationMarkerSheetHandle } from '../../src/compon
 import { VehicleSheet, VehicleSheetHandle } from '../../src/components/VehicleSheet';
 import { EvBreakevenSheet, EvBreakevenSheetHandle } from '../../src/components/EvBreakevenSheet';
 import { fuelLabel } from '../../src/utils/fuelNames';
-import { evBreakeven } from '../../src/utils/vehicles';
+import { evBreakeven, consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
 import type { Vehicle } from '../../src/utils/vehicles';
 
 type ThemePref = 'system' | 'light' | 'dark';
@@ -160,7 +160,18 @@ export default function SettingsScreen() {
               <View key={vehicle.id}>
                 <ListItem
                   onPress={() => vehicleSheetRef.current?.present(vehicle)}
-                  trailing={`${fuelLabel(vehicle.fuelType)} · ${vehicle.consumption} L/100km`}
+                  trailing={
+                    <View>
+                      {vehicle.fuels.map((f) => (
+                        <Text
+                          key={f.fuelType}
+                          className="text-body text-secondary-label dark:text-secondary-label-dark text-right"
+                        >
+                          {fuelLabel(f.fuelType)} · {f.consumption} {consumptionUnit(f.fuelType)} · {f.capacity} {capacityUnit(f.fuelType)}
+                        </Text>
+                      ))}
+                    </View>
+                  }
                 >
                   {vehicle.name}
                 </ListItem>
@@ -186,8 +197,8 @@ export default function SettingsScreen() {
           <ListItem
             onPress={() => evSheetRef.current?.present()}
             trailing={
-              evResult.breakEvenYears !== null
-                ? t('settings.ev_break_even_short', { years: evResult.breakEvenYears.toFixed(1) })
+              evResult.breakEvenYear !== null
+                ? t('settings.ev_break_even_short', { years: evResult.breakEvenYear })
                 : t('settings.ev_no_break_even_short')
             }
           >

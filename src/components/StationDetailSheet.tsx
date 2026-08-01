@@ -120,13 +120,13 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
         </TouchableOpacity>
       )}
 
-      {/* === Drive cost & emissions for the user's cars === */}
-      {distanceKm !== undefined && <WorthTheDrive station={station} distanceKm={distanceKm} />}
-
       {/* === FULL CARD DETAILS — animated fade in/out === */}
       {snapIndex >= 1 && (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
           <View className="gap-md">
+            {/* === Drive cost & emissions for the user's cars === */}
+            {distanceKm !== undefined && <WorthTheDrive station={station} distanceKm={distanceKm} />}
+
             <View className="h-px bg-separator dark:bg-separator-dark" />
 
             {schedule || hours ? (

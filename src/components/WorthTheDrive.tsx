@@ -10,6 +10,8 @@ import {
   roundTripFuelCostKm,
   co2PerTank,
   savingPerTank,
+  normalizeFuelPrice,
+  consumptionUnit,
 } from '../utils/vehicles';
 
 interface WorthTheDriveProps {
@@ -23,83 +25,108 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
   const { vehicles } = useVehicles();
   const { stations, stationDistances } = useStations();
 
+  const source = station.properties.source as string | undefined;
+
   const matching = useMemo(() => {
     if (!vehicles.length) return [];
-    return vehicles.filter((v) => {
-      if (fuelType && v.fuelType !== fuelType) return false;
-      const price = station.properties.fuels?.[v.fuelType];
-      return typeof price === 'number' && isFinite(price);
-    });
+    return vehicles
+      .map((v) => ({
+        vehicle: v,
+        fuels: v.fuels.filter((f) => {
+          if (fuelType && f.fuelType !== fuelType) return false;
+          const price = station.properties.fuels?.[f.fuelType];
+          return typeof price === 'number' && isFinite(price);
+        }),
+      }))
+      .filter((x) => x.fuels.length > 0);
   }, [vehicles, fuelType, station]);
 
   if (!matching.length) return null;
 
   return (
-    <View className="bg-surface dark:bg-surface-dark rounded-md p-lg gap-sm">
+    <View className="bg-surface dark:bg-surface-dark rounded-md p-lg gap-md">
       <Text className="text-footnote text-label dark:text-label-dark font-semibold uppercase tracking-wide">
         {t('settings.drive_cost_title')}
       </Text>
-      {matching.map((v) => {
-        const fuelPrice = station.properties.fuels?.[v.fuelType] as number;
+      {matching.map(({ vehicle: v, fuels }) => (
+        <View key={v.id} className="bg-grouped-background dark:bg-grouped-background-dark rounded-md p-lg gap-sm">
+          <Text className="text-callout font-semibold text-label dark:text-label-dark">
+            {v.name}
+          
+          </Text>
+          {fuels.map((f, idx) => {
+            const rawPrice = station.properties.fuels?.[f.fuelType] as number;
+            const fuelPrice = normalizeFuelPrice(f.fuelType, rawPrice, source);
 
-        const candidates = stations
-          .filter((s) => {
-            const p = s.properties.fuels?.[v.fuelType];
-            return typeof p === 'number' && p < fuelPrice;
-          })
-          .sort((a, b) => (a.properties.fuels?.[v.fuelType] as number) - (b.properties.fuels?.[v.fuelType] as number));
-        const cheapest = candidates[0];
+            const norm = (s: FuelStationFeature) =>
+              normalizeFuelPrice(f.fuelType, s.properties.fuels?.[f.fuelType] as number, s.properties.source);
 
-        const driveCost = distanceKm !== undefined ? roundTripFuelCostKm(distanceKm, v.consumption, fuelPrice) : null;
-        const co2 = co2PerTank(v.tankSize, v.fuelType);
+            const candidates = stations
+              .filter((s) => {
+                const p = s.properties.fuels?.[f.fuelType];
+                return typeof p === 'number' && norm(s) < fuelPrice;
+              })
+              .sort((a, b) => norm(a) - norm(b));
+            const cheapest = candidates[0];
 
-        return (
-          <View key={v.id} className="bg-grouped-background dark:bg-grouped-background-dark rounded-md p-md gap-xs">
-            <Text className="text-callout font-semibold text-label dark:text-label-dark">
-              {v.name}
-              <Text className="text-secondary-label dark:text-secondary-label-dark font-normal">
-                {'  ·  '}{fuelLabel(v.fuelType)} · {v.consumption} L/100km
-              </Text>
-            </Text>
-            {driveCost !== null && (
-              <Text className="text-subheadline text-label dark:text-label-dark">
-                {t('settings.drive_cost_label')}: <Text className="font-semibold">{driveCost.toFixed(2)} €</Text>
-              </Text>
-            )}
-            <Text className="text-subheadline text-label dark:text-label-dark">
-              {t('settings.co2_tank_label')}: <Text className="font-semibold">{co2.toFixed(0)} kg</Text>
-            </Text>
-            {cheapest ? (
-              (() => {
-                const minPrice = cheapest.properties.fuels?.[v.fuelType] as number;
-                const saving = savingPerTank(fuelPrice - minPrice, v.tankSize);
-                const cheapestDistance = stationDistances.get(cheapest.properties.id);
-                const costToCheapest =
-                  cheapestDistance !== undefined ? roundTripFuelCostKm(cheapestDistance, v.consumption, minPrice) : undefined;
-                if (costToCheapest !== undefined) {
-                  const worth = saving > costToCheapest;
-                  return (
-                    <Text className={`text-footnote ${worth ? 'text-price-low dark:text-price-low-dark' : 'text-price-high dark:text-price-high-dark'}`}>
-                      {worth
-                        ? t('settings.worth_it', { saving: saving.toFixed(2), cost: costToCheapest.toFixed(2) })
-                        : t('settings.not_worth', { cost: costToCheapest.toFixed(2), saving: saving.toFixed(2) })}
-                    </Text>
-                  );
-                }
-                return (
-                  <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
-                    {t('settings.cheapest_nearby', { price: minPrice.toFixed(3) })}
+            const driveCost = distanceKm !== undefined ? roundTripFuelCostKm(distanceKm, f.consumption, fuelPrice) : null;
+            const co2 = f.capacity > 0 ? co2PerTank(f.capacity, f.fuelType) : null;
+
+            return (
+              <View key={f.fuelType} className={idx > 0 ? 'border-t border-separator dark:border-separator-dark pt-sm' : undefined}>
+                <Text className="text-footnote font-semibold text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-xs">
+                  {fuelLabel(f.fuelType)} · {f.consumption} {consumptionUnit(f.fuelType)}
+                </Text>
+                {driveCost !== null && (
+                  <Text className="text-subheadline text-label dark:text-label-dark">
+                    {t('settings.drive_cost_label')}: <Text className="font-semibold">{driveCost.toFixed(2)} €</Text>
                   </Text>
-                );
-              })()
-            ) : (
-              <Text className="text-footnote text-price-low dark:text-price-low-dark">
-                {t('settings.this_is_cheapest')}
-              </Text>
-            )}
-          </View>
-        );
-      })}
+                )}
+                {co2 !== null && (
+                  <Text className="text-subheadline text-label dark:text-label-dark">
+                    {t('settings.co2_tank_label')}: <Text className="font-semibold">{co2.toFixed(0)} kg</Text>
+                  </Text>
+                )}
+                {cheapest ? (
+                  (() => {
+                    const minPrice = norm(cheapest);
+                    const saving = savingPerTank(fuelPrice - minPrice, f.capacity);
+                    const cheapestDistance = stationDistances.get(cheapest.properties.id);
+                    const costToCheapest =
+                      cheapestDistance !== undefined
+                        ? roundTripFuelCostKm(cheapestDistance, f.consumption, minPrice)
+                        : undefined;
+                    if (costToCheapest !== undefined) {
+                      const worth = saving > costToCheapest;
+                      return (
+                        <View className={`flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs ${worth ? 'bg-price-low/10 dark:bg-price-low-dark/10' : 'bg-price-high/10 dark:bg-price-high-dark/10'}`}>
+                          <Text className={`text-subheadline font-semibold ${worth ? 'text-price-low dark:text-price-low-dark' : 'text-price-high dark:text-price-high-dark'}`}>
+                            {worth ? '✓ ' : '✕ '}
+                          </Text>
+                          <Text className={`text-subheadline font-semibold flex-1 ${worth ? 'text-price-low dark:text-price-low-dark' : 'text-price-high dark:text-price-high-dark'}`}>
+                            {worth
+                              ? t('settings.worth_it', { saving: saving.toFixed(2), cost: costToCheapest.toFixed(2) })
+                              : t('settings.not_worth', { cost: costToCheapest.toFixed(2), saving: saving.toFixed(2) })}
+                          </Text>
+                        </View>
+                      );
+                    }
+                    return (
+                      <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark mt-xs">
+                        {t('settings.cheapest_nearby', { price: (cheapest.properties.fuels?.[f.fuelType] as number).toFixed(3) })}
+                      </Text>
+                    );
+                  })()
+                ) : (
+                  <Text className="text-footnote text-price-low dark:text-price-low-dark mt-xs">
+                    {t('settings.this_is_cheapest')}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 };

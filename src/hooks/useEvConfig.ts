@@ -7,12 +7,11 @@ import type { EvConfig } from '../utils/vehicles';
 const STORAGE_KEY = 'siphon:evConfig';
 
 const NUMERIC_FIELDS = [
-  'electricityRate',
-  'evConsumption',
-  'gasConsumption',
-  'gasPrice',
-  'evPremium',
+  'evPrice',
+  'petrolPrice',
   'annualKm',
+  'gasPrice',
+  'electricityRate',
 ] as const;
 
 function sanitizeEvConfig(raw: unknown): EvConfig {

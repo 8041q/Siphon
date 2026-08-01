@@ -11,11 +11,14 @@ import {
   parseDecimal,
   inRange,
   isVehicleFormValid,
+  isElectricFuel,
+  consumptionUnit,
+  capacityUnit,
+  capacityRange,
   NAME_MAX_LENGTH,
+  MAX_FUELS,
   CONSUMPTION_MIN,
   CONSUMPTION_MAX,
-  TANK_MIN,
-  TANK_MAX,
 } from '../utils/vehicles';
 import type { Vehicle } from '../utils/vehicles';
 
@@ -25,6 +28,16 @@ interface VehicleSheetProps {
 }
 
 export type VehicleSheetHandle = { present: (vehicle: Vehicle | null) => void };
+
+interface FuelInput {
+  fuelType: string;
+  consumption: string;
+  capacity: string;
+}
+
+function defaultFuels(): FuelInput[] {
+  return [{ fuelType: VEHICLE_FUEL_KEYS[0], consumption: '', capacity: '' }];
+}
 
 export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
   function VehicleSheet({ onSave, onRemove }, ref) {
@@ -36,9 +49,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
 
     const [editing, setEditing] = useState<Vehicle | null>(null);
     const [name, setName] = useState('');
-    const [fuelType, setFuelType] = useState<string>(VEHICLE_FUEL_KEYS[0]);
-    const [consumption, setConsumption] = useState('');
-    const [tankSize, setTankSize] = useState('');
+    const [fuels, setFuels] = useState<FuelInput[]>(defaultFuels);
     const [touched, setTouched] = useState<Record<string, boolean>>({});
 
     useImperativeHandle(
@@ -47,9 +58,15 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         present: (v: Vehicle | null) => {
           setEditing(v);
           setName(v?.name ?? '');
-          setFuelType(v?.fuelType ?? VEHICLE_FUEL_KEYS[0]);
-          setConsumption(v ? String(v.consumption) : '');
-          setTankSize(v ? String(v.tankSize) : '');
+          setFuels(
+            v?.fuels?.length
+              ? v.fuels.map((f) => ({
+                  fuelType: f.fuelType,
+                  consumption: String(f.consumption),
+                  capacity: String(f.capacity),
+                }))
+              : defaultFuels()
+          );
           setTouched({});
           bottomSheetRef.current?.present();
         },
@@ -64,43 +81,106 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
       return null;
     }, [name, t]);
 
-    const consumptionNum = parseDecimal(consumption);
-    const consumptionError = useMemo(() => {
-      if (consumptionNum === null) {
-        return consumption.trim() === '' ? t('settings.error_required') : t('settings.error_invalid_number');
-      }
-      if (!inRange(consumptionNum, CONSUMPTION_MIN, CONSUMPTION_MAX)) {
-        return t('settings.error_range', { min: CONSUMPTION_MIN, max: CONSUMPTION_MAX });
-      }
-      return null;
-    }, [consumptionNum, consumption, t]);
+    const consumptionError = useCallback(
+      (fuel: FuelInput): string | null => {
+        const n = parseDecimal(fuel.consumption);
+        if (n === null) {
+          return fuel.consumption.trim() === '' ? t('settings.error_required') : t('settings.error_invalid_number');
+        }
+        if (!inRange(n, CONSUMPTION_MIN, CONSUMPTION_MAX)) {
+          return t('settings.error_range', { min: CONSUMPTION_MIN, max: CONSUMPTION_MAX });
+        }
+        return null;
+      },
+      [t]
+    );
 
-    const tankSizeNum = parseDecimal(tankSize);
-    const tankSizeError = useMemo(() => {
-      if (tankSizeNum === null) {
-        return tankSize.trim() === '' ? t('settings.error_required') : t('settings.error_invalid_number');
-      }
-      if (!inRange(tankSizeNum, TANK_MIN, TANK_MAX)) {
-        return t('settings.error_range', { min: TANK_MIN, max: TANK_MAX });
-      }
-      return null;
-    }, [tankSizeNum, tankSize, t]);
+    const capacityError = useCallback(
+      (fuel: FuelInput): string | null => {
+        const n = parseDecimal(fuel.capacity);
+        if (n === null) {
+          return fuel.capacity.trim() === '' ? t('settings.error_required') : t('settings.error_invalid_number');
+        }
+        const range = capacityRange(fuel.fuelType);
+        if (!inRange(n, range.min, range.max)) {
+          return t('settings.error_range', { min: range.min, max: range.max });
+        }
+        return null;
+      },
+      [t]
+    );
 
-    const valid = isVehicleFormValid({ name, fuelType, consumption, tankSize });
+    const hasLiquid = fuels.some((f) => !isElectricFuel(f.fuelType));
+
+    const valid = isVehicleFormValid({ name, fuels });
 
     const markTouched = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
 
+    const toggleFuel = useCallback((key: string) => {
+      setFuels((prev) => {
+        const exists = prev.some((f) => f.fuelType === key);
+        if (exists) {
+          if (prev.length <= 1) return prev;
+          return prev.filter((f) => f.fuelType !== key);
+        }
+        if (prev.length >= MAX_FUELS) return prev;
+        return [...prev, { fuelType: key, consumption: '', capacity: '' }];
+      });
+      setTouched((prev) => ({ ...prev, [`fuel:${key}`]: true }));
+    }, []);
+
+    const updateFuelConsumption = useCallback((key: string, text: string) => {
+      setFuels((prev) => prev.map((f) => (f.fuelType === key ? { ...f, consumption: text } : f)));
+      setTouched((prev) => ({ ...prev, [`fuel:${key}`]: true }));
+    }, []);
+
+    const updateFuelCapacity = useCallback((key: string, text: string) => {
+      setFuels((prev) => prev.map((f) => (f.fuelType === key ? { ...f, capacity: text } : f)));
+      setTouched((prev) => ({ ...prev, [`fuel:${key}`]: true }));
+    }, []);
+
+    const consumptionPlaceholder = (fuel: FuelInput) => {
+      if (isElectricFuel(fuel.fuelType)) return t('settings.vehicle_consumption_placeholder_ev');
+      if (fuel.fuelType === 'lpg') return t('settings.vehicle_consumption_placeholder_lpg');
+      return t('settings.vehicle_consumption_placeholder');
+    };
+
+    const capacityPlaceholder = (fuel: FuelInput) =>
+      isElectricFuel(fuel.fuelType)
+        ? t('settings.vehicle_range_placeholder')
+        : t('settings.vehicle_tank_placeholder');
+
+    const capacityLabel = (fuel: FuelInput) =>
+      isElectricFuel(fuel.fuelType)
+        ? `${t('settings.vehicle_range')} (${capacityUnit(fuel.fuelType)})`
+        : `${t('settings.vehicle_tank')} (${capacityUnit(fuel.fuelType)})`;
+
     const handleSave = useCallback(() => {
-      if (!valid || consumptionNum === null || tankSizeNum === null) {
-        setTouched({ name: true, consumption: true, tankSize: true });
+      if (!valid) {
+        const nextTouched: Record<string, boolean> = { name: true };
+        for (const f of fuels) {
+          nextTouched[`fuel:${f.fuelType}`] = true;
+          nextTouched[`cap:${f.fuelType}`] = true;
+        }
+        setTouched(nextTouched);
         return;
       }
+      const ordered = [...fuels].sort(
+        (a, b) => VEHICLE_FUEL_KEYS.indexOf(a.fuelType as (typeof VEHICLE_FUEL_KEYS)[number]) - VEHICLE_FUEL_KEYS.indexOf(b.fuelType as (typeof VEHICLE_FUEL_KEYS)[number])
+      );
       onSave(
-        { name: name.trim(), fuelType, consumption: consumptionNum, tankSize: tankSizeNum },
+        {
+          name: name.trim(),
+          fuels: ordered.map((f) => ({
+            fuelType: f.fuelType,
+            consumption: parseDecimal(f.consumption) as number,
+            capacity: parseDecimal(f.capacity) as number,
+          })),
+        },
         editing?.id
       );
       bottomSheetRef.current?.dismiss();
-    }, [valid, consumptionNum, tankSizeNum, name, fuelType, editing, onSave]);
+    }, [valid, fuels, name, editing, onSave]);
 
     const handleRemove = useCallback(() => {
       if (!editing) return;
@@ -120,7 +200,6 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         ref={bottomSheetRef}
         snapPoints={snapPoints}
         enablePanDownToClose
-        enableContentPanningGesture
         enableDynamicSizing={false}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
@@ -153,44 +232,57 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
               </Text>
               <View className="flex-row flex-wrap gap-sm">
                 {VEHICLE_FUEL_KEYS.map((key) => {
-                  const selected = fuelType === key;
+                  const selected = fuels.some((f) => f.fuelType === key);
+                  const atMax = fuels.length >= MAX_FUELS && !selected;
                   return (
                     <TouchableOpacity
                       key={key}
                       activeOpacity={0.7}
-                      onPress={() => setFuelType(key)}
-                      className={`px-3.5 py-1.5 rounded-full ${chipBg(selected)}`}
+                      onPress={() => toggleFuel(key)}
+                      disabled={atMax}
+                      className={`px-3.5 py-1.5 rounded-full ${chipBg(selected)} ${atMax ? 'opacity-40' : ''}`}
                     >
                       <Text className={`text-caption-1 font-semibold ${chipText(selected)}`}>{fuelLabel(key)}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
+              {fuels.length >= MAX_FUELS && (
+                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark mt-xs">
+                  {t('settings.vehicle_max_fuels')}
+                </Text>
+              )}
             </View>
 
-            <Field
-              label={t('settings.vehicle_consumption')}
-              value={consumption}
-              onChangeText={(text) => {
-                setConsumption(text);
-                markTouched('consumption');
-              }}
-              placeholder={t('settings.vehicle_consumption_placeholder')}
-              keyboardType="decimal-pad"
-              error={touched.consumption ? consumptionError : null}
-            />
+            {fuels.map((fuel) => (
+              <View key={fuel.fuelType} className="gap-md">
+                <Field
+                  label={t('settings.vehicle_consumption_fuel', {
+                    fuel: fuelLabel(fuel.fuelType),
+                    unit: consumptionUnit(fuel.fuelType),
+                  })}
+                  value={fuel.consumption}
+                  onChangeText={(text) => updateFuelConsumption(fuel.fuelType, text)}
+                  placeholder={consumptionPlaceholder(fuel)}
+                  keyboardType="decimal-pad"
+                  error={touched[`fuel:${fuel.fuelType}`] ? consumptionError(fuel) : null}
+                />
+                <Field
+                  label={capacityLabel(fuel)}
+                  value={fuel.capacity}
+                  onChangeText={(text) => updateFuelCapacity(fuel.fuelType, text)}
+                  placeholder={capacityPlaceholder(fuel)}
+                  keyboardType="numeric"
+                  error={touched[`cap:${fuel.fuelType}`] ? capacityError(fuel) : null}
+                />
+              </View>
+            ))}
 
-            <Field
-              label={t('settings.vehicle_tank')}
-              value={tankSize}
-              onChangeText={(text) => {
-                setTankSize(text);
-                markTouched('tankSize');
-              }}
-              placeholder={t('settings.vehicle_tank_placeholder')}
-              keyboardType="numeric"
-              error={touched.tankSize ? tankSizeError : null}
-            />
+            {hasLiquid && (
+              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+                {t('settings.vehicle_tank_caption')}
+              </Text>
+            )}
           </View>
 
           <View className="gap-sm mt-xl">
