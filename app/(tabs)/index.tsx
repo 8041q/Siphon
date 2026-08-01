@@ -211,7 +211,7 @@ export default function MapScreen() {
       )}
 
       {/* Filters button */}
-      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10 }}>
+      <View style={{ position: 'absolute', top: insets.top + 12, left: 16, zIndex: 10 }}>
         <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 22, overflow: 'hidden' }}>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -227,7 +227,7 @@ export default function MapScreen() {
               <Icon name="filter_list" size={20} color={secondaryLabelColor} />
               {filterCount > 0 && (
                 <View className="absolute -top-1.5 -right-1.5 rounded-full min-w-[16px] h-4 items-center justify-center px-1" style={{ backgroundColor: tintColor }}>
-                  <Text className="text-[10px] text-white font-bold">{filterCount}</Text>
+                  <Text className="text-[10px] font-bold">{filterCount}</Text>
                 </View>
               )}
             </View>
@@ -235,8 +235,8 @@ export default function MapScreen() {
         </BlurView>
       </View>
 
-      {/* Locate me button */}
-      <View style={{ position: 'absolute', bottom: 88, right: 16, zIndex: 10 }}>
+            {/* Locate me button */}
+      <View style={{ position: 'absolute', top: 140, left: 16, zIndex: 10 }}>
         <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 22, overflow: 'hidden' }}>
           <TouchableOpacity
             activeOpacity={0.7}

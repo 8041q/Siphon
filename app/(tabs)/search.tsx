@@ -133,7 +133,7 @@ export default function SearchScreen() {
               <Icon name="filter_list" size={20} color={secondaryLabel} />
               {filterCount > 0 && (
                 <View className="absolute -top-1.5 -right-1.5 bg-tint rounded-full min-w-[16px] h-4 items-center justify-center px-1">
-                  <Text className="text-[10px] text-white font-bold">{filterCount}</Text>
+                  <Text className="text-[10px] font-bold">{filterCount}</Text>
                 </View>
               )}
             </View>

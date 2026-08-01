@@ -100,9 +100,9 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         >
           {markerConfig.type === 'image' ? (
             <View style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
+              width: 50,
+              height: 50,
+              borderRadius: 25,
               overflow: 'hidden',
               borderWidth: 2.5,
               borderColor: '#FFFFFF',
@@ -120,24 +120,24 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             </View>
           ) : (
             <View style={{
-              width: 38,
-              height: 38,
+              width: 50,
+              height: 50,
               borderRadius: 19,
-              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+              // backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
               alignItems: 'center',
               justifyContent: 'center',
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 1,
               shadowRadius: 4,
               elevation: 5,
             }}>
               {markerConfig.type === 'icon' && (
-                <Icon name={markerConfig.value} size={24} color={tint} />
+                <Icon name={markerConfig.value} size={50} color={tint} />
               )}
               {markerConfig.type === 'svg' && (() => {
                 const SvgComp = svgMarkers[markerConfig.value];
-                return SvgComp ? <SvgComp size={24} color={tint} /> : null;
+                return SvgComp ? <SvgComp size={50} color={tint} /> : null;
               })()}
             </View>
           )}
@@ -165,7 +165,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           type="circle"
           source="station-points"
           paint={{
-            'circle-radius': 6,
+            'circle-radius': 8,
             'circle-color': tint,
             'circle-stroke-width': 2,
             'circle-stroke-color': 'rgba(255, 255, 255, 0.5)',

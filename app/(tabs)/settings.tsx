@@ -215,7 +215,7 @@ export default function SettingsScreen() {
                 : t('settings.ev_no_break_even_short')
             }
           >
-            {t('settings.ev_vs_gas')}
+            {t('settings.ev_vs_gas_sub')}
           </ListItem>
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
             {t('settings.ev_caption')}
