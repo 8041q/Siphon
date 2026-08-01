@@ -67,7 +67,14 @@
     "marker_image": "Custom Image",
     "marker_import_image": "Import from Gallery",
     "marker_change_image": "Change Image",
-    "marker_custom_image": "Custom Image"
+    "marker_custom_image": "Custom Image",
+    "updates": "Updates",
+    "update_status": "Status",
+    "checking": "Prüfe…",
+    "up_to_date": "Aktuell",
+    "update_available_version": "v{{version}} verfügbar",
+    "check_for_updates": "Nach Updates suchen",
+    "download_update": "Update herunterladen"
   },
   "screen": {
     "price_history": "Preisverlauf"

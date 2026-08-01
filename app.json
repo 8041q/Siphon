@@ -27,7 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.8041q.Siphon"
+      "package": "com.8041q.siphon"
     },
     "web": {
       "favicon": "./assets/favicon.png"

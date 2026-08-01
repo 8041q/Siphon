@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Appearance, Switch, Text, View } from 'react-native';
+import { Appearance, Linking, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,7 +7,9 @@ import { setBackgroundColorAsync } from 'expo-system-ui';
 import { useTranslation } from 'react-i18next';
 
 import { client, useUI } from '../../src/hooks/useApp';
+import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
 import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
+import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
 import { LocationMarkerSheet, LocationMarkerSheetHandle } from '../../src/components/LocationMarkerSheet';
@@ -20,10 +22,15 @@ const THEME_STORAGE_KEY = 'siphon:theme';
 export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { historyEnabled, setHistoryEnabled } = useUI();
+  const { updateAvailable, latestVersion, installedVersion, checking, check } = useAppUpdate();
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
   const locationMarkerSheetRef = useRef<LocationMarkerSheetHandle>(null);
+
+  const handleDownloadUpdate = () => {
+    Linking.openURL(getUpdateUrl()).catch(() => {});
+  };
 
   const persistLanguage = useCallback(async (lng: string) => {
     await i18nInstance.changeLanguage(lng);
@@ -83,7 +90,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
-      <View className="flex-1 gap-lg">
+      <ScrollView className="flex-1" contentContainerClassName="gap-lg pb-xl">
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
@@ -140,15 +147,42 @@ export default function SettingsScreen() {
 
         <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
           <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.updates')}
+          </Text>
+          <ListItem
+            trailing={
+              checking
+                ? t('settings.checking')
+                : updateAvailable
+                  ? t('settings.update_available_version', { version: latestVersion })
+                  : t('settings.up_to_date')
+            }
+          >
+            {t('settings.update_status')}
+          </ListItem>
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+          <ListItem onPress={() => check(true)}>{t('settings.check_for_updates')}</ListItem>
+          {updateAvailable && (
+            <>
+              <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+              <View className="px-lg py-md">
+                <Button onPress={handleDownloadUpdate}>{t('settings.download_update')}</Button>
+              </View>
+            </>
+          )}
+        </View>
+
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.about')}
           </Text>
           <ListItem trailing="Siphon">{t('settings.app_name')}</ListItem>
           <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem trailing="SiphonAPI">{t('settings.data_source')}</ListItem>
           <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
-          <ListItem trailing="1.0.0">{t('settings.version')}</ListItem>
+          <ListItem trailing={installedVersion}>{t('settings.version')}</ListItem>
         </View>
-      </View>
+      </ScrollView>
 
       <LanguageSheet
         ref={languageSheetRef}

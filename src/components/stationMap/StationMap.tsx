@@ -17,9 +17,14 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const cameraRef = useRef<CameraRef>(null);
   const { marker: markerConfig } = useUserLocationMarker();
   const onMapReadyFired = useRef(false);
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    if (flyToCoords) {
+    return () => { isMounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (flyToCoords && isMounted.current) {
       cameraRef.current?.flyTo({ center: flyToCoords, duration: 500 });
     }
   }, [flyToCoords]);

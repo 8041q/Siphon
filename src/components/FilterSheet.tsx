@@ -27,12 +27,16 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
 
     const [localFilters, setLocalFilters] = useState(searchFilter);
 
+    const searchFilterRef = useRef(searchFilter);
+    searchFilterRef.current = searchFilter;
+    const pendingApplyRef = useRef<SearchFilter | null>(null);
+
     useImperativeHandle(ref, () => ({
       present: () => {
-        setLocalFilters(searchFilter);
+        setLocalFilters(searchFilterRef.current);
         bottomSheetRef.current?.present();
       },
-    }), [searchFilter]);
+    }), []);
 
     const toggleCountry = (code: CountryCode) => {
       const current = localFilters.countries ?? [];
@@ -67,10 +71,16 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     };
 
     const handleApply = () => {
+      pendingApplyRef.current = localFilters;
       bottomSheetRef.current?.dismiss();
-      requestIdleCallback(() => {
-        onApply(localFilters);
-      });
+    };
+
+    const handleDismiss = () => {
+      if (pendingApplyRef.current) {
+        const filters = pendingApplyRef.current;
+        pendingApplyRef.current = null;
+        onApply(filters);
+      }
     };
 
     const filterCount = useMemo(() => {
@@ -95,6 +105,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         enablePanDownToClose
         enableContentPanningGesture
         enableDynamicSizing={false}
+        onDismiss={handleDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}

@@ -13,6 +13,7 @@ import { setBackgroundColorAsync } from 'expo-system-ui';
 
 import { StationDetailSheet } from '../src/components/StationDetailSheet';
 import { AppProvider } from '../src/hooks/useApp';
+import { useAppUpdate } from '../src/hooks/useAppUpdate';
 import '../src/i18n';
 
 function ThemeInit() {
@@ -28,6 +29,12 @@ function ThemeInit() {
   return null;
 }
 
+// Verifies on launch whether a new version is available (no download).
+function UpdateWatcher() {
+  useAppUpdate();
+  return null;
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -35,6 +42,7 @@ export default function RootLayout() {
         <BottomSheetModalProvider>
           <AppProvider>
             <ThemeInit />
+            <UpdateWatcher />
             <View className="flex-1">
               <StatusBar style="auto" />
               <Stack screenOptions={{ headerShown: false }}>
