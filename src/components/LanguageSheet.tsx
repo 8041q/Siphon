@@ -52,14 +52,13 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
         enablePanDownToClose
         enableContentPanningGesture={false}
         enableDynamicSizing={false}
-        handleStyle={{ marginVertical: 8 }}
+        handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
           backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)',
           width: 40,
           height: 5,
           borderRadius: 3,
           alignSelf: 'center',
-          marginVertical: 8,
         }}
         onDismiss={onDismiss}
         backdropComponent={(props) => (

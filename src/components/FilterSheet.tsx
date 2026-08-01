@@ -109,14 +109,13 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         enablePanDownToClose
         enableContentPanningGesture={false}
         enableDynamicSizing={false}
-        handleStyle={{ marginVertical: 8 }}
+        handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
           backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
           width: 40,
           height: 5,
           borderRadius: 3,
           alignSelf: 'center',
-          marginVertical: 8,
         }}
         onDismiss={handleDismiss}
         backdropComponent={(props) => (
@@ -126,8 +125,8 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
           backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
         }}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-          <View className="gap-5">
+        <BottomSheetScrollView contentContainerStyle={{ padding: 13 }}>
+          <View className="gap-3">
             {/* Country */}
             <View>
               <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
@@ -161,7 +160,8 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setLocalFilters({ ...localFilters, fuelTypes: undefined })}
-                  className={`px-4 py-2 rounded-full ${chipBg(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}
+                  className={`py-2 rounded-full ${chipBg(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}
+                  style={{ paddingHorizontal: Math.max(8, t('search.any_fuel').length * 2) }}
                 >
                   <Text className={`text-subheadline ${chipText(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}>
                     {t('search.any_fuel')}
@@ -169,15 +169,17 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 </TouchableOpacity>
                 {FUEL_KEYS.map((key) => {
                   const selected = (localFilters.fuelTypes ?? []).includes(key);
+                  const label = fuelLabel(key);
                   return (
                     <TouchableOpacity
                       key={key}
                       activeOpacity={0.7}
                       onPress={() => toggleFuelType(key)}
-                      className={`px-4 py-2 rounded-full ${chipBg(selected)}`}
+                      className={`py-2 rounded-full ${chipBg(selected)}`}
+                      style={{ paddingHorizontal: Math.max(8, label.length * 2) }}
                     >
                       <Text className={`text-subheadline ${chipText(selected)}`}>
-                        {fuelLabel(key)}
+                        {label}
                       </Text>
                     </TouchableOpacity>
                   );
