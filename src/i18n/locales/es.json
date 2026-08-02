@@ -239,6 +239,7 @@
     "day_s": "Sáb",
     "day_d": "Dom",
     "from_location": "de distancia",
+    "distance_optimizing": "optimizando...",
     "open_in_maps": "Abrir en Mapas",
     "payment_dinheiro": "Efectivo",
     "payment_multibanco": "Tarjeta",

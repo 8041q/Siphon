@@ -17,14 +17,19 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const { marker: markerConfig } = useUserLocationMarker();
   const onMapReadyFired = useRef(false);
   const isMounted = useRef(true);
+  const pendingFlyToRef = useRef<[number, number] | null>(null);
 
   useEffect(() => {
     return () => { isMounted.current = false; };
   }, []);
 
   useEffect(() => {
-    if (flyToCoords && isMounted.current) {
+    if (!flyToCoords || !isMounted.current) return;
+
+    if (onMapReadyFired.current) {
       cameraRef.current?.flyTo({ center: flyToCoords, duration: 500 });
+    } else {
+      pendingFlyToRef.current = flyToCoords;
     }
   }, [flyToCoords]);
 
@@ -83,6 +88,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           if (!onMapReadyFired.current) {
             onMapReadyFired.current = true;
             onMapReady?.();
+            const pending = pendingFlyToRef.current;
+            if (pending) {
+              pendingFlyToRef.current = null;
+              cameraRef.current?.flyTo({ center: pending, duration: 500 });
+            }
           }
         }}
     >

@@ -23,7 +23,7 @@ function priceColorStyle(price: number, colors: { priceLow: string; priceMid: st
   return { color: colors.priceHigh };
 }
 
-function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: FuelStationFeature; snapIndex: number; distanceKm?: number; onClose: () => void }) {
+function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClose }: { station: FuelStationFeature; snapIndex: number; distanceKm?: number; distanceLoading?: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { name, brand, address, fuels, hours, schedule, services, paymentMethods, observations, otherServices, lastUpdated, extra, source } = station.properties;
   const [showPaymentTip, setShowPaymentTip] = useState(false);
@@ -66,11 +66,19 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
             </Text>
           )}
           {distanceKm !== undefined && (
-            <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline mt-0.5">
-              {distanceKm < 1
-                ? `${(distanceKm * 1000).toFixed(0)} m`
-                : `${distanceKm.toFixed(1)} km`} {t('station.from_location')}
-            </Text>
+            <View className="flex-row items-center gap-1 mt-0.5">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline">
+                {distanceKm < 1
+                  ? `${(distanceKm * 1000).toFixed(0)} m`
+                  : `${distanceKm.toFixed(1)} km`}{' '}
+                {t('station.from_location')}
+              </Text>
+              {distanceLoading && (
+                <Text style={{ color: colors.priceMid }} className="text-[10px]">
+                  ({t('station.distance_optimizing')})
+                </Text>
+              )}
+            </View>
           )}
         </View>
         <View className="flex-row items-center gap-1">
@@ -209,7 +217,7 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
 
 export function StationDetailSheet() {
   const { selectedStation, setSelectedStation } = useUI();
-  const { stationDistances } = useStations();
+  const { stationDistances, distanceLoading } = useStations();
   const distanceKm = selectedStation ? stationDistances.get(selectedStation.properties.id) : undefined;
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const isPresentedRef = useRef(false);
@@ -279,6 +287,7 @@ export function StationDetailSheet() {
               station={selectedStation}
               snapIndex={snapIndex}
               distanceKm={distanceKm}
+              distanceLoading={distanceLoading}
               onClose={() => bottomSheetRef.current?.dismiss()}
             />
           ) : (

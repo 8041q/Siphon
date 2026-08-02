@@ -5,7 +5,7 @@ import { FuelDataClient, FuelStationFeature, CountryCode } from '../api/siphonCl
 import { RateLimitedError } from '../api/rateLimit';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
-import { haversineKm } from '../utils/location';
+import { roadEstimateKm, roadDistanceKm } from '../utils/routeDistance';
 import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
 import i18n from '../i18n';
@@ -14,6 +14,7 @@ interface StationState {
   stations: FuelStationFeature[];
   allStations: FuelStationFeature[];
   stationDistances: Map<string, number>;
+  distanceLoading: boolean;
   loading: boolean;
   error: string | null;
   offline: boolean;
@@ -76,6 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stations, setStations] = useState<FuelStationFeature[]>([]);
   const [allStations, setAllStations] = useState<FuelStationFeature[]>([]);
   const [stationDistances, setStationDistances] = useState<Map<string, number>>(new Map());
+  const [distanceLoading, setDistanceLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
@@ -226,28 +228,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!allStations.length) return;
-    const round = (n: number) => Math.round(n * 100) / 100;
-    const cacheKey = `siphon:distances:${round(location.latitude)}:${round(location.longitude)}`;
+    if (location.latitude === 0 && location.longitude === 0) return;
+
+    const userLat = location.latitude;
+    const userLng = location.longitude;
+    const userId = `user:${Math.round(userLat * 100)}:${Math.round(userLng * 100)}`;
 
     (async () => {
-      const cached = await AsyncStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          setStationDistances(new Map(Object.entries(JSON.parse(cached))));
-          return;
-        } catch {}
-      }
+      setDistanceLoading(true);
 
       const map = new Map<string, number>();
+      const pending: Array<{ stationId: string; slng: number; slat: number }> = [];
+
       for (const s of allStations) {
         const [slng, slat] = s.geometry.coordinates;
-        map.set(s.properties.id, haversineKm(location.latitude, location.longitude, slat, slng));
+        const sid = s.properties.id;
+
+        // First: instant estimate for all stations
+        const estimate = roadEstimateKm(userLat, userLng, slat, slng);
+        map.set(sid, estimate);
+        pending.push({ stationId: sid, slng, slat });
       }
 
-      setStationDistances(map);
-      AsyncStorage.setItem(cacheKey, JSON.stringify(Object.fromEntries(map)));
+      setStationDistances(new Map(map));
+
+      // Then: batch-enrich with actual OSRM distances (5 concurrent, short timeout)
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+        const batch = pending.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(
+          batch.map((p) =>
+            roadDistanceKm(userLat, userLng, p.slat, p.slng, userId, p.stationId)
+          )
+        );
+
+        let hasOSRM = false;
+        results.forEach((r, j) => {
+          if (r.status === 'fulfilled') {
+            map.set(batch[j].stationId, r.value.value);
+            hasOSRM = true;
+          }
+        });
+
+        if (hasOSRM) {
+          setStationDistances(new Map(map));
+        }
+      }
+
+      setDistanceLoading(false);
     })();
-  }, [allStations, location]);
+  }, [allStations, location.latitude, location.longitude]);
 
   useEffect(() => {
     return () => {
@@ -311,6 +341,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stations,
       allStations,
       stationDistances,
+      distanceLoading,
       loading,
       error,
       offline,
@@ -319,7 +350,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       filteredStations,
       reload: load,
     }),
-    [stations, allStations, stationDistances, loading, error, offline, rateLimited, syncProgress, filteredStations, load]
+    [stations, allStations, stationDistances, distanceLoading, loading, error, offline, rateLimited, syncProgress, filteredStations, load]
   );
 
   const locationValue = useMemo<LocationState>(

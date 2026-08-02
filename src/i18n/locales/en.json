@@ -239,6 +239,7 @@
     "day_s": "Sat",
     "day_d": "Sun",
     "from_location": "away",
+    "distance_optimizing": "optimizing...",
     "open_in_maps": "Open in Maps",
     "payment_dinheiro": "Cash",
     "payment_multibanco": "Card",

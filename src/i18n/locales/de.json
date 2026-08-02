@@ -239,6 +239,7 @@
     "day_s": "Sa",
     "day_d": "So",
     "from_location": "entfernt",
+    "distance_optimizing": "wird optimiert...",
     "open_in_maps": "In Karten öffnen",
     "payment_dinheiro": "Bargeld",
     "payment_multibanco": "Karte",

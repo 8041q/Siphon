@@ -10,16 +10,7 @@ import { FilterSheet } from '../../src/components/FilterSheet';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStations, useLocationState, useUI } from '../../src/hooks/useApp';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+import { roadEstimateKm } from '../../src/utils/routeDistance';
 
 export default function SearchScreen() {
   const { t } = useTranslation();
@@ -105,7 +96,7 @@ export default function SearchScreen() {
 
       const withDistance = filtered.map((s) => {
         const [slng, slat] = s.geometry.coordinates;
-        const dist = haversineKm(userLat, userLng, slat, slng);
+        const dist = roadEstimateKm(userLat, userLng, slat, slng);
         return { station: s, distance: dist };
       });
 

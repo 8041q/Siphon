@@ -24,7 +24,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const entries = Object.entries(fuels ?? {});
   const favorite = favorites?.has(station.properties.id) ?? false;
   const locationParts = getLocationParts(station.properties);
-  const { stationDistances } = useStations();
+  const { stationDistances, distanceLoading } = useStations();
   const distanceKm = stationDistances.get(station.properties.id);
   const { colors } = useThemeTokens();
 
@@ -85,11 +85,19 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
             </Text>
           )}
           {distanceKm !== undefined && (
-            <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-0.5">
-              {distanceKm < 1
-                ? `${(distanceKm * 1000).toFixed(0)} m`
-                : `${distanceKm.toFixed(1)} km`} {t('station.from_location')}
-            </Text>
+            <View className="flex-row items-center gap-1 mt-0.5">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
+                {distanceKm < 1
+                  ? `${(distanceKm * 1000).toFixed(0)} m`
+                  : `${distanceKm.toFixed(1)} km`}{' '}
+                {t('station.from_location')}
+              </Text>
+              {distanceLoading && (
+                <Text style={{ color: colors.priceMid }} className="text-[10px]">
+                  ({t('station.distance_optimizing')})
+                </Text>
+              )}
+            </View>
           )}
         </View>
         <View className="flex-row items-center gap-1">
