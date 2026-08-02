@@ -19,6 +19,14 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const isMounted = useRef(true);
   const pendingFlyToRef = useRef<[number, number] | null>(null);
 
+  // Stable camera center — written once on first render so the native map never
+  // receives a mid-init reposition via the Camera prop. All subsequent moves
+  // go through cameraRef.flyTo(), which is already deferred until map ready.
+  const stableCameraCenter = useRef<[number, number]>([initialRegion.longitude, initialRegion.latitude]);
+  if (!Number.isFinite(stableCameraCenter.current[0]) || !Number.isFinite(stableCameraCenter.current[1])) {
+    stableCameraCenter.current = [initialRegion.longitude, initialRegion.latitude];
+  }
+
   useEffect(() => {
     return () => { isMounted.current = false; };
   }, []);
@@ -32,6 +40,17 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
       pendingFlyToRef.current = flyToCoords;
     }
   }, [flyToCoords]);
+
+  const handleMapFullyRendered = () => {
+    if (onMapReadyFired.current) return;
+    onMapReadyFired.current = true;
+    onMapReady?.();
+    const pending = pendingFlyToRef.current;
+    if (pending) {
+      pendingFlyToRef.current = null;
+      cameraRef.current?.flyTo({ center: pending, duration: 500 });
+    }
+  };
 
   const stationsSourceData = useMemo<GeoJSON.FeatureCollection>(() => {
     if (__DEV__) {
@@ -84,21 +103,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             onRegionChange(lat, lng, bounds);
           }
         }}
-        onDidFinishRenderingMapFully={() => {
-          if (!onMapReadyFired.current) {
-            onMapReadyFired.current = true;
-            onMapReady?.();
-            const pending = pendingFlyToRef.current;
-            if (pending) {
-              pendingFlyToRef.current = null;
-              cameraRef.current?.flyTo({ center: pending, duration: 500 });
-            }
-          }
-        }}
+        onDidFinishRenderingMapFully={handleMapFullyRendered}
     >
       <Camera
         ref={cameraRef}
-        center={[initialRegion.longitude, initialRegion.latitude]}
+        center={stableCameraCenter.current}
         zoom={12}
       />
       {userLocation && (
