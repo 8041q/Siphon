@@ -9,6 +9,7 @@ import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 const TABS = [
   { name: 'index', href: '/', labelKey: 'tabs.map', icon: 'map.fill' },
   { name: 'search', href: '/search', labelKey: 'tabs.search', icon: 'magnifyingglass' },
+  { name: 'market', href: '/market', labelKey: 'tabs.market', icon: 'oilcan.fill' },
   { name: 'favorites', href: '/favorites', labelKey: 'tabs.favorites', icon: 'star.fill' },
   { name: 'settings', href: '/settings', labelKey: 'tabs.settings', icon: 'gearshape.fill' },
 ];

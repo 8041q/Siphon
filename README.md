@@ -60,8 +60,9 @@ npx expo run:android
 ### Android
 
 ```bash
+npx expo prebuild --clean --platform android
 cd android
-./gradlew assembleRelease
+gradlew assembleRelease
 ```
 
 ### iOS

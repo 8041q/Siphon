@@ -54,8 +54,17 @@ export function isElectricFuel(fuelType: string): boolean {
 // (~0.55 kg/L).
 export const LPG_KG_PER_LITER = 0.55;
 
+// Matches 'PT', 'pt', 'pt-continente', 'pt_azores', etc. If your source
+// values follow a different convention (e.g. full country names), update
+// this check accordingly.
+function isPortugalSource(source?: string): boolean {
+  if (!source) return false;
+  const normalized = source.trim().toLowerCase();
+  return normalized === 'pt' || normalized.startsWith('pt-') || normalized.startsWith('pt_');
+}
+
 export function normalizeFuelPrice(fuelType: string, price: number, source?: string): number {
-  if (source === 'PT' && fuelType === 'lpg') return price * LPG_KG_PER_LITER;
+  if (fuelType === 'lpg' && isPortugalSource(source)) return price * LPG_KG_PER_LITER;
   return price;
 }
 
@@ -143,7 +152,16 @@ export function roundTripFuelCostKm(distanceKm: number, consumption: number, pri
   return ((distanceKm * 2) / 100) * consumption * pricePerLiter;
 }
 
-export function co2PerTank(capacity: number, fuelType: string): number {
+// For liquid fuels, `capacity` is tank size in liters, so multiplying by the
+// per-liter CO2 factor is correct. For EVs, `capacity` is range in km (see
+// capacityUnit/capacityRange), which isn't meaningful multiplied by a €/L-style
+// constant. Pass `consumption` (kWh/100km) to get a real grid-CO2 estimate for
+// a full charge's range; without it, EVs return 0 rather
+export function co2PerTank(capacity: number, fuelType: string, consumption?: number): number {
+  if (isElectricFuel(fuelType)) {
+    if (consumption === undefined) return 0;
+    return (capacity / 100) * consumption * GRID_CO2_KG_PER_KWH;
+  }
   return capacity * co2PerLiter(fuelType);
 }
 

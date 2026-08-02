@@ -8,7 +8,7 @@ export interface LocationState {
   approximate: boolean;
 }
 
-const DEFAULT_COORDS = { latitude: 39.5, longitude: -8.0 };
+const DEFAULT_COORDS = { latitude: 37.5, longitude: -8.0 };
 const LOCATION_KEY = 'siphon:lastLocation';
 
 async function fetchGpsLocation(): Promise<LocationState | null> {

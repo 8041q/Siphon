@@ -11,7 +11,8 @@
     "map": "Carte",
     "search": "Rechercher",
     "favorites": "Favoris",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "market": "Marché"
   },
   "map": {
     "offline_banner": "Utilisation des données en cache — pas de connexion",
@@ -282,5 +283,26 @@
     "electric": "Électrique",
     "gasolineMix": "Essence Mélangée",
     "adblue": "AdBlue"
+  },
+  "market": {
+    "title": "Marché",
+    "loading": "Chargement des données du marché…",
+    "no_data": "Aucune donnée de marché disponible.",
+    "insufficient_data": "Pas assez de données pour calculer les métriques.",
+    "country_es": "Espagne",
+    "country_pt": "Portugal",
+    "country_combined": "Combiné",
+    "fuel_select": "Carburant",
+    "crude_label": "Pétrole (Brent)",
+    "retail_label": "Prix moyen",
+    "lag_label": "Retard",
+    "lag_days": "{{days}} jours",
+    "correlation_label": "Corrélation",
+    "rocket_feather_label": "Fusée et plume",
+    "rocket_feather_desc": "Les prix montent {{rocket}}%/mois plus vite qu'ils ne baissent ({{feather}}%). Asymétrie : {{asymmetry}}.",
+    "asymmetry_label": "Asymétrie",
+    "trend_7d": "Pétrole 7j",
+    "trend_30d": "Pétrole 30j",
+    "disclaimer": "Estimations statistiques basées sur des données historiques — pas un conseil financier."
   }
 }

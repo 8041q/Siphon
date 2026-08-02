@@ -17,6 +17,7 @@ export interface RootManifest {
   countries: Record<CountryCode, { manifest: string; hash: string; lastUpdated: string | null }>;
   // Present on server version 2+. Optional so older roots keep working.
   history?: { path: string; hash: string; lastUpdated: string | null };
+  commodities?: { path: string; hash: string; lastUpdated: string | null };
 }
 
 export interface HistoryDayEntry {
@@ -33,6 +34,37 @@ export interface HistoryIndex {
 export interface PriceHistoryPoint {
   date: string;
   price: number;
+}
+
+export interface CommodityDataPoint {
+  date: string;
+  value: number;
+}
+
+export interface CommodityMetrics {
+  fuel: string;
+  country: string;
+  status: 'ok' | 'insufficient_data';
+  lagDays: number;
+  correlation: number;
+  rocket: number;
+  feather: number;
+  asymmetry: number;
+  crudeTrend7d: number | null;
+  crudeTrend30d: number | null;
+}
+
+export interface CommodityDashboard {
+  lastUpdated: string;
+  status: string;
+  source: string;
+  unit: string;
+  crude: {
+    brent: CommodityDataPoint[];
+    wti: CommodityDataPoint[];
+  };
+  retail: Record<string, CommodityDataPoint[]>;
+  metrics: Record<string, CommodityMetrics>;
 }
 
 export interface SpainTile {
@@ -91,6 +123,8 @@ const KEYS = {
   tileHash: (path: string) => `siphon:hash:${path}`,
   tileData: (path: string) => `siphon:data:${path}`,
   historyIndexHash: 'siphon:etag:historyIndex',
+  commoditiesHash: 'siphon:etag:commodities',
+  commoditiesData: 'siphon:data:commodities:dashboard',
 };
 
 // How many recent day files the device keeps locally. Older ones are pruned
@@ -430,6 +464,48 @@ export class FuelDataClient {
     await this.store.removeItem?.(KEYS.historyIndexHash);
     this.historyMemo.clear();
     return { deleted };
+  }
+
+  // ---------- Commodity dashboard ----------
+
+  // Fetches the single data/commodities/dashboard.json file from the server
+  // whenever its hash changes. Mirrors the history pattern (hash-gated,
+  // optional — only runs when root.commodities exists).
+  //
+  // On success returns the parsed dashboard; on hash-match returns null;
+  // on failure falls back to stale cache. Never throws.
+  async checkCommodityUpdates(root: RootManifest | null): Promise<CommodityDashboard | null> {
+    if (!root?.commodities) return null;
+
+    try {
+      const cachedHash = await this.store.getItem(KEYS.commoditiesHash);
+      if (cachedHash === root.commodities.hash) {
+        const cached = tryParse<CommodityDashboard>(await this.store.getItem(KEYS.commoditiesData));
+        return cached;
+      }
+
+      const res = await this.fetchRateLimited(root.commodities.path);
+      if (!res.ok) throw new Error(`Commodity fetch failed: ${res.status}`);
+      const data: CommodityDashboard = await res.json();
+      await this.store.setItem(KEYS.commoditiesHash, root.commodities.hash);
+      await this.store.setItem(KEYS.commoditiesData, JSON.stringify(data));
+      return data;
+    } catch (e) {
+      if (e instanceof RateLimitedError) throw e;
+      const cached = tryParse<CommodityDashboard>(await this.store.getItem(KEYS.commoditiesData));
+      return cached;
+    }
+  }
+
+  // Convenience: reads the cached root manifest, then runs the commodities
+  // hash-gated update. Call once per launch (after checkForUpdates).
+  async refreshCommodityDashboard(): Promise<void> {
+    try {
+      const root = tryParse<RootManifest>(await this.store.getItem(KEYS.rootManifest));
+      await this.checkCommodityUpdates(root);
+    } catch {
+      // silent
+    }
   }
 
   // ---------- All-stations cache ----------

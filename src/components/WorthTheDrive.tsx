@@ -71,7 +71,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
             const cheapest = candidates[0];
 
             const driveCost = distanceKm !== undefined ? roundTripFuelCostKm(distanceKm, f.consumption, fuelPrice) : null;
-            const co2 = f.capacity > 0 ? co2PerTank(f.capacity, f.fuelType) : null;
+            const co2 = f.capacity > 0 ? co2PerTank(f.capacity, f.fuelType, f.consumption) : null;
 
             return (
               <View key={f.fuelType} className={idx > 0 ? 'border-t pt-sm' : undefined} style={idx > 0 ? { borderColor: colors.separator } : undefined}>

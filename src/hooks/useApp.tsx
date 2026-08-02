@@ -203,6 +203,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY)) !== 'false') {
         await client.checkHistoryUpdates();
       }
+
+      // Commodity dashboard: a single tiny file, always fetched once per
+      // launch (hash-gated so unchanged → zero network traffic).
+      await client.refreshCommodityDashboard().catch(() => {});
+
       await loadAllStationsData();
 
       if (result.offline) {

@@ -27,6 +27,7 @@ const MAPPING: Record<string, IoniconsName> = {
   'kofi': 'cafe',
   'lock': 'lock-closed',
   'gift': 'gift-outline',
+  'oilcan.fill': 'flame',
 };
 
 type IconProps = {

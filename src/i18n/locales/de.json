@@ -7,11 +7,12 @@
     "something_went_wrong": "Etwas ist schiefgelaufen",
     "and": "und"
   },
-  "tabs": {
+"tabs": {
     "map": "Karte",
-    "search": "Suche",
+    "search": "Suchen",
     "favorites": "Favoriten",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "market": "Markt"
   },
   "map": {
     "offline_banner": "Verwende zwischengespeicherte Daten — keine Verbindung",
@@ -282,5 +283,26 @@
     "electric": "Elektro",
     "gasolineMix": "Gemischtes Benzin",
     "adblue": "AdBlue"
+  },
+  "market": {
+    "title": "Markt",
+    "loading": "Marktdaten werden geladen…",
+    "no_data": "Noch keine Marktdaten.",
+    "insufficient_data": "Nicht genug Daten für Metriken.",
+    "country_es": "Spanien",
+    "country_pt": "Portugal",
+    "country_combined": "Kombiniert",
+    "fuel_select": "Kraftstoff",
+    "crude_label": "Rohöl (Brent)",
+    "retail_label": "Durchschnittspreis",
+    "lag_label": "Verzögerung",
+    "lag_days": "{{days}} Tage",
+    "correlation_label": "Korrelation",
+    "rocket_feather_label": "Rakete & Feder",
+    "rocket_feather_desc": "Preise steigen {{rocket}}%/Mo. schneller als sie fallen ({{feather}}%). Asymmetrie: {{asymmetry}}.",
+    "asymmetry_label": "Asymmetrie",
+    "trend_7d": "Rohöl 7d",
+    "trend_30d": "Rohöl 30d",
+    "disclaimer": "Statistische Schätzungen auf Basis historischer Daten — keine Finanzberatung."
   }
 }

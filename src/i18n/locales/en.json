@@ -11,7 +11,8 @@
     "map": "Map",
     "search": "Search",
     "favorites": "Favorites",
-    "settings": "Settings"
+    "settings": "Settings",
+    "market": "Market"
   },
   "map": {
     "offline_banner": "Using cached data — no connection",
@@ -282,5 +283,26 @@
     "electric": "Electric",
     "gasolineMix": "Mixed Gasoline",
     "adblue": "AdBlue"
+  },
+  "market": {
+    "title": "Market",
+    "loading": "Loading market data…",
+    "no_data": "No market data available yet.",
+    "insufficient_data": "Not enough data to compute metrics yet.",
+    "country_es": "Spain",
+    "country_pt": "Portugal",
+    "country_combined": "Combined",
+    "fuel_select": "Fuel",
+    "crude_label": "Crude (Brent)",
+    "retail_label": "Retail average",
+    "lag_label": "Lag",
+    "lag_days": "{{days}} days",
+    "correlation_label": "Correlation",
+    "rocket_feather_label": "Rocket & Feather",
+    "rocket_feather_desc": "Prices rise {{rocket}}%/mo faster than they fall ({{feather}}%). Asymmetry: {{asymmetry}}.",
+    "asymmetry_label": "Asymmetry",
+    "trend_7d": "Crude 7d",
+    "trend_30d": "Crude 30d",
+    "disclaimer": "Statistical estimates based on historical data — not financial advice."
   }
 }

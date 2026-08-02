@@ -70,7 +70,7 @@ export const midnight: Palette = {
     radarGrid: 'rgba(11, 27, 43, 0.18)',
     radarLabel: 'rgba(11, 27, 43, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#34C759',
+    dayBannerBg: '#16A34A',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -124,7 +124,7 @@ export const midnight: Palette = {
     radarGrid: 'rgba(148, 163, 184, 0.45)',
     radarLabel: 'rgba(234, 241, 251, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#30D158',
+    dayBannerBg: '#4ADE80',
     dayBannerText: '#FFFFFF',
   },
 };
@@ -161,7 +161,7 @@ export const sunset: Palette = {
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#2F9E44',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
-    priceMid: '#E67700',
+    priceMid: '#B8860B',
     priceHigh: '#C92A2A',
     priceHighTint: 'rgba(201, 42, 42, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
@@ -183,7 +183,7 @@ export const sunset: Palette = {
     radarGrid: 'rgba(59, 29, 18, 0.18)',
     radarLabel: 'rgba(59, 29, 18, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#34C759',
+    dayBannerBg: '#2F9E44',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -237,7 +237,7 @@ export const sunset: Palette = {
     radarGrid: 'rgba(240, 189, 165, 0.4)',
     radarLabel: 'rgba(253, 235, 224, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#30D158',
+    dayBannerBg: '#69DB7C',
     dayBannerText: '#FFFFFF',
   },
 };
@@ -258,7 +258,7 @@ export const forest: Palette = {
     labelOnTint: '#FFFFFF',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(18, 36, 26, 0.18)',
-    tint: '#33a049',
+    tint: '#1F6B45',
     destructive: '#C92A2A',
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#FFFFFF',
@@ -269,7 +269,7 @@ export const forest: Palette = {
     // ── Other ─────────────────────────────────────────────────────
     error: '#C92A2A',
     // ── Map ───────────────────────────────────────────────────────
-    pin: '#2B8A3E',
+    pin: '#1F6B45',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#2F9E44',
@@ -285,18 +285,18 @@ export const forest: Palette = {
     // ── Favorite ─────────────────────────────────────────────────
     favorite: '#FFD60A',
     // ── Charts ────────────────────────────────────────────────────
-    chartLine: '#2B8A3E',
+    chartLine: '#1F6B45',
     chartGrid: 'rgba(18, 36, 26, 0.18)',
     chartLabel: 'rgba(18, 36, 26, 0.7)',
-    chartDot: '#2B8A3E',
+    chartDot: '#1F6B45',
     // ── Radar ─────────────────────────────────────────────────────
-    radarLine: '#2B8A3E',
+    radarLine: '#1F6B45',
     radarDot: 'rgba(18, 36, 26, 0.7)',
-    radarBest: '#2B8A3E',
+    radarBest: '#1F6B45',
     radarGrid: 'rgba(18, 36, 26, 0.18)',
     radarLabel: 'rgba(18, 36, 26, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#34C759',
+    dayBannerBg: '#2F9E44',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -323,7 +323,7 @@ export const forest: Palette = {
     // ── Other ─────────────────────────────────────────────────────
     error: '#FF8787',
     // ── Map ───────────────────────────────────────────────────────
-    pin: '#51CF66',
+    pin: '#378d5e',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#69DB7C',
@@ -339,18 +339,18 @@ export const forest: Palette = {
     // ── Favorite ─────────────────────────────────────────────────
     favorite: '#FFD60A',
     // ── Charts ────────────────────────────────────────────────────
-    chartLine: '#51CF66',
+    chartLine: '#378d5e',
     chartGrid: 'rgba(155, 194, 165, 0.45)',
     chartLabel: 'rgba(233, 245, 236, 0.75)',
-    chartDot: '#51CF66',
+    chartDot: '#378d5e',
     // ── Radar ─────────────────────────────────────────────────────
-    radarLine: '#51CF66',
+    radarLine: '#378d5e',
     radarDot: 'rgba(233, 245, 236, 0.75)',
-    radarBest: '#51CF66',
+    radarBest: '#378d5e',
     radarGrid: 'rgba(155, 194, 165, 0.45)',
     radarLabel: 'rgba(233, 245, 236, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#30D158',
+    dayBannerBg: '#69DB7C',
     dayBannerText: '#FFFFFF',
   },
 };
@@ -409,7 +409,7 @@ export const mono: Palette = {
     radarGrid: 'rgba(17, 17, 17, 0.18)',
     radarLabel: 'rgba(17, 17, 17, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#34C759',
+    dayBannerBg: '#1C7C54',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -422,7 +422,7 @@ export const mono: Palette = {
     label: '#F5F5F5',
     secondaryLabel: 'rgba(245, 245, 245, 0.75)',
     tertiaryLabel: 'rgba(245, 245, 245, 0.5)',
-    labelOnTint: '#FFFFFF',
+    labelOnTint: '#111111',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(163, 163, 163, 0.5)',
     tint: '#D4D4D4',
@@ -436,7 +436,7 @@ export const mono: Palette = {
     // ── Other ─────────────────────────────────────────────────────
     error: '#FF8A80',
     // ── Map ───────────────────────────────────────────────────────
-    pin: '#D4D4D4',
+    pin: '#404040',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#4ADE80',
@@ -463,7 +463,7 @@ export const mono: Palette = {
     radarGrid: 'rgba(163, 163, 163, 0.5)',
     radarLabel: 'rgba(245, 245, 245, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#30D158',
+    dayBannerBg: '#4ADE80',
     dayBannerText: '#FFFFFF',
   },
 };
