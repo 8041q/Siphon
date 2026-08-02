@@ -6,22 +6,42 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import type { CommodityDataPoint } from '../api/siphonClient';
 
+const PADDING = { top: 8, right: 12, bottom: 24, left: 36 };
+const WIDTH = 350;
+const HEIGHT = 200;
+
+function buildPath(pts: CommodityDataPoint[], xScale: (i: number) => number, yLerp: (v: number) => number) {
+  return pts
+    .map((p, i) => {
+      const cmd = i === 0 ? 'M' : 'L';
+      return `${cmd} ${xScale(i)},${yLerp(p.value)}`;
+    })
+    .join(' ');
+}
+
+function scalePoints(pts: CommodityDataPoint[]): { min: number; range: number } {
+  const values = pts.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return { min, range: max - min || 1 };
+}
+
 interface CommodityChartProps {
   dataA: CommodityDataPoint[];
   dataB: CommodityDataPoint[];
   labelA: string;
   labelB: string;
+  pendingLabel?: string;
 }
 
-const PADDING = { top: 8, right: 12, bottom: 24, left: 36 };
-const WIDTH = 350;
-const HEIGHT = 200;
-
-export function CommodityChart({ dataA, dataB, labelA, labelB }: CommodityChartProps) {
+export function CommodityChart({ dataA, dataB, labelA, labelB, pendingLabel }: CommodityChartProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
 
-  if (dataA.length < 2 || dataB.length < 2) {
+  const hasA = dataA.length >= 2;
+  const hasB = dataB.length >= 2;
+
+  if (!hasA && !hasB) {
     return (
       <View style={{ alignItems: 'center', padding: 24 }}>
         <Text style={{ color: colors.chartLabel }}>{t('market.no_data')}</Text>
@@ -32,13 +52,8 @@ export function CommodityChart({ dataA, dataB, labelA, labelB }: CommodityChartP
   const chartW = WIDTH - PADDING.left - PADDING.right;
   const chartH = HEIGHT - PADDING.top - PADDING.bottom;
 
-  const minA = Math.min(...dataA.map((p) => p.value));
-  const maxA = Math.max(...dataA.map((p) => p.value));
-  const rangeA = maxA - minA || 1;
-
-  const minB = Math.min(...dataB.map((p) => p.value));
-  const maxB = Math.max(...dataB.map((p) => p.value));
-  const rangeB = maxB - minB || 1;
+  const metricsA = hasA ? scalePoints(dataA) : { min: 0, range: 1 };
+  const metricsB = hasB ? scalePoints(dataB) : { min: 0, range: 1 };
 
   const xScale = (i: number, len: number) =>
     PADDING.left + (i / Math.max(len - 1, 1)) * chartW;
@@ -46,15 +61,8 @@ export function CommodityChart({ dataA, dataB, labelA, labelB }: CommodityChartP
   const yLerp = (v: number, min: number, range: number) =>
     PADDING.top + chartH - ((v - min) / range) * chartH;
 
-  const buildPath = (pts: CommodityDataPoint[], min: number, range: number) =>
-    pts
-      .map((p, i) => {
-        const cmd = i === 0 ? 'M' : 'L';
-        return `${cmd} ${xScale(i, pts.length)},${yLerp(p.value, min, range)}`;
-      })
-      .join(' ');
-
-  const xLabelStep = Math.max(1, Math.floor(dataA.length / 5));
+  const xLabelMain = hasA ? dataA : dataB;
+  const xLabelStep = Math.max(1, Math.floor(xLabelMain.length / 5));
 
   return (
     <View>
@@ -62,16 +70,16 @@ export function CommodityChart({ dataA, dataB, labelA, labelB }: CommodityChartP
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: colors.chartLine }} />
-          <Text style={{ fontSize: 11, color: colors.chartLabel }}>{labelA}</Text>
+          <Text style={{ fontSize: 11, color: hasA ? colors.chartLabel : colors.chartGrid }}>{labelA}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: colors.tint }} />
-          <Text style={{ fontSize: 11, color: colors.chartLabel }}>{labelB}</Text>
+          <Text style={{ fontSize: 11, color: hasB ? colors.chartLabel : colors.chartGrid }}>{labelB}</Text>
         </View>
       </View>
 
       <Svg width={WIDTH} height={HEIGHT}>
-        {/* 3% horizontal grid lines: 0%, 50%, 100% */}
+        {/* 3 grid lines: 0%, 50%, 100% */}
         {[0, 50, 100].map((pct) => {
           const y = PADDING.top + chartH - (pct / 100) * chartH;
           return (
@@ -104,20 +112,34 @@ export function CommodityChart({ dataA, dataB, labelA, labelB }: CommodityChartP
         })}
 
         {/* Crude (series A) */}
-        <Path d={buildPath(dataA, minA, rangeA)} fill="none" stroke={colors.chartLine} strokeWidth={2} />
+        {hasA && (
+          <Path
+            d={buildPath(dataA, (i) => xScale(i, dataA.length), (v) => yLerp(v, metricsA.min, metricsA.range))}
+            fill="none"
+            stroke={colors.chartLine}
+            strokeWidth={2}
+          />
+        )}
 
         {/* Retail (series B) */}
-        <Path d={buildPath(dataB, minB, rangeB)} fill="none" stroke={colors.tint} strokeWidth={2} />
+        {hasB && (
+          <Path
+            d={buildPath(dataB, (i) => xScale(i, dataB.length), (v) => yLerp(v, metricsB.min, metricsB.range))}
+            fill="none"
+            stroke={colors.tint}
+            strokeWidth={2}
+          />
+        )}
 
         {/* X-axis date labels */}
-        {dataA
-          .filter((_, i) => i % xLabelStep === 0 || i === dataA.length - 1)
+        {xLabelMain
+          .filter((_, i) => i % xLabelStep === 0 || i === xLabelMain.length - 1)
           .map((p) => {
-            const idx = dataA.indexOf(p);
+            const idx = xLabelMain.indexOf(p);
             return (
               <SvgText
                 key={p.date}
-                x={xScale(idx, dataA.length)}
+                x={xScale(idx, xLabelMain.length)}
                 y={HEIGHT - 6}
                 fill={colors.chartLabel}
                 fontSize={9}
@@ -128,6 +150,8 @@ export function CommodityChart({ dataA, dataB, labelA, labelB }: CommodityChartP
             );
           })}
       </Svg>
+
+      {pendingLabel && <Text style={{ color: colors.chartLabel, fontSize: 11, textAlign: 'center', marginTop: 4 }}>{pendingLabel}</Text>}
     </View>
   );
 }

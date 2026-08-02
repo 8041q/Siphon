@@ -303,6 +303,7 @@
     "asymmetry_label": "Asymétrie",
     "trend_7d": "Pétrole 7j",
     "trend_30d": "Pétrole 30j",
-    "disclaimer": "Estimations statistiques basées sur des données historiques — pas un conseil financier."
+    "disclaimer": "Estimations statistiques basées sur des données historiques — pas un conseil financier.",
+    "insufficient_hint": "Pas assez d'historique de prix pour le moment — les données de détail et les métriques de corrélation apparaîtront au fur et à mesure que l'historique s'accumule."
   }
 }

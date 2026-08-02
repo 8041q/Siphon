@@ -7,7 +7,7 @@
     "something_went_wrong": "Etwas ist schiefgelaufen",
     "and": "und"
   },
-"tabs": {
+  "tabs": {
     "map": "Karte",
     "search": "Suchen",
     "favorites": "Favoriten",
@@ -303,6 +303,7 @@
     "asymmetry_label": "Asymmetrie",
     "trend_7d": "Rohöl 7d",
     "trend_30d": "Rohöl 30d",
-    "disclaimer": "Statistische Schätzungen auf Basis historischer Daten — keine Finanzberatung."
+    "disclaimer": "Statistische Schätzungen auf Basis historischer Daten — keine Finanzberatung.",
+    "insufficient_hint": "Noch nicht genug Preisverlauf — die Einzelhandelsdaten und Korrelationsmetriken erscheinen, sobald der Verlauf wächst."
   }
 }

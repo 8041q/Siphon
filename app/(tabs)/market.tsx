@@ -121,11 +121,11 @@ export default function MarketScreen() {
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.loading')}
           </Text>
-        ) : !dashboard || dashboard.status !== 'ok' ? (
+        ) : !dashboard || dashboard.status === 'no_crude' ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.no_data')}
           </Text>
-        ) : crudePoints.length < 2 || retailPoints.length < 2 ? (
+        ) : crudePoints.length < 2 && retailPoints.length < 2 ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.no_data')}
           </Text>
@@ -136,66 +136,86 @@ export default function MarketScreen() {
               dataB={retailPoints}
               labelA={t('market.crude_label')}
               labelB={t('market.retail_label')}
+              pendingLabel={retailPoints.length < 2 ? t('market.insufficient_hint') : undefined}
             />
 
-            {/* Metric cards */}
-            <View style={{ gap: 8 }}>
+            {/* Insufficient retail notice */}
+            {retailPoints.length < 2 && (
               <View style={{
                 backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
                 borderRadius: 12,
                 padding: 12,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                marginTop: 12,
               }}>
-                <Text style={{ fontWeight: '600', color: colors.label }}>
-                  {t('market.lag_label')}
-                </Text>
-                <Text style={{ color: colors.chartLabel }}>
-                  {metrics ? t('market.lag_days', { days: metrics.lagDays }) : '—'}
+                <Text style={{ color: colors.chartLabel, fontSize: 12, textAlign: 'center' }}>
+                  {t('market.insufficient_hint')}
                 </Text>
               </View>
+            )}
 
-              <View style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                borderRadius: 12,
-                padding: 12,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-                <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14 }}>
-                  {t('market.correlation_label')}
-                </Text>
-                <Text style={{ color: colors.chartLabel }}>
-                  {metrics ? metrics.correlation.toFixed(3) : '—'}
-                </Text>
-              </View>
-
-              <View style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                borderRadius: 12,
-                padding: 12,
-              }}>
-                <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14, marginBottom: 4 }}>
-                  {t('market.rocket_feather_label')}
-                </Text>
-                {metrics && metrics.status === 'ok' ? (
-                  <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
-                    {t('market.rocket_feather_desc', {
-                      rock: formatRatio(metrics.rocket),
-                      feather: formatRatio(metrics.feather),
-                      asymmetry: metrics.asymmetry.toFixed(2),
-                    })}
+            {/* Metric cards (only fully rendered when retail has meaningful data) */}
+            {retailPoints.length >= 2 && (
+              <View style={{ gap: 8, marginTop: 12 }}>
+                <View style={{
+                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+                  borderRadius: 12,
+                  padding: 12,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ fontWeight: '600', color: colors.label }}>
+                    {t('market.lag_label')}
                   </Text>
-                ) : (
-                  <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
-                    {t('market.insufficient_data')}
+                  <Text style={{ color: colors.chartLabel }}>
+                    {metrics && metrics.status === 'ok' ? t('market.lag_days', { days: metrics.lagDays }) : '—'}
                   </Text>
-                )}
-              </View>
+                </View>
 
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{
+                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+                  borderRadius: 12,
+                  padding: 12,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14 }}>
+                    {t('market.correlation_label')}
+                  </Text>
+                  <Text style={{ color: colors.chartLabel }}>
+                    {metrics && metrics.status === 'ok' ? metrics.correlation.toFixed(3) : '—'}
+                  </Text>
+                </View>
+
+                <View style={{
+                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+                  borderRadius: 12,
+                  padding: 12,
+                }}>
+                  <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14, marginBottom: 4 }}>
+                    {t('market.rocket_feather_label')}
+                  </Text>
+                  {metrics && metrics.status === 'ok' ? (
+                    <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
+                      {t('market.rocket_feather_desc', {
+                        rock: formatRatio(metrics.rocket),
+                        feather: formatRatio(metrics.feather),
+                        asymmetry: metrics.asymmetry.toFixed(2),
+                      })}
+                    </Text>
+                  ) : (
+                    <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
+                      {t('market.insufficient_data')}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Crude trend cards (always show when crude exists) */}
+            {crudePoints.length >= 2 && (
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
                 <View style={{
                   flex: 1,
                   backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
@@ -225,11 +245,11 @@ export default function MarketScreen() {
                   </Text>
                 </View>
               </View>
+            )}
 
-              <Text style={{ color: colors.chartLabel, fontSize: 11, textAlign: 'center', marginTop: 12 }}>
-                {t('market.disclaimer')}
-              </Text>
-            </View>
+            <Text style={{ color: colors.chartLabel, fontSize: 11, textAlign: 'center', marginTop: 12 }}>
+              {t('market.disclaimer')}
+            </Text>
           </>
         )}
       </ScrollView>

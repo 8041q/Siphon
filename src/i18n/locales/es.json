@@ -303,6 +303,7 @@
     "asymmetry_label": "Asimetría",
     "trend_7d": "Crudo 7d",
     "trend_30d": "Crudo 30d",
-    "disclaimer": "Estimaciones estadísticas basadas en datos históricos — no es consejo financiero."
+    "disclaimer": "Estimaciones estadísticas basadas en datos históricos — no es consejo financiero.",
+    "insufficient_hint": "No hay suficiente historial de precios todavía — los datos minoristas y las métricas de correlación aparecerán a medida que se acumule el historial."
   }
 }

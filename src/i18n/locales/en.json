@@ -289,6 +289,7 @@
     "loading": "Loading market data…",
     "no_data": "No market data available yet.",
     "insufficient_data": "Not enough data to compute metrics yet.",
+    "insufficient_hint": "Not enough price history yet — retail series and correlation metrics start appearing as history accumulates.",
     "country_es": "Spain",
     "country_pt": "Portugal",
     "country_combined": "Combined",

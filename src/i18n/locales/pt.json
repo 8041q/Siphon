@@ -303,6 +303,7 @@
     "asymmetry_label": "Assimetria",
     "trend_7d": "Petróleo 7d",
     "trend_30d": "Petróleo 30d",
-    "disclaimer": "Estimativas estatísticas baseadas em dados históricos — não é aconselhamento financeiro."
+    "disclaimer": "Estimativas estatísticas baseadas em dados históricos — não é aconselhamento financeiro.",
+    "insufficient_hint": "Ainda não há histórico de preços suficiente — os dados de retalho e as métricas de correlação começarão a aparecer à medida que o histórico se acumula."
   }
 }
