@@ -8,10 +8,16 @@ import { useSupport, ALL_REWARDS } from '../hooks/useSupport';
 import { useUserLocationMarker } from '../hooks/useUserLocationMarker';
 import { PALETTES, PALETTE_ORDER } from '../theme/palettes';
 import type { PaletteId } from '../theme/palettes';
-import { PALETTE_REWARDS, SVG_REWARDS, rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
+import { rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
 import { svgRewards, SVG_REWARD_NAMES, type SvgMarkerRewardId } from './userLocationMarkers/rewards';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { Button } from './ui/button';
+
+export type RewardsSheetHandle = { present: () => void };
+
+const LOCKED_NOTICE_MS = 1800;
+const UNLOCKED_FLASH_MS = 2500;
+const AD_FAILED_MS = 2500;
 
 function swatchStyle(base: string, borderColor: string) {
   return {
@@ -20,8 +26,6 @@ function swatchStyle(base: string, borderColor: string) {
     borderWidth: 1,
   };
 }
-
-export type RewardsSheetHandle = { present: () => void };
 
 export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function RewardsSheet(
   _props,
@@ -36,17 +40,20 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
   const {
     watchedCount,
     isUnlocked,
+    remainingFor,
     watchAd,
-    watchToUnlock,
     adLoaded,
     adLoading,
+    rewardsLoaded,
     paletteId,
     setPaletteId,
   } = useSupport();
   const { setMarker } = useUserLocationMarker();
 
   const [lastUnlockedId, setLastUnlockedId] = useState<string | null>(null);
+  const [noticeId, setNoticeId] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [adFailed, setAdFailed] = useState(false);
 
   useImperativeHandle(ref, () => ({
     present: () => bottomSheetRef.current?.present(),
@@ -58,53 +65,67 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     )[0];
   }, [watchedCount]);
 
+  // The single, only entry point for actually watching an ad
   const handleWatchAd = useCallback(async () => {
     if (working) return;
     setWorking(true);
-    const { earned, unlockedItem } = await watchAd();
+    setAdFailed(false);
+    const result = await watchAd();
     setWorking(false);
-    if (earned && unlockedItem) {
-      setLastUnlockedId(unlockedItem.id);
-      setTimeout(() => setLastUnlockedId(null), 2500);
+    if (result.earned && result.unlockedItem) {
+      setLastUnlockedId(result.unlockedItem.id);
+      setTimeout(() => setLastUnlockedId(null), UNLOCKED_FLASH_MS);
+    } else if (!result.earned && result.reason === 'failed') {
+      setAdFailed(true);
+      setTimeout(() => setAdFailed(false), AD_FAILED_MS);
     }
   }, [watchAd, working]);
 
+  const showLockedNotice = useCallback((id: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setNoticeId(id);
+    setTimeout(() => setNoticeId((current) => (current === id ? null : current)), LOCKED_NOTICE_MS);
+  }, []);
+
   const handleSelectPalette = useCallback(
-    async (id: PaletteId) => {
+    (id: PaletteId) => {
       const reward = rewardForPalette(id);
       if (reward && !isUnlocked(reward.id)) {
-        const ok = await watchToUnlock(reward.id);
-        if (!ok) return;
+        showLockedNotice(id);
+        return;
       }
       Haptics.selectionAsync();
       setPaletteId(id);
       bottomSheetRef.current?.dismiss();
     },
-    [isUnlocked, watchToUnlock, setPaletteId],
+    [isUnlocked, setPaletteId, showLockedNotice],
   );
 
   const handleSelectSvg = useCallback(
-    async (name: string) => {
+    (name: string) => {
       const reward = rewardForSvg(name as SvgMarkerRewardId);
       if (reward && !isUnlocked(reward.id)) {
-        const ok = await watchToUnlock(reward.id);
-        if (!ok) return;
+        showLockedNotice(name);
+        return;
       }
       Haptics.selectionAsync();
       setMarker({ type: 'svg', value: name });
       bottomSheetRef.current?.dismiss();
     },
-    [isUnlocked, watchToUnlock, setMarker],
+    [isUnlocked, setMarker, showLockedNotice],
   );
 
-  const trailingFor = (requiredWatches: number, unlocked: boolean, id: string) => {
+  const trailingFor = (remaining: number, unlocked: boolean, id: string) => {
     if (lastUnlockedId === id) {
       return <Text style={{ color: colors.priceLow }} className="text-callout font-semibold">{t('settings.reward_unlocked')}</Text>;
+    }
+    if (noticeId === id) {
+      return <Text style={{ color: colors.tint }} className="text-footnote">{t('settings.reward_locked_notice')}</Text>;
     }
     if (unlocked) {
       return <Text style={{ color: colors.tint }} className="text-body">✓</Text>;
     }
-    return <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('settings.reward_locked_ads', { count: requiredWatches })}</Text>;
+    return <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('settings.reward_locked_ads', { count: remaining })}</Text>;
   };
 
   return (
@@ -148,12 +169,17 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
               </Text>
             )}
           </View>
-          <Button onPress={handleWatchAd} disabled={!adLoaded || working} loading={working || adLoading}>
+          <Button onPress={handleWatchAd} disabled={working || !rewardsLoaded} loading={working || adLoading}>
             {t('settings.watch_ad')}
           </Button>
-          {!adLoaded && (
-            <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
+          {working && adLoading && (
+            <Text style={{ color: colors.tertiaryLabel }}  className="text-caption2 mt-sm">
               {t('settings.rewards_ad_loading')}
+            </Text>
+          )}
+          {adFailed && (
+            <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
+              {t('settings.rewards_ad_failed')}
             </Text>
           )}
         </View>
@@ -182,7 +208,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
                   {t(`settings.palette_${id}`)}
                 </Text>
               </View>
-              {trailingFor(reward?.requiredWatches ?? 0, unlocked, id)}
+              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
             </TouchableOpacity>
           );
         })}
@@ -214,7 +240,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
                   {t(`settings.reward_svg_${name}`)}
                 </Text>
               </View>
-              {trailingFor(reward?.requiredWatches ?? 0, unlocked, name)}
+              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, name)}
             </TouchableOpacity>
           );
         })}

@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -6,14 +6,21 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Icon } from '../theme/Icon';
-import { useUserLocationMarker, type UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
+import { useUserLocationMarker, saveMarkerImage, type UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { svgMarkers, SVG_MARKER_NAMES, SVG_REWARD_NAMES } from './userLocationMarkers';
 
 export type LocationMarkerSheetHandle = { present: () => void };
 
+const LOCKED_NOTICE_MS = 1800;
+
 interface LocationMarkerSheetProps {
   isSvgUnlocked?: (name: string) => boolean;
+  /**
+   * Fired when a locked reward marker is tapped, purely as a notification
+   * This must never trigger an ad watch or unlock anything itself
+   * Ads only ever play from the explicit "Watch an ad" button in the Rewards sheet.
+   */
   onRequestUnlockSvg?: (name: string) => void;
 }
 
@@ -25,6 +32,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     const { colors } = useThemeTokens();
 
     const { marker: currentMarker, setMarker, availableIcons } = useUserLocationMarker();
+    const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
@@ -37,9 +45,17 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     }, [setMarker]);
 
     const handleSelectSvg = useCallback((name: string) => {
+      Haptics.selectionAsync();
       setMarker({ type: 'svg', value: name });
       bottomSheetRef.current?.dismiss();
     }, [setMarker]);
+
+    const handleLockedSvgTap = useCallback((name: string) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setLockedNoticeName(name);
+      setTimeout(() => setLockedNoticeName((current) => (current === name ? null : current)), LOCKED_NOTICE_MS);
+      onRequestUnlockSvg?.(name);
+    }, [onRequestUnlockSvg]);
 
     const handlePickImage = useCallback(async () => {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -49,7 +65,10 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        setMarker({ type: 'image', value: result.assets[0].uri });
+        const uri = await saveMarkerImage(result.assets[0].uri);
+        if (uri) {
+          setMarker({ type: 'image', value: uri });
+        }
         bottomSheetRef.current?.dismiss();
       }
     }, [setMarker]);
@@ -139,7 +158,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     <TouchableOpacity
                       key={name}
                       activeOpacity={0.7}
-                      onPress={() => (unlocked ? handleSelectSvg(name) : onRequestUnlockSvg?.(name))}
+                      onPress={() => (unlocked ? handleSelectSvg(name) : handleLockedSvgTap(name))}
                       className="items-center gap-xs"
                       style={{ width: '22%' }}
                     >
@@ -176,8 +195,14 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                           </View>
                         )}
                       </View>
-                      <Text style={{ color: colors.secondaryLabel }} className="text-caption1 text-center">
-                        {name}
+                      <Text
+                        className="text-caption1 text-center"
+                        style={{
+                          color: lockedNoticeName === name ? colors.priceHigh : colors.secondaryLabel,
+                          fontWeight: lockedNoticeName === name ? '600' : undefined,
+                        }}
+                      >
+                        {lockedNoticeName === name ? t('settings.reward_locked_notice') : name}
                       </Text>
                     </TouchableOpacity>
                   );

@@ -98,6 +98,8 @@ export function useRewardedAd() {
   return {
     watchAd,
     loaded: phase === 'ready',
-    loading: phase === 'loading' || phase === 'idle',
+    // 'idle' means no request has been made yet - that's the normal resting
+    // Nothing preloads the ad
+    loading: phase === 'loading',
   };
 }

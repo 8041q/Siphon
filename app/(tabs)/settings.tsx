@@ -45,11 +45,11 @@ export default function SettingsScreen() {
   const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
   const donationSheetRef = useRef<DonationSheetHandle>(null);
 
-   const { watchedCount, isUnlocked, watchToUnlock, paletteId } = useSupport();
-   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
-   const { config: evConfig, setEvConfig } = useEvConfig();
-   const evResult = evBreakeven(evConfig);
-   const { colors } = useThemeTokens();
+  const { watchedCount, isUnlocked, paletteId } = useSupport();
+  const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
+  const { config: evConfig, setEvConfig } = useEvConfig();
+  const evResult = evBreakeven(evConfig);
+  const { colors } = useThemeTokens();
 
   const handleDownloadUpdate = () => {
     Linking.openURL(getUpdateUrl()).catch(() => {});
@@ -305,11 +305,6 @@ export default function SettingsScreen() {
       <LocationMarkerSheet
         ref={locationMarkerSheetRef}
         isSvgUnlocked={isUnlocked}
-        onRequestUnlockSvg={(name) => {
-          watchToUnlock(name).then((ok) => {
-            if (ok) setMarker({ type: 'svg', value: name });
-          });
-        }}
       />
       <VehicleSheet
         ref={vehicleSheetRef}
