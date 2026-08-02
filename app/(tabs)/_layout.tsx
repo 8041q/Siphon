@@ -1,11 +1,10 @@
 import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../src/components/ui/icon';
-import { tokens } from '../../src/theme/tokens';
+import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 
 const TABS = [
   { name: 'index', href: '/', labelKey: 'tabs.map', icon: 'map.fill' },
@@ -19,13 +18,11 @@ type TabItemProps = {
   label: string;
   isFocused?: boolean;
   onPress?: () => void;
-  colorScheme: 'light' | 'dark';
+  colors: Record<string, string>;
   bottomInset: number;
 };
 
-function TabItem({ icon: iconName, label, isFocused, onPress, colorScheme, bottomInset }: TabItemProps) {
-  const colors = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'];
-  
+function TabItem({ icon: iconName, label, isFocused, onPress, colors, bottomInset }: TabItemProps) {
   return (
     <Pressable onPress={onPress} className="flex-1">
       <View
@@ -56,13 +53,11 @@ const TAB_BAR_CONTENT_HEIGHT = Platform.OS === 'ios' ? 52 : 70;
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const { colorScheme } = useColorScheme();
   const { t } = useTranslation();
-  const currentTheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const colors = tokens.color[currentTheme];
+  const { colors } = useThemeTokens();
 
   return (
-    <Tabs key={colorScheme}>
+    <Tabs>
       <TabSlot />
       <TabList
         style={{
@@ -75,7 +70,7 @@ export default function TabLayout() {
       >
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href as any} asChild>
-            <TabItem icon={tab.icon} label={t(tab.labelKey)} colorScheme={currentTheme} bottomInset={insets.bottom} />
+            <TabItem icon={tab.icon} label={t(tab.labelKey)} colors={colors} bottomInset={insets.bottom} />
           </TabTrigger>
         ))}
       </TabList>

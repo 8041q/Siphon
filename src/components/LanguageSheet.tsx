@@ -2,8 +2,9 @@ import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'r
 import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
+
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 interface LanguageOption {
   code: string;
@@ -32,8 +33,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['40%'], []);
 
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const { colors } = useThemeTokens();
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
@@ -54,7 +54,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
         enableDynamicSizing={false}
         handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
-          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)',
+          backgroundColor: colors.handleIndicator,
           width: 40,
           height: 5,
           borderRadius: 3,
@@ -65,7 +65,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
         backgroundStyle={{
-          backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+          backgroundColor: colors.sheet,
         }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
@@ -78,11 +78,11 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
                 onPress={() => handleSelect(lang.code)}
                 className="flex-row items-center justify-between py-md px-sm"
               >
-                <Text className="text-body text-label dark:text-label-dark">
+                <Text style={{ color: colors.label }} className="text-body">
                   {t(lang.labelKey)}
                 </Text>
                 {selected && (
-                  <Text className="text-tint dark:text-tint-dark text-body">✓</Text>
+                  <Text style={{ color: colors.tint }} className="text-body">✓</Text>
                 )}
               </TouchableOpacity>
             );

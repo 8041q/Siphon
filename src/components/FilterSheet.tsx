@@ -1,12 +1,13 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
-import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from './ui/icon';
 import { SearchFilter } from '../hooks/useApp';
 import { FUEL_KEYS, fuelLabel } from '../utils/fuelNames';
+import { useThemeTokens } from '../hooks/useThemeTokens';
 import type { CountryCode } from '../api/siphonClient';
 
 const PRICE_OPTIONS = [1.65, 1.87, 2.0] as const;
@@ -22,9 +23,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['90%'], []);
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
-    const secondaryLabel = isDark ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
+    const { colors } = useThemeTokens();
 
     const [localFilters, setLocalFilters] = useState(searchFilter);
 
@@ -98,9 +97,9 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     }, [localFilters]);
 
     const chipBg = (selected: boolean) =>
-      selected ? 'bg-tint' : 'bg-surface dark:bg-surface-dark';
+      selected ? { backgroundColor: colors.tint } : { backgroundColor: colors.surface };
     const chipText = (selected: boolean) =>
-      selected ? 'text-white' : 'text-label dark:text-label-dark';
+      selected ? { color: colors.labelOnTint } : { color: colors.label };
 
     return (
       <BottomSheetModal
@@ -111,7 +110,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         enableDynamicSizing={false}
         handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
-          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
+          backgroundColor: colors.handleIndicator,
           width: 40,
           height: 5,
           borderRadius: 3,
@@ -122,27 +121,28 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
         backgroundStyle={{
-          backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+          backgroundColor: colors.sheet,
         }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 13 }}>
           <View className="gap-3">
             {/* Country */}
             <View>
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('search.country')}
               </Text>
               <View className="flex-row gap-2">
                 {(['PT', 'ES'] as CountryCode[]).map((code) => {
                   const selected = (localFilters.countries ?? []).includes(code);
                   return (
-                    <TouchableOpacity
-                      key={code}
-                      activeOpacity={0.7}
-                      onPress={() => toggleCountry(code)}
-                      className={`px-4 py-2 rounded-full ${chipBg(selected)}`}
-                    >
-                      <Text className={`text-subheadline ${chipText(selected)}`}>
+                <TouchableOpacity
+                  key={code}
+                  activeOpacity={0.7}
+                  onPress={() => toggleCountry(code)}
+                  style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                  className="rounded-full"
+                >
+                      <Text style={chipText(selected)} className="text-subheadline">
                         {code === 'PT' ? t('search.portugal') : t('search.spain')}
                       </Text>
                     </TouchableOpacity>
@@ -153,17 +153,17 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
 
             {/* Fuel Type */}
             <View>
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('search.fuel_type')}
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setLocalFilters({ ...localFilters, fuelTypes: undefined })}
-                  className={`py-2 rounded-full ${chipBg(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}
-                  style={{ paddingHorizontal: Math.max(8, t('search.any_fuel').length * 2) }}
+                  style={[chipBg(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                  className="rounded-full"
                 >
-                  <Text className={`text-subheadline ${chipText(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)}`}>
+                  <Text style={chipText(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)} className="text-subheadline">
                     {t('search.any_fuel')}
                   </Text>
                 </TouchableOpacity>
@@ -175,10 +175,10 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                       key={key}
                       activeOpacity={0.7}
                       onPress={() => toggleFuelType(key)}
-                      className={`py-2 rounded-full ${chipBg(selected)}`}
-                      style={{ paddingHorizontal: Math.max(8, label.length * 2) }}
+                      style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                      className="rounded-full"
                     >
-                      <Text className={`text-subheadline ${chipText(selected)}`}>
+                      <Text style={chipText(selected)} className="text-subheadline">
                         {label}
                       </Text>
                     </TouchableOpacity>
@@ -189,29 +189,31 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
 
             {/* Price Range */}
             <View>
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('search.price_range')}
               </Text>
               <View className="flex-row gap-2 flex-wrap">
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setPriceRange(undefined)}
-                  className={`px-4 py-2 rounded-full ${chipBg(!localFilters.priceRange)}`}
+                  style={[chipBg(!localFilters.priceRange), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                  className="rounded-full"
                 >
-                  <Text className={`text-subheadline ${chipText(!localFilters.priceRange)}`}>
+                  <Text style={chipText(!localFilters.priceRange)} className="text-subheadline">
                     {t('search.any_price')}
                   </Text>
                 </TouchableOpacity>
                 {PRICE_OPTIONS.map((max) => {
                   const selected = localFilters.priceRange?.max === max;
                   return (
-                    <TouchableOpacity
-                      key={max}
-                      activeOpacity={0.7}
-                      onPress={() => setPriceRange(selected ? undefined : max)}
-                      className={`px-4 py-2 rounded-full ${chipBg(selected)}`}
-                    >
-                      <Text className={`text-subheadline ${chipText(selected)}`}>
+                  <TouchableOpacity
+                    key={max}
+                    activeOpacity={0.7}
+                    onPress={() => setPriceRange(selected ? undefined : max)}
+                    style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                    className="rounded-full"
+                  >
+                      <Text style={chipText(selected)} className="text-subheadline">
                         {t('search.under', { max: max.toFixed(2) })}
                       </Text>
                     </TouchableOpacity>
@@ -222,43 +224,46 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
 
             {/* City */}
             <View>
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('search.city')}
               </Text>
               <TextInput
                 value={localFilters.city ?? ''}
                 onChangeText={setCity}
                 placeholder={t('search.city_placeholder')}
-                placeholderTextColor={secondaryLabel}
-                className="bg-surface dark:bg-surface-dark rounded-md px-3 py-2 text-label dark:text-label-dark"
+                placeholderTextColor={colors.placeholder}
+                style={{ backgroundColor: colors.surface, color: colors.label }}
+                className="rounded-md px-3 py-2"
               />
             </View>
 
             {/* Distance */}
             <View>
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('search.distance')}
               </Text>
               <View className="flex-row gap-2 flex-wrap">
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setDistance(undefined)}
-                  className={`px-4 py-2 rounded-full ${chipBg(!localFilters.maxDistance)}`}
+                  style={[chipBg(!localFilters.maxDistance), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                  className="rounded-full"
                 >
-                  <Text className={`text-subheadline ${chipText(!localFilters.maxDistance)}`}>
+                  <Text style={chipText(!localFilters.maxDistance)} className="text-subheadline">
                     {t('search.any_distance')}
                   </Text>
                 </TouchableOpacity>
                 {DISTANCE_OPTIONS.map((km) => {
                   const selected = localFilters.maxDistance === km;
                   return (
-                    <TouchableOpacity
-                      key={km}
-                      activeOpacity={0.7}
-                      onPress={() => setDistance(selected ? undefined : km)}
-                      className={`px-4 py-2 rounded-full ${chipBg(selected)}`}
-                    >
-                      <Text className={`text-subheadline ${chipText(selected)}`}>
+                  <TouchableOpacity
+                    key={km}
+                    activeOpacity={0.7}
+                    onPress={() => setDistance(selected ? undefined : km)}
+                    style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
+                    className="rounded-full"
+                  >
+                      <Text style={chipText(selected)} className="text-subheadline">
                         {km} km
                       </Text>
                     </TouchableOpacity>
@@ -272,18 +277,20 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handleClear}
-                className="flex-1 py-3 rounded-md bg-surface dark:bg-surface-dark items-center"
+                style={{ backgroundColor: colors.surface }}
+                className="flex-1 py-3 rounded-md items-center"
               >
-                <Text className="text-body text-label dark:text-label-dark">
+                <Text style={{ color: colors.label }} className="text-body">
                   {t('search.clear_filters')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handleApply}
-                className="flex-1 py-3 rounded-md bg-tint items-center"
+                style={{ backgroundColor: colors.tint }}
+                className="flex-1 py-3 rounded-md items-center"
               >
-                <Text className="text-body text-white font-semibold">
+                <Text style={{ color: colors.labelOnTint }} className="text-body font-semibold">
                   {t('search.apply')}{filterCount > 0 ? ` (${filterCount})` : ''}
                 </Text>
               </TouchableOpacity>

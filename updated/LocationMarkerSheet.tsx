@@ -1,19 +1,28 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Icon } from '../theme/Icon';
 import { useUserLocationMarker, type UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
-import { useThemeTokens } from '../hooks/useThemeTokens';
 import { svgMarkers, SVG_MARKER_NAMES, SVG_REWARD_NAMES } from './userLocationMarkers';
 
 export type LocationMarkerSheetHandle = { present: () => void };
 
+const LOCKED_NOTICE_MS = 1800;
+
 interface LocationMarkerSheetProps {
   isSvgUnlocked?: (name: string) => boolean;
+  /**
+   * Fired when a locked reward marker is tapped, purely as a notification
+   * (e.g. for analytics). This must never trigger an ad watch or unlock
+   * anything itself - the sheet always shows its own "watch more ads to
+   * unlock" notice locally. Ads only ever play from the explicit "Watch an
+   * ad" button in the Rewards sheet.
+   */
   onRequestUnlockSvg?: (name: string) => void;
 }
 
@@ -22,9 +31,13 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['50%'], []);
-    const { colors } = useThemeTokens();
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
+    const bg = isDark ? '#1C1C1E' : '#FFFFFF';
+    const tint = '#0C8599';
 
     const { marker: currentMarker, setMarker, availableIcons } = useUserLocationMarker();
+    const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
@@ -37,9 +50,20 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     }, [setMarker]);
 
     const handleSelectSvg = useCallback((name: string) => {
+      Haptics.selectionAsync();
       setMarker({ type: 'svg', value: name });
       bottomSheetRef.current?.dismiss();
     }, [setMarker]);
+
+    // Tapping a locked reward marker never watches an ad or unlocks it -
+    // it just surfaces a brief notice. The only way to watch an ad is the
+    // button in the Rewards sheet.
+    const handleLockedSvgTap = useCallback((name: string) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setLockedNoticeName(name);
+      setTimeout(() => setLockedNoticeName((current) => (current === name ? null : current)), LOCKED_NOTICE_MS);
+      onRequestUnlockSvg?.(name);
+    }, [onRequestUnlockSvg]);
 
     const handlePickImage = useCallback(async () => {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -67,7 +91,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         enableDynamicSizing={false}
         handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
-          backgroundColor: colors.handleIndicator,
+          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)',
           width: 40,
           height: 5,
           borderRadius: 3,
@@ -76,15 +100,15 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{ backgroundColor: colors.sheet }}
+        backgroundStyle={{ backgroundColor: bg }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-          <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
+          <Text className="text-title2 font-semibold text-label dark:text-label-dark mb-lg">
             {t('settings.location_marker')}
           </Text>
 
           {/* Icons section */}
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
             {t('settings.marker_icons')}
           </Text>
           <View className="flex-row flex-wrap gap-md mb-xl">
@@ -102,7 +126,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     width: 54,
                     height: 54,
                     borderRadius: 27,
-                    backgroundColor: colors.sheet,
+                    backgroundColor: bg,
                     alignItems: 'center',
                     justifyContent: 'center',
                     shadowColor: '#000',
@@ -111,11 +135,11 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     shadowRadius: 3,
                     elevation: 3,
                     borderWidth: selected ? 2.5 : 0,
-                    borderColor: selected ? colors.tint : 'transparent',
+                    borderColor: selected ? tint : 'transparent',
                   }}>
-                    <Icon name={name} size={26} color={colors.tint} />
+                    <Icon name={name} size={26} color={tint} />
                   </View>
-                  <Text style={{ color: colors.secondaryLabel }} className="text-caption1 text-center">
+                  <Text className="text-caption1 text-secondary-label dark:text-secondary-label-dark text-center">
                     {name.replace('_', ' ')}
                   </Text>
                 </TouchableOpacity>
@@ -126,7 +150,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
           {/* SVG section */}
           {SVG_MARKER_NAMES.length > 0 && (
             <>
-              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
                 {t('settings.marker_svg')}
               </Text>
               <View className="flex-row flex-wrap gap-md mb-xl">
@@ -139,7 +163,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     <TouchableOpacity
                       key={name}
                       activeOpacity={0.7}
-                      onPress={() => (unlocked ? handleSelectSvg(name) : onRequestUnlockSvg?.(name))}
+                      onPress={() => (unlocked ? handleSelectSvg(name) : handleLockedSvgTap(name))}
                       className="items-center gap-xs"
                       style={{ width: '22%' }}
                     >
@@ -147,7 +171,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                         width: 54,
                         height: 54,
                         borderRadius: 27,
-                        backgroundColor: colors.sheet,
+                        backgroundColor: bg,
                         alignItems: 'center',
                         justifyContent: 'center',
                         shadowColor: '#000',
@@ -156,10 +180,10 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                         shadowRadius: 3,
                         elevation: 3,
                         borderWidth: selected ? 2.5 : 0,
-                        borderColor: selected ? colors.tint : 'transparent',
+                        borderColor: selected ? tint : 'transparent',
                         opacity: unlocked ? 1 : 0.4,
                       }}>
-                        {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
+                        {SvgComponent && <SvgComponent size={26} color={tint} />}
                         {!unlocked && (
                           <View style={{
                             position: 'absolute',
@@ -168,16 +192,22 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                             width: 18,
                             height: 18,
                             borderRadius: 9,
-                            backgroundColor: colors.surface,
+                            backgroundColor: isDark ? '#3A3A3C' : '#FFFFFF',
                             alignItems: 'center',
                             justifyContent: 'center',
                           }}>
-                            <Icon name="lock" size={11} color={colors.tint} />
+                            <Icon name="lock" size={11} color={tint} />
                           </View>
                         )}
                       </View>
-                      <Text style={{ color: colors.secondaryLabel }} className="text-caption1 text-center">
-                        {name}
+                      <Text
+                        className={
+                          lockedNoticeName === name
+                            ? 'text-caption1 text-price-high dark:text-price-high-dark text-center font-semibold'
+                            : 'text-caption1 text-secondary-label dark:text-secondary-label-dark text-center'
+                        }
+                      >
+                        {lockedNoticeName === name ? t('settings.reward_locked_notice') : name}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -187,7 +217,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
           )}
 
           {/* Custom Image section */}
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
             {t('settings.marker_image')}
           </Text>
           {currentMarker.type === 'image' ? (
@@ -210,10 +240,10 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handlePickImage}
-                style={{ backgroundColor: colors.groupedBackground }}
                 className="flex-row items-center justify-center py-md px-lg rounded-lg"
+                style={{ backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
               >
-                <Text style={{ color: colors.label }} className="text-body">
+                <Text className="text-body text-label dark:text-label-dark">
                   {t('settings.marker_change_image')}
                 </Text>
               </TouchableOpacity>
@@ -222,13 +252,13 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handlePickImage}
-              style={{ backgroundColor: colors.groupedBackground }}
               className="flex-row items-center justify-center py-md px-lg rounded-lg mb-xl"
+              style={{ backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
             >
               <View style={{ marginRight: 8 }}>
-                <Icon name="my_location" size={18} color={colors.tint} />
+                <Icon name="my_location" size={18} color={tint} />
               </View>
-              <Text style={{ color: colors.label }} className="text-body">
+              <Text className="text-body text-label dark:text-label-dark">
                 {t('settings.marker_import_image')}
               </Text>
             </TouchableOpacity>

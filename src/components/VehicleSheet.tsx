@@ -2,8 +2,9 @@ import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState
 import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
+
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import { Field } from './ui/field';
 import { fuelLabel } from '../utils/fuelNames';
@@ -45,8 +46,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['80%'], []);
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const { colors } = useThemeTokens();
 
     const [editing, setEditing] = useState<Vehicle | null>(null);
     const [name, setName] = useState('');
@@ -193,9 +193,9 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
     }, [editing, onRemove]);
 
     const chipBg = (selected: boolean) =>
-      selected ? 'bg-tint' : 'bg-surface dark:bg-surface-dark';
+      selected ? { backgroundColor: colors.tint } : { backgroundColor: colors.surface };
     const chipText = (selected: boolean) =>
-      selected ? 'text-white' : 'text-label dark:text-label-dark';
+      selected ? { color: colors.labelOnTint } : { color: colors.label };
 
     const isEdit = editing !== null;
 
@@ -208,7 +208,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         enableDynamicSizing={false}
         handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
-          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
+          backgroundColor: colors.handleIndicator,
           width: 40,
           height: 5,
           borderRadius: 3,
@@ -217,10 +217,10 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }}
+        backgroundStyle={{ backgroundColor: colors.sheet }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-          <Text className="text-title2 font-semibold text-label dark:text-label-dark mb-lg">
+          <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
             {isEdit ? t('settings.vehicle_edit_title') : t('settings.vehicle_new_title')}
           </Text>
 
@@ -237,7 +237,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
             />
 
             <View>
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('settings.vehicle_fuel')}
               </Text>
               <View className="flex-row flex-wrap gap-sm">
@@ -250,15 +250,16 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
                       activeOpacity={0.7}
                       onPress={() => toggleFuel(key)}
                       disabled={atMax}
-                      className={`px-3.5 py-1.5 rounded-full ${chipBg(selected)} ${atMax ? 'opacity-40' : ''}`}
+                      style={chipBg(selected)}
+                      className={`px-3.5 py-1.5 rounded-full ${atMax ? 'opacity-40' : ''}`}
                     >
-                      <Text className={`text-caption-1 font-semibold ${chipText(selected)}`}>{fuelLabel(key)}</Text>
+                      <Text style={chipText(selected)} className="text-caption-1 font-semibold">{fuelLabel(key)}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
               {fuels.length >= MAX_FUELS && (
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark mt-xs">
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-xs">
                   {t('settings.vehicle_max_fuels')}
                 </Text>
               )}
@@ -289,7 +290,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
             ))}
 
             {hasLiquid && (
-              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
                 {t('settings.vehicle_tank_caption')}
               </Text>
             )}
@@ -300,9 +301,10 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
               activeOpacity={0.7}
               onPress={handleSave}
               disabled={!valid}
-              className={`rounded-md py-md items-center ${valid ? 'bg-tint' : 'bg-surface dark:bg-surface-dark'}`}
+              style={{ backgroundColor: valid ? colors.tint : colors.surface }}
+              className="rounded-md py-md items-center"
             >
-              <Text className={`font-semibold text-callout ${valid ? 'text-white' : 'text-secondary-label dark:text-secondary-label-dark'}`}>
+              <Text style={{ color: valid ? colors.labelOnTint : colors.secondaryLabel }} className="font-semibold text-callout">
                 {t('settings.save_vehicle')}
               </Text>
             </TouchableOpacity>
@@ -311,9 +313,10 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handleRemove}
-                className="rounded-md py-md items-center border border-destructive dark:border-destructive-dark"
+                style={{ borderColor: colors.destructive }}
+                className="rounded-md py-md items-center border"
               >
-                <Text className="text-destructive dark:text-destructive-dark font-semibold text-callout">
+                <Text style={{ color: colors.destructive }} className="font-semibold text-callout">
                   {t('settings.remove_vehicle')}
                 </Text>
               </TouchableOpacity>

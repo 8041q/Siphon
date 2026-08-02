@@ -1,24 +1,23 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
-import { tokens } from '../theme/tokens';
+
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 interface SyncOverlayProps {
   message: string | null;
 }
 
 export function SyncOverlay({ message }: SyncOverlayProps) {
-  const { colorScheme } = useColorScheme();
-  const theme = colorScheme === 'dark' ? 'dark' : 'light';
-  const colors = tokens.color[theme];
+  const { colors } = useThemeTokens();
 
   return (
     <SafeAreaView
-      className="flex-1 justify-center items-center p-xl bg-background dark:bg-background-dark"
+      className="flex-1 justify-center items-center p-xl"
+      style={{ backgroundColor: colors.background }}
     >
       <ActivityIndicator size="large" color={colors.tint} />
       {message && (
-        <Text className="text-secondary-label dark:text-secondary-label-dark mt-sm text-center">
+        <Text style={{ color: colors.secondaryLabel }} className="mt-sm text-center">
           {message}
         </Text>
       )}

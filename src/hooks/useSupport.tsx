@@ -6,7 +6,7 @@ import { useAdRewards, SVG_REWARDS, PALETTE_REWARDS } from './useAdRewards';
 import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
 import { useRewardedAd } from './useRewardedAd';
-import type { PaletteId } from '../theme/palettes';
+import type { Palette, PaletteId } from '../theme/palettes';
 
 export const ALL_REWARDS: RewardItem[] = [...SVG_REWARDS, ...PALETTE_REWARDS];
 
@@ -20,6 +20,7 @@ interface SupportValue {
   watchToUnlock: (targetId: string) => Promise<boolean>;
   adLoaded: boolean;
   adLoading: boolean;
+  palette: Palette;
   paletteId: PaletteId;
   setPaletteId: (id: PaletteId) => void;
   paletteVariables: Record<string, string>;
@@ -63,6 +64,7 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
       watchToUnlock,
       adLoaded: rewarded.loaded,
       adLoading: rewarded.loading,
+      palette: palette.palette,
       paletteId: palette.paletteId,
       setPaletteId: palette.setPaletteId,
       paletteVariables: palette.variables,

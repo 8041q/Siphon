@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 
+import { useThemeTokens } from '../../hooks/useThemeTokens';
+
 type ButtonProps = {
   children: ReactNode;
   onPress: () => void;
@@ -18,18 +20,20 @@ export function Button({
   disabled = false,
   loading = false,
 }: ButtonProps) {
-  const bg = variant === 'primary' ? 'bg-tint' : 'bg-transparent';
+  const { colors } = useThemeTokens();
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
       disabled={disabled || loading}
-      className={`rounded-md py-md px-lg items-center justify-center ${bg} ${className} ${disabled ? 'opacity-50' : ''}`}
+      style={{ backgroundColor: variant === 'primary' ? colors.tint : 'transparent' }}
+      className={`rounded-md py-md px-lg items-center justify-center ${className} ${disabled ? 'opacity-50' : ''}`}
     >
       {loading ? (
-        <ActivityIndicator size="small" color="#FFFFFF" />
+        <ActivityIndicator size="small" color={colors.labelOnTint} />
       ) : typeof children === 'string' ? (
-        <Text className="text-white font-semibold text-callout">{children}</Text>
+        <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">{children}</Text>
       ) : (
         children
       )}

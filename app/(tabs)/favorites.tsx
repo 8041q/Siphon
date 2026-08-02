@@ -7,11 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { StationCard } from '../../src/components/StationCard';
 import { useStations, useUI } from '../../src/hooks/useApp';
 import { Icon } from '../../src/components/ui/icon';
+import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 
 export default function FavoritesScreen() {
   const { t } = useTranslation();
   const { filteredStations } = useStations();
   const { favorites, setSelectedStation, toggleFavorite } = useUI();
+  const { colors } = useThemeTokens();
 
   const favoriteStations = filteredStations.filter(
     (station) => favorites?.has(station.properties.id)
@@ -25,14 +27,14 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       {favoriteStations.length === 0 ? (
         <View className="flex-1 justify-center items-center p-xl">
-          <Icon name="star.fill" size={48} color="rgba(60, 60, 67, 0.3)" />
-          <Text className="text-body text-secondary-label dark:text-secondary-label-dark mt-md">
+          <Icon name="star.fill" size={48} color={colors.placeholder} />
+          <Text className="text-body mt-md" style={{ color: colors.secondaryLabel }}>
             {t('favorites.empty_title')}
           </Text>
-          <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-xs">
+          <Text className="text-footnote mt-xs" style={{ color: colors.tertiaryLabel }}>
             {t('favorites.empty_subtitle')}
           </Text>
         </View>

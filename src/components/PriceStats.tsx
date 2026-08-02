@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useThemeTokens } from '../hooks/useThemeTokens';
 import type { PriceHistoryPoint } from '../api/siphonClient';
 import { statsFor } from '../utils/priceAnalysis';
 
@@ -10,17 +11,12 @@ interface PriceStatsProps {
   unit: string;
 }
 
-function priceClass(price: number): string {
-  if (price < 1.65) return 'text-price-low dark:text-price-low-dark';
-  if (price < 1.87) return 'text-price-mid dark:text-price-mid-dark';
-  return 'text-price-high dark:text-price-high-dark';
-}
-
-function StatCell({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+function StatCell({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  const { colors } = useThemeTokens();
   return (
     <View className="flex-1 basis-[30%] min-w-[88px]">
-      <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{label}</Text>
-      <Text className={`text-title-3 font-bold mt-0.5 ${valueClass ?? 'text-label dark:text-label-dark'}`}>
+      <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{label}</Text>
+      <Text style={{ color: valueColor ?? colors.label }} className="text-title-3 font-bold mt-0.5">
         {value}
       </Text>
     </View>
@@ -29,6 +25,7 @@ function StatCell({ label, value, valueClass }: { label: string; value: string; 
 
 function ChangeCell({ label, pct }: { label: string; pct: number | null }) {
   const { t } = useTranslation();
+  const { colors } = useThemeTokens();
   if (pct === null) return <StatCell label={label} value="—" />;
   const down = pct <= 0;
   const value = `${down ? '▼' : '▲'} ${Math.abs(pct).toFixed(1)}%`;
@@ -36,22 +33,29 @@ function ChangeCell({ label, pct }: { label: string; pct: number | null }) {
     <StatCell
       label={label}
       value={value}
-      valueClass={down ? 'text-price-low dark:text-price-low-dark' : 'text-price-high dark:text-price-high-dark'}
+      valueColor={down ? colors.priceLow : colors.priceHigh}
     />
   );
 }
 
 const PriceStatsComponent = ({ data, unit }: PriceStatsProps) => {
   const { t } = useTranslation();
+  const { colors } = useThemeTokens();
   const stats = statsFor(data);
   if (!stats) return null;
+
+  const priceColor = (price: number) => {
+    if (price < 1.65) return colors.priceLow;
+    if (price < 1.87) return colors.priceMid;
+    return colors.priceHigh;
+  };
 
   return (
     <View className="flex-row flex-wrap gap-sm">
       <StatCell
         label={t('price_trends.stat_current')}
         value={`${stats.current.toFixed(3)}${unit}`}
-        valueClass={priceClass(stats.current)}
+        valueColor={priceColor(stats.current)}
       />
       <ChangeCell label={t('price_trends.stat_change_7d')} pct={stats.change7dPct} />
       <ChangeCell label={t('price_trends.stat_change_30d')} pct={stats.change30dPct} />

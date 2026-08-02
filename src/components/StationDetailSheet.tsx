@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -13,14 +12,15 @@ import { formatSchedule, marginLabel } from '../utils/schedule';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { Icon } from '../theme/Icon';
 import { useUI, useStations } from '../hooks/useApp';
+import { useThemeTokens } from '../hooks/useThemeTokens';
 import { WorthTheDrive } from './WorthTheDrive';
 
 const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
 
-function priceColorClass(price: number): string {
-  if (price < 1.65) return 'text-price-low dark:text-price-low-dark';
-  if (price < 1.87) return 'text-price-mid dark:text-price-mid-dark';
-  return 'text-price-high dark:text-price-high-dark';
+function priceColorStyle(price: number, colors: { priceLow: string; priceMid: string; priceHigh: string }): { color: string } {
+  if (price < 1.65) return { color: colors.priceLow };
+  if (price < 1.87) return { color: colors.priceMid };
+  return { color: colors.priceHigh };
 }
 
 function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: FuelStationFeature; snapIndex: number; distanceKm?: number; onClose: () => void }) {
@@ -40,19 +40,17 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
     Linking.openURL(url);
   }, [station]);
 
-  const { colorScheme } = useColorScheme();
-  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
+  const { colors } = useThemeTokens();
 
   return (
     <View className="gap-md p-lg">
-      {/* === ALWAYS VISIBLE === */}
       <View className="flex-row items-start justify-between">
         <View className="flex-1 mr-2">
-          <Text className="text-title-2 text-label dark:text-label-dark">
+          <Text style={{ color: colors.label }} className="text-title-2">
             {brand || name || t('common.unknown_station')}
           </Text>
           {brand && name && brand !== name && (
-            <Text className="text-callout text-secondary-label dark:text-secondary-label-dark mt-0.5">
+            <Text style={{ color: colors.secondaryLabel }} className="text-callout mt-0.5">
               {name}
             </Text>
           )}
@@ -61,14 +59,14 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
 
       <View className="flex-row items-start">
         <View className="flex-1 mr-2">
-          <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{cleanAddress(station.properties)}</Text>
+          <Text style={{ color: colors.secondaryLabel }} className="text-callout">{cleanAddress(station.properties)}</Text>
           {locationParts.length > 0 && (
-            <Text className="text-subheadline text-tertiary-label dark:text-tertiary-label-dark mt-0.5">
+            <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline mt-0.5">
               {locationParts.join(', ')}
             </Text>
           )}
           {distanceKm !== undefined && (
-            <Text className="text-subheadline text-tertiary-label dark:text-tertiary-label-dark mt-0.5">
+            <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline mt-0.5">
               {distanceKm < 1
                 ? `${(distanceKm * 1000).toFixed(0)} m`
                 : `${distanceKm.toFixed(1)} km`} {t('station.from_location')}
@@ -77,13 +75,13 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
         </View>
         <View className="flex-row items-center gap-1">
           <Pressable onPress={handleOpenInMaps} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
-              <Icon name="directions" size={19} color={secondaryLabel} />
+            <View style={{ backgroundColor: colors.surface }} className="rounded-sm p-1.5">
+              <Icon name="directions" size={19} color={colors.secondaryLabel} />
             </View>
           </Pressable>
           <Pressable onPress={handleCopyAddress} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View className="bg-surface dark:bg-surface-dark rounded-sm p-1.5">
-              <Icon name="copy" size={19} color={secondaryLabel} />
+            <View style={{ backgroundColor: colors.surface }} className="rounded-sm p-1.5">
+              <Icon name="copy" size={19} color={colors.secondaryLabel} />
             </View>
           </Pressable>
         </View>
@@ -92,11 +90,11 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
       {entries.length > 0 && (
         <View className="flex-row flex-wrap gap-sm">
           {entries.map(([fuel, price]) => (
-            <View key={fuel} className="bg-surface dark:bg-surface-dark rounded-md px-md py-sm min-w-[140px] flex-1 basis-[45%]">
-              <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+            <View key={fuel} style={{ backgroundColor: colors.surface }} className="rounded-md px-md py-sm min-w-[140px] flex-1 basis-[45%]">
+              <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                 {fuelLabel(fuel)}
               </Text>
-              <Text className={`text-title-3 font-bold mt-0.5 ${priceColorClass(price)}`}>
+              <Text style={priceColorStyle(price, colors)} className="text-title-3 font-bold mt-0.5">
                 {price.toFixed(3)}{fuelUnit(fuel, source)}
               </Text>
             </View>
@@ -104,78 +102,76 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
         </View>
       )}
 
-      {/* === View Price History — always visible === */}
       {entries.length > 0 && (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => {
-            onClose();
-            router.push(`/price-trends/${station.properties.id}`);
-          }}
-          className="bg-tint rounded-md py-md items-center"
-        >
-          <Text className="text-white font-semibold text-callout">
-            {t('station.view_price_history')}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              onClose();
+              router.push(`/price-trends/${station.properties.id}`);
+            }}
+            style={{ backgroundColor: colors.tint }}
+            className="rounded-md py-md items-center"
+          >
+            <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">
+              {t('station.view_price_history')}
+            </Text>
+          </TouchableOpacity>
       )}
 
-      {/* === FULL CARD DETAILS — animated fade in/out === */}
       {snapIndex >= 1 && (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
           <View className="gap-md">
-            {/* === Drive cost & emissions for the user's cars === */}
             {distanceKm !== undefined && <WorthTheDrive station={station} distanceKm={distanceKm} />}
 
-            <View className="h-px bg-separator dark:bg-separator-dark" />
+            <View style={{ backgroundColor: colors.separator }} className="h-px" />
 
             {schedule || hours ? (
               <View>
-                <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+                <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('station.hours')}
                 </Text>
                 {schedule ? (
-                  <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+                  <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                     {formatSchedule(schedule)}
                   </Text>
                 ) : (
                   <>
-                    {hours.weekdays && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.weekdays')}: {hours.weekdays}</Text>}
-                    {hours.saturday && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.saturday')}: {hours.saturday}</Text>}
-                    {hours.sunday && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.sunday')}: {hours.sunday}</Text>}
-                    {hours.holiday && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.holiday')}: {hours.holiday}</Text>}
+                    {hours.weekdays && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.weekdays')}: {hours.weekdays}</Text>}
+                    {hours.saturday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.saturday')}: {hours.saturday}</Text>}
+                    {hours.sunday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.sunday')}: {hours.sunday}</Text>}
+                    {hours.holiday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.holiday')}: {hours.holiday}</Text>}
                   </>)}
               </View>
             ) : null}
 
             {services?.length > 0 && (
               <View>
-                <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+                <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('station.services')}
                 </Text>
-<Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
-                   {Array.isArray(services) ? services.join(', ') : services}
-                 </Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-callout">
+                  {Array.isArray(services) ? services.join(', ') : services}
+                </Text>
               </View>
             )}
 
             {paymentMethods?.length > 0 && (
               <View>
-                <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+                <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('station.payment_methods')}
                 </Text>
                 <View className="flex-row items-center">
-                  <Text className="text-callout text-secondary-label dark:text-secondary-label-dark flex-1">
+                  <Text style={{ color: colors.secondaryLabel }} className="text-callout flex-1">
                     {Array.isArray(paymentMethods) ? paymentMethods.map((pm: string) => `${t(`station.payment_${pm.toLowerCase()}`, { defaultValue: pm })}`).join(', ') : `${t(`station.payment_${(paymentMethods as string).toLowerCase()}`, { defaultValue: paymentMethods })}`}
                   </Text>
                   <Pressable onPress={() => setShowPaymentTip(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Icon name="info.circle" size={14} color={secondaryLabel} />
+                    <Icon name="info.circle" size={14} color={colors.secondaryLabel} />
                   </Pressable>
                 </View>
                 {showPaymentTip && (
                   <Pressable onPress={() => setShowPaymentTip(false)}>
-                    <View className="mt-2 p-md bg-surface dark:bg-surface-dark rounded-md border border-separator dark:border-separator-dark">
-                      <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">{t('station.payment_disclaimer')}</Text>
+                    <View style={{ backgroundColor: colors.surface, borderColor: colors.separator }} className="mt-2 p-md rounded-md border">
+                      <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('station.payment_disclaimer')}</Text>
                     </View>
                   </Pressable>
                 )}
@@ -184,22 +180,22 @@ function DetailContent({ station, snapIndex, distanceKm, onClose }: { station: F
 
             {(observations || otherServices || extra?.stationType || extra?.margin || lastUpdated) && (
               <View>
-                <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+                <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('common.station')}
                 </Text>
-                {extra?.stationType && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.station_type')}: {extra?.stationType}</Text>}
-                {otherServices && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.other_services')}: {otherServices}</Text>}
-                {extra?.margin && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.margin')}: {marginLabel(extra.margin)}</Text>}
-                {observations && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{observations}</Text>}
-                {lastUpdated && <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">{t('station.last_updated')}: {lastUpdated}</Text>}
+                {extra?.stationType && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.station_type')}: {extra?.stationType}</Text>}
+                {otherServices && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.other_services')}: {otherServices}</Text>}
+                {extra?.margin && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.margin')}: {marginLabel(extra.margin)}</Text>}
+                {observations && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{observations}</Text>}
+                {lastUpdated && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.last_updated')}: {lastUpdated}</Text>}
               </View>
             )}
 
             <View>
-              <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+              <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                 {t('station.id')}
               </Text>
-              <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+              <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                 {station.properties.id}
               </Text>
             </View>
@@ -226,8 +222,7 @@ export function StationDetailSheet() {
     return [`${firstSnap}%`, '90%'];
   }, [selectedStation]);
 
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors } = useThemeTokens();
   const { t } = useTranslation();
 
   const handleReport = useCallback(() => {
@@ -261,8 +256,8 @@ export function StationDetailSheet() {
       enableDynamicSizing
       maxDynamicContentSize={Math.round(Dimensions.get('window').height * 0.9)}
       handleStyle={{ marginVertical: 4 }}
-      handleIndicatorStyle={{ 
-        backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
+      handleIndicatorStyle={{
+        backgroundColor: colors.handleIndicator,
         width: 40,
         height: 5,
         borderRadius: 3,
@@ -274,7 +269,7 @@ export function StationDetailSheet() {
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
       backgroundStyle={{
-        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+        backgroundColor: colors.sheet,
       }}
     >
       <View className="flex-1">
@@ -291,18 +286,19 @@ export function StationDetailSheet() {
           )}
         </BottomSheetScrollView>
         {selectedStation && snapIndex >= 1 && (
-          <View className="border-t border-separator dark:border-separator-dark px-lg pt-sm pb-lg">
+          <View style={{ borderColor: colors.separator }} className="px-lg pt-sm pb-lg">
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleReport}
-              className="bg-surface dark:bg-surface-dark border border-separator dark:border-separator-dark rounded-md py-md items-center flex-row justify-center gap-sm"
+              style={{ backgroundColor: colors.surface, borderColor: colors.separator }}
+              className="rounded-md py-md items-center flex-row justify-center gap-sm"
             >
-              <Icon name="flag" size={16} color={isDark ? '#22B8CD' : '#0C8599'} />
-              <Text className="text-tint dark:text-tint-dark font-semibold text-callout">
+              <Icon name="flag" size={16} color={colors.tint} />
+              <Text style={{ color: colors.tint }} className="font-semibold text-callout">
                 {t('station.report_incorrect_info')}
               </Text>
             </TouchableOpacity>
-            <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark text-center mt-xs">
+            <Text style={{ color: colors.tertiaryLabel }} className="text-footnote text-center mt-xs">
               {t('station.report_hint')}
             </Text>
           </View>

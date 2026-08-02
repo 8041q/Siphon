@@ -3,22 +3,57 @@
 @tailwind utilities;
 
 :root {
+  /* ── UI backgrounds ───────────────────────────────────────────── */
   --color-background: #FFFFFF;
   --color-background-dark: #FFFFFF;
   --color-grouped-background: #F2F2F7;
   --color-grouped-background-dark: #F2F2F7;
-  --color-surface: #FFFFFF;
-  --color-surface-dark: #FFFFFF;
+  --color-surface: #F8F4F4;
+  --color-surface-dark: #F8F4F4;
+  --color-sheet: #FFFFFF;
+  --color-sheet-dark: #FFFFFF;
+
+  /* ── Text ─────────────────────────────────────────────────────── */
   --color-label: #000000;
   --color-label-dark: #000000;
   --color-secondary-label: rgba(60, 60, 67, 0.8);
   --color-secondary-label-dark: rgba(60, 60, 67, 0.8);
-  --color-tertiary-label: rgba(60, 60, 67, 0.8);
-  --color-tertiary-label-dark: rgba(60, 60, 67, 0.8);
+  --color-tertiary-label: rgba(93, 93, 109, 0.8);
+  --color-tertiary-label-dark: rgba(93, 93, 109, 0.8);
+  --color-label-on-tint: #FFFFFF;
+  --color-label-on-tint-dark: #FFFFFF;
+
+  /* ── Decorative ───────────────────────────────────────────────── */
   --color-separator: rgba(60, 60, 67, 0.21);
   --color-separator-dark: rgba(60, 60, 67, 0.21);
   --color-tint: #0C8599;
   --color-tint-dark: #0C8599;
+  --color-destructive: #FF3B30;
+  --color-destructive-dark: #FF3B30;
+
+  /* ── Inputs ───────────────────────────────────────────────────── */
+  --color-field-background: #FFFFFF;
+  --color-field-background-dark: #FFFFFF;
+  --color-field-border: rgba(60, 60, 67, 0.21);
+  --color-field-border-dark: rgba(60, 60, 67, 0.21);
+  --color-placeholder: rgba(60, 60, 67, 0.3);
+  --color-placeholder-dark: rgba(60, 60, 67, 0.3);
+
+  /* ── Sheet indicator ──────────────────────────────────────────── */
+  --color-handle-indicator: rgba(60, 60, 67, 0.3);
+  --color-handle-indicator-dark: rgba(60, 60, 67, 0.3);
+
+  /* ── Other ────────────────────────────────────────────────────── */
+  --color-error: #FF3B30;
+  --color-error-dark: #FF3B30;
+
+  /* ── Map ──────────────────────────────────────────────────────── */
+  --color-pin: #0C8599;
+  --color-pin-dark: #0C8599;
+  --color-pin-stroke: rgba(255, 255, 255, 0.5);
+  --color-pin-stroke-dark: rgba(255, 255, 255, 0.5);
+
+  /* ── Price badges ─────────────────────────────────────────────── */
   --color-price-low: #22A559;
   --color-price-low-dark: #22A559;
   --color-price-low-tint: rgba(34, 165, 89, 0.1);
@@ -29,29 +64,113 @@
   --color-price-high-dark: #E5484D;
   --color-price-high-tint: rgba(229, 72, 77, 0.1);
   --color-price-high-tint-dark: rgba(229, 72, 77, 0.1);
-  --color-destructive: #FF3B30;
-  --color-destructive-dark: #FF3B30;
-  --color-field-background: #FFFFFF;
-  --color-field-background-dark: #FFFFFF;
-  --color-field-border: rgba(60, 60, 67, 0.21);
-  --color-field-border-dark: rgba(60, 60, 67, 0.21);
+
+  /* ── Worth the drive ──────────────────────────────────────────── */
+  --color-worth-it-text: #22A559;
+  --color-worth-it-text-dark: #22A559;
+  --color-worth-it-bg: rgba(34, 165, 89, 0.1);
+  --color-worth-it-bg-dark: rgba(34, 165, 89, 0.1);
+  --color-not-worth-text: #E5484D;
+  --color-not-worth-text-dark: #E5484D;
+  --color-not-worth-bg: rgba(229, 72, 77, 0.1);
+  --color-not-worth-bg-dark: rgba(229, 72, 77, 0.1);
+
+  /* ── Favorite ─────────────────────────────────────────────────── */
+  --color-favorite: #FFD60A;
+  --color-favorite-dark: #FFD60A;
+
+  /* ── Charts ───────────────────────────────────────────────────── */
+  --color-chart-line: #0C8599;
+  --color-chart-line-dark: #0C8599;
+  --color-chart-grid: rgba(60, 60, 67, 0.21);
+  --color-chart-grid-dark: rgba(60, 60, 67, 0.21);
+  --color-chart-label: rgba(60, 60, 67, 0.8);
+  --color-chart-label-dark: rgba(60, 60, 67, 0.8);
+  --color-chart-dot: #0C8599;
+  --color-chart-dot-dark: #0C8599;
+
+  /* ── Radar ────────────────────────────────────────────────────── */
+  --color-radar-line: #0C8599;
+  --color-radar-line-dark: #0C8599;
+  --color-radar-dot: rgba(60, 60, 67, 0.8);
+  --color-radar-dot-dark: rgba(60, 60, 67, 0.8);
+  --color-radar-best: #0C8599;
+  --color-radar-best-dark: #0C8599;
+  --color-radar-grid: rgba(60, 60, 67, 0.21);
+  --color-radar-grid-dark: rgba(60, 60, 67, 0.21);
+  --color-radar-label: rgba(60, 60, 67, 0.8);
+  --color-radar-label-dark: rgba(60, 60, 67, 0.8);
+
+  /* ── Day banner ───────────────────────────────────────────────── */
+  --color-day-banner-bg: #34C759;
+  --color-day-banner-bg-dark: #34C759;
+  --color-day-banner-text: #FFFFFF;
+  --color-day-banner-text-dark: #FFFFFF;
 }
 
 .dark:root {
+  /* ── UI backgrounds ───────────────────────────────────────────── */
   --color-background-dark: #1C1C1E;
   --color-grouped-background-dark: #2C2C2E;
   --color-surface-dark: #3A3A3C;
+  --color-sheet-dark: #1C1C1E;
+
+  /* ── Text ─────────────────────────────────────────────────────── */
   --color-label-dark: #FFFFFF;
   --color-secondary-label-dark: rgba(235, 235, 245, 0.75);
   --color-tertiary-label-dark: rgba(235, 235, 245, 0.5);
+  --color-label-on-tint-dark: #FFFFFF;
+
+  /* ── Decorative ───────────────────────────────────────────────── */
   --color-separator-dark: rgba(84, 84, 88, 0.6);
   --color-tint-dark: #22B8CD;
+  --color-destructive-dark: #FF453A;
+
+  /* ── Inputs ───────────────────────────────────────────────────── */
+  --color-field-background-dark: #3A3A3C;
+  --color-field-border-dark: rgba(84, 84, 88, 0.6);
+  --color-placeholder-dark: rgba(235, 235, 245, 0.5);
+
+  /* ── Sheet indicator ──────────────────────────────────────────── */
+  --color-handle-indicator-dark: rgba(235, 235, 245, 0.5);
+
+  /* ── Other ────────────────────────────────────────────────────── */
+  --color-error-dark: #FF453A;
+
+  /* ── Map ──────────────────────────────────────────────────────── */
+  --color-pin-dark: #22B8CD;
+  --color-pin-stroke-dark: rgba(255, 255, 255, 0.5);
+
+  /* ── Price badges ─────────────────────────────────────────────── */
   --color-price-low-dark: #30D158;
   --color-price-low-tint-dark: rgba(48, 209, 88, 0.1);
   --color-price-mid-dark: #FFD60A;
   --color-price-high-dark: #FF453A;
   --color-price-high-tint-dark: rgba(255, 69, 58, 0.1);
-  --color-destructive-dark: #FF453A;
-  --color-field-background-dark: #3A3A3C;
-  --color-field-border-dark: rgba(84, 84, 88, 0.6);
+
+  /* ── Worth the drive ──────────────────────────────────────────── */
+  --color-worth-it-text-dark: #30D158;
+  --color-worth-it-bg-dark: rgba(48, 209, 88, 0.1);
+  --color-not-worth-text-dark: #FF453A;
+  --color-not-worth-bg-dark: rgba(255, 69, 58, 0.1);
+
+  /* ── Favorite ─────────────────────────────────────────────────── */
+  --color-favorite-dark: #FFD60A;
+
+  /* ── Charts ───────────────────────────────────────────────────── */
+  --color-chart-line-dark: #22B8CD;
+  --color-chart-grid-dark: rgba(84, 84, 88, 0.6);
+  --color-chart-label-dark: rgba(235, 235, 245, 0.75);
+  --color-chart-dot-dark: #22B8CD;
+
+  /* ── Radar ────────────────────────────────────────────────────── */
+  --color-radar-line-dark: #22B8CD;
+  --color-radar-dot-dark: rgba(235, 235, 245, 0.75);
+  --color-radar-best-dark: #22B8CD;
+  --color-radar-grid-dark: rgba(84, 84, 88, 0.6);
+  --color-radar-label-dark: rgba(235, 235, 245, 0.75);
+
+  /* ── Day banner ───────────────────────────────────────────────── */
+  --color-day-banner-bg-dark: #30D158;
+  --color-day-banner-text-dark: #FFFFFF;
 }

@@ -1,11 +1,11 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import { Linking, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
 
 import { SUPPORT } from '../config/support';
 import { Icon } from '../theme/Icon';
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 export type DonationSheetHandle = { present: () => void };
 
@@ -36,8 +36,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(function Do
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['52%'], []);
 
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors } = useThemeTokens();
 
   useImperativeHandle(ref, () => ({
     present: () => bottomSheetRef.current?.present(),
@@ -57,7 +56,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(function Do
       enableDynamicSizing={false}
       handleStyle={{ marginVertical: 4 }}
       handleIndicatorStyle={{
-        backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)',
+        backgroundColor: colors.handleIndicator,
         width: 40,
         height: 5,
         borderRadius: 3,
@@ -67,14 +66,14 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(function Do
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
       backgroundStyle={{
-        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+        backgroundColor: colors.sheet,
       }}
     >
       <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text className="text-title2 font-semibold text-label dark:text-label-dark mb-sm">
+        <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
           {t('settings.donate_title')}
         </Text>
-        <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark mb-lg">
+        <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
           {t('settings.donate_caption')}
         </Text>
 
@@ -83,30 +82,31 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(function Do
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => handleOpen(option.url)}
-              className="flex-row items-center justify-between py-md px-sm rounded-md bg-field-background dark:bg-field-background-dark"
+              style={{ backgroundColor: colors.fieldBackground }}
+              className="flex-row items-center justify-between py-md px-sm rounded-md"
             >
               <View className="flex-row items-center flex-1">
                 <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
-                  style={{ backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
+                  style={{ backgroundColor: colors.groupedBackground }}
                 >
-                  <Icon name={option.icon} size={20} color="#0C8599" />
+                  <Icon name={option.icon} size={20} color={colors.tint} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-body text-label dark:text-label-dark font-semibold">
+                  <Text style={{ color: colors.label }} className="text-body font-semibold">
                     {t(option.titleKey)}
                   </Text>
-                  <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+                  <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
                     {t(option.captionKey)}
                   </Text>
                 </View>
               </View>
-              <Text className="text-tint dark:text-tint-dark text-body ml-sm">›</Text>
+              <Text style={{ color: colors.tint }} className="text-body ml-sm">›</Text>
             </TouchableOpacity>
-            <Text className="text-caption2 text-tertiary-label dark:text-tertiary-label-dark px-sm pt-xs">
+            <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 px-sm pt-xs">
               {t(option.feeKey)}
             </Text>
             {idx < OPTIONS.length - 1 && (
-              <View className="h-px bg-separator dark:bg-separator-dark my-sm" />
+              <View style={{ backgroundColor: colors.separator }} className="h-px my-sm" />
             )}
           </View>
         ))}

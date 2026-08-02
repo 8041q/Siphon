@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -8,17 +8,12 @@ import { StationMap } from '../../src/components/stationMap/StationMap';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
 import { FilterSheet } from '../../src/components/FilterSheet';
 import { Icon } from '../../src/components/ui/icon';
-import { usePalette } from '../../src/hooks/usePalette';
+import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStations, useUI, useLocationState, useActions } from '../../src/hooks/useApp';
 
 export default function MapScreen() {
   const { t } = useTranslation();
-  const colorScheme = useColorScheme();
-
-  const { palette } = usePalette();
-  const scheme = (colorScheme ?? 'light') as 'light' | 'dark';
-  const tintColor = palette[scheme].tint;
-  const secondaryLabelColor = palette[scheme].secondaryLabel;
+  const { colors, scheme: colorScheme } = useThemeTokens();
 
   const { filteredStations, loading, syncProgress, error, offline, rateLimited } = useStations();
   const { location, requestingLocation, locateWithGps } = useLocationState();
@@ -131,8 +126,8 @@ export default function MapScreen() {
 
   if (error) {
     return (
-      <View style={{ paddingTop: insets.top }} className="flex-1 justify-center items-center p-xl bg-background dark:bg-background-dark">
-        <Text className="text-destructive dark:text-destructive-dark text-center">{error}</Text>
+      <View style={{ paddingTop: insets.top, flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: colors.background }}>
+        <Text style={{ color: colors.destructive, textAlign: 'center' }}>{error}</Text>
       </View>
     );
   }
@@ -145,7 +140,7 @@ export default function MapScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Map rendering full bleed */}
       <StationMap
         initialRegion={initialRegion}
@@ -162,7 +157,7 @@ export default function MapScreen() {
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
           <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
             <View className="py-1.5 px-lg" pointerEvents="box-none">
-              <Text style={{ color: secondaryLabelColor }} className="text-footnote text-center">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
                 {t('map.offline_banner')}
               </Text>
             </View>
@@ -175,7 +170,7 @@ export default function MapScreen() {
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
           <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
             <View className="py-1.5 px-lg" pointerEvents="box-none">
-              <Text style={{ color: secondaryLabelColor }} className="text-footnote text-center">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
                 {t('sync.rate_limited')}
               </Text>
             </View>
@@ -188,8 +183,8 @@ export default function MapScreen() {
         <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 999, overflow: 'hidden' }}>
           <TouchableOpacity activeOpacity={0.7} onPress={handleSearchArea}>
             <View className="flex-row items-center gap-xs px-lg py-sm">
-              <Icon name="magnifyingglass" size={20} color={tintColor} />
-              <Text style={{ color: tintColor }} className="text-footnote font-semibold">
+              <Icon name="magnifyingglass" size={20} color={colors.tint} />
+              <Text style={{ color: colors.tint }} className="text-footnote font-semibold">
                 {t('map.search_area')}
               </Text>
             </View>
@@ -202,7 +197,7 @@ export default function MapScreen() {
         <View style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
           <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 999, overflow: 'hidden' }}>
             <View className="px-lg py-1.5">
-              <Text style={{ color: secondaryLabelColor }} className="text-footnote">
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
                 {searchFeedback}
               </Text>
             </View>
@@ -224,9 +219,9 @@ export default function MapScreen() {
             }}
           >
             <View className="relative">
-              <Icon name="filter_list" size={20} color={secondaryLabelColor} />
+              <Icon name="filter_list" size={20} color={colors.tint} />
               {filterCount > 0 && (
-                <View className="absolute -top-1.5 -right-1.5 rounded-full min-w-[16px] h-4 items-center justify-center px-1" style={{ backgroundColor: tintColor }}>
+                <View className="absolute -top-1.5 -right-1.5 rounded-full min-w-[16px] h-4 items-center justify-center px-1" style={{ backgroundColor: colors.tint }}>
                   <Text className="text-[10px] font-bold">{filterCount}</Text>
                 </View>
               )}
@@ -235,7 +230,7 @@ export default function MapScreen() {
         </BlurView>
       </View>
 
-            {/* Locate me button */}
+      {/* Locate me button */}
       <View style={{ position: 'absolute', top: 140, left: 16, zIndex: 10 }}>
         <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ borderRadius: 22, overflow: 'hidden' }}>
           <TouchableOpacity
@@ -250,9 +245,9 @@ export default function MapScreen() {
             }}
           >
             {requestingLocation ? (
-              <ActivityIndicator size="small" color={tintColor} />
+              <ActivityIndicator size="small" color={colors.tint} />
             ) : (
-              <Icon name="my_location" size={20} color={tintColor} />
+              <Icon name="my_location" size={20} color={colors.tint} />
             )}
           </TouchableOpacity>
         </BlurView>

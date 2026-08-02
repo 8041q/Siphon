@@ -1,6 +1,7 @@
 import { Text, TextInput, View } from 'react-native';
-import { useColorScheme } from 'nativewind';
 import type { KeyboardTypeOptions } from 'react-native';
+
+import { useThemeTokens } from '../../hooks/useThemeTokens';
 
 interface FieldProps {
   label: string;
@@ -13,25 +14,25 @@ interface FieldProps {
 }
 
 export function Field({ label, value, onChangeText, placeholder, error, keyboardType = 'default', autoCapitalize = 'sentences' }: FieldProps) {
-  const { colorScheme } = useColorScheme();
-  const placeholderColor = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)';
+  const { colors } = useThemeTokens();
 
   return (
     <View>
-      <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
+      <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
         {label}
       </Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
+        placeholderTextColor={colors.placeholder}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
-        className="bg-field-background dark:bg-field-background-dark border border-field-border dark:border-field-border-dark rounded-md px-3 py-2 text-body text-label dark:text-label-dark"
+        style={{ backgroundColor: colors.fieldBackground, borderColor: colors.fieldBorder, color: colors.label }}
+        className="rounded-md px-3 py-2 text-body"
       />
       {error ? (
-        <Text className="text-footnote text-destructive dark:text-destructive-dark mt-xs">{error}</Text>
+        <Text style={{ color: colors.error }} className="text-footnote mt-xs">{error}</Text>
       ) : null}
     </View>
   );

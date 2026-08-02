@@ -1,7 +1,6 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '../../src/hooks/useApp';
@@ -15,7 +14,7 @@ import { WorthTheDrive } from '../../src/components/WorthTheDrive';
 import { fuelLabel, fuelUnit } from '../../src/utils/fuelNames';
 import { getLocationParts } from '../../src/utils/location';
 import { forecast, FORECAST_HORIZONS, FORECAST_MIN_DAYS, historyCoverageDays } from '../../src/utils/priceAnalysis';
-import { tokens } from '../../src/theme/tokens';
+import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 
 function formatDistance(d: number): string {
   return d < 1 ? `${(d * 1000).toFixed(0)} m` : `${d.toFixed(1)} km`;
@@ -26,9 +25,7 @@ export default function PriceTrendsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { stations, stationDistances } = useApp();
 
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const colors = tokens.color[isDark ? 'dark' : 'light'];
+  const { colors } = useThemeTokens();
 
   const station = useMemo(
     () => stations.find((s) => s.properties.id === id),
@@ -77,13 +74,12 @@ export default function PriceTrendsScreen() {
         }}
       />
 
-      {/* Screen Content */}
-      <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
-        <Text className="text-title-3 text-label dark:text-label-dark mb-xs">
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16 }}>
+        <Text className="text-title-3 mb-xs" style={{ color: colors.label }}>
           {station?.properties.brand || station?.properties.name || t('common.station')}
         </Text>
         {subtitleParts.length > 0 && (
-          <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark mb-lg">
+          <Text className="text-subheadline mb-lg" style={{ color: colors.secondaryLabel }}>
             {subtitleParts.join(' · ')}
           </Text>
         )}
@@ -91,19 +87,21 @@ export default function PriceTrendsScreen() {
         {fuels.length > 1 && (
           <View className="flex-row flex-wrap gap-sm mb-lg">
             {fuels.map((fuel) => (
-              <TouchableOpacity
-                key={fuel}
-                activeOpacity={0.7}
-                onPress={() => setSelectedFuel(fuel)}
-                className={`px-3.5 py-1.5 rounded-xl ${
-                  selectedFuel === fuel ? 'bg-tint dark:bg-tint-dark' : 'bg-grouped-background dark:bg-grouped-background-dark'
-                }`}
-              >
-                <Text
-                  className={`text-caption-1 font-semibold ${
-                    selectedFuel === fuel ? 'text-white' : 'text-label dark:text-label-dark'
-                  }`}
+                <TouchableOpacity
+                  key={fuel}
+                  activeOpacity={0.7}
+                  onPress={() => setSelectedFuel(fuel)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 16,
+                    backgroundColor: selectedFuel === fuel ? colors.tint : colors.groupedBackground,
+                  }}
                 >
+                  <Text
+                    className="text-caption-1 font-semibold"
+                    style={{ color: selectedFuel === fuel ? colors.labelOnTint : colors.label }}
+                  >
                   {fuelLabel(fuel)}
                 </Text>
               </TouchableOpacity>
@@ -112,11 +110,11 @@ export default function PriceTrendsScreen() {
         )}
 
         {loading ? (
-          <Text className="text-secondary-label dark:text-secondary-label-dark text-center">
+          <Text style={{ color: colors.secondaryLabel, textAlign: 'center' }}>
             {t('price_trends.loading')}
           </Text>
         ) : !enabled ? (
-          <Text className="text-secondary-label dark:text-secondary-label-dark text-center">
+          <Text style={{ color: colors.secondaryLabel, textAlign: 'center' }}>
             {t('price_trends.history_disabled')}
           </Text>
         ) : (

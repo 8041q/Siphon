@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
@@ -8,20 +9,23 @@ import { useSupport, ALL_REWARDS } from '../hooks/useSupport';
 import { useUserLocationMarker } from '../hooks/useUserLocationMarker';
 import { PALETTES, PALETTE_ORDER } from '../theme/palettes';
 import type { PaletteId } from '../theme/palettes';
-import { PALETTE_REWARDS, SVG_REWARDS, rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
+import { rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
 import { svgRewards, SVG_REWARD_NAMES, type SvgMarkerRewardId } from './userLocationMarkers/rewards';
-import { useThemeTokens } from '../hooks/useThemeTokens';
 import { Button } from './ui/button';
 
-function swatchStyle(base: string, borderColor: string) {
+export type RewardsSheetHandle = { present: () => void };
+
+const LOCKED_NOTICE_MS = 1800;
+const UNLOCKED_FLASH_MS = 2500;
+const AD_FAILED_MS = 2500;
+
+function swatchStyle(base: string, isDark: boolean) {
   return {
     backgroundColor: base,
-    borderColor,
+    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
     borderWidth: 1,
   };
 }
-
-export type RewardsSheetHandle = { present: () => void };
 
 export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function RewardsSheet(
   _props,
@@ -31,22 +35,26 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['82%'], []);
 
-  const { colors } = useThemeTokens();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const {
     watchedCount,
     isUnlocked,
+    remainingFor,
     watchAd,
-    watchToUnlock,
     adLoaded,
     adLoading,
+    rewardsLoaded,
     paletteId,
     setPaletteId,
   } = useSupport();
   const { setMarker } = useUserLocationMarker();
 
   const [lastUnlockedId, setLastUnlockedId] = useState<string | null>(null);
+  const [noticeId, setNoticeId] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [adFailed, setAdFailed] = useState(false);
 
   useImperativeHandle(ref, () => ({
     present: () => bottomSheetRef.current?.present(),
@@ -58,53 +66,69 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     )[0];
   }, [watchedCount]);
 
+  // The single, only entry point for actually watching an ad. Everything
+  // else in this sheet (tapping a locked palette/marker) is inert - it just
+  // surfaces a "watch more ads" notice below.
   const handleWatchAd = useCallback(async () => {
     if (working) return;
     setWorking(true);
+    setAdFailed(false);
     const { earned, unlockedItem } = await watchAd();
     setWorking(false);
     if (earned && unlockedItem) {
       setLastUnlockedId(unlockedItem.id);
-      setTimeout(() => setLastUnlockedId(null), 2500);
+      setTimeout(() => setLastUnlockedId(null), UNLOCKED_FLASH_MS);
+    } else if (!earned) {
+      setAdFailed(true);
+      setTimeout(() => setAdFailed(false), AD_FAILED_MS);
     }
   }, [watchAd, working]);
 
+  const showLockedNotice = useCallback((id: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setNoticeId(id);
+    setTimeout(() => setNoticeId((current) => (current === id ? null : current)), LOCKED_NOTICE_MS);
+  }, []);
+
   const handleSelectPalette = useCallback(
-    async (id: PaletteId) => {
+    (id: PaletteId) => {
       const reward = rewardForPalette(id);
       if (reward && !isUnlocked(reward.id)) {
-        const ok = await watchToUnlock(reward.id);
-        if (!ok) return;
+        showLockedNotice(id);
+        return;
       }
       Haptics.selectionAsync();
       setPaletteId(id);
       bottomSheetRef.current?.dismiss();
     },
-    [isUnlocked, watchToUnlock, setPaletteId],
+    [isUnlocked, setPaletteId, showLockedNotice],
   );
 
   const handleSelectSvg = useCallback(
-    async (name: string) => {
+    (name: string) => {
       const reward = rewardForSvg(name as SvgMarkerRewardId);
       if (reward && !isUnlocked(reward.id)) {
-        const ok = await watchToUnlock(reward.id);
-        if (!ok) return;
+        showLockedNotice(name);
+        return;
       }
       Haptics.selectionAsync();
       setMarker({ type: 'svg', value: name });
       bottomSheetRef.current?.dismiss();
     },
-    [isUnlocked, watchToUnlock, setMarker],
+    [isUnlocked, setMarker, showLockedNotice],
   );
 
-  const trailingFor = (requiredWatches: number, unlocked: boolean, id: string) => {
+  const trailingFor = (remaining: number, unlocked: boolean, id: string) => {
     if (lastUnlockedId === id) {
-      return <Text style={{ color: colors.priceLow }} className="text-callout font-semibold">{t('settings.reward_unlocked')}</Text>;
+      return <Text className="text-price-low dark:text-price-low-dark text-callout font-semibold">{t('settings.reward_unlocked')}</Text>;
+    }
+    if (noticeId === id) {
+      return <Text className="text-price-high dark:text-price-high-dark text-footnote font-semibold">{t('settings.reward_locked_notice')}</Text>;
     }
     if (unlocked) {
-      return <Text style={{ color: colors.tint }} className="text-body">✓</Text>;
+      return <Text className="text-tint dark:text-tint-dark text-body">✓</Text>;
     }
-    return <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('settings.reward_locked_ads', { count: requiredWatches })}</Text>;
+    return <Text className="text-tertiary-label dark:text-tertiary-label-dark text-footnote">{t('settings.reward_locked_ads', { count: remaining })}</Text>;
   };
 
   return (
@@ -116,7 +140,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       enableDynamicSizing={false}
       handleStyle={{ marginVertical: 4 }}
       handleIndicatorStyle={{
-        backgroundColor: colors.handleIndicator,
+        backgroundColor: isDark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)',
         width: 40,
         height: 5,
         borderRadius: 3,
@@ -126,39 +150,44 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
       backgroundStyle={{
-        backgroundColor: colors.sheet,
+        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
       }}
     >
       <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
+        <Text className="text-title2 font-semibold text-label dark:text-label-dark mb-sm">
           {t('settings.rewards_title')}
         </Text>
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
+        <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark mb-lg">
           {t('settings.rewards_caption')}
         </Text>
 
-        <View style={{ backgroundColor: colors.fieldBackground }} className="rounded-md p-md mb-lg">
+        <View className="rounded-md bg-field-background dark:bg-field-background-dark p-md mb-lg">
           <View className="flex-row items-center justify-between mb-sm">
-            <Text style={{ color: colors.label }} className="text-body font-semibold">
+            <Text className="text-body font-semibold text-label dark:text-label-dark">
               {t('settings.rewards_progress', { count: watchedCount })}
             </Text>
             {nextReward && (
-              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+              <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
                 {t('settings.rewards_next', { ads: nextReward.requiredWatches })}
               </Text>
             )}
           </View>
-          <Button onPress={handleWatchAd} disabled={!adLoaded || working} loading={working || adLoading}>
+          <Button onPress={handleWatchAd} disabled={working || !rewardsLoaded} loading={working || adLoading}>
             {t('settings.watch_ad')}
           </Button>
-          {!adLoaded && (
-            <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
+          {working && adLoading && (
+            <Text className="text-caption2 text-tertiary-label dark:text-tertiary-label-dark mt-sm">
               {t('settings.rewards_ad_loading')}
+            </Text>
+          )}
+          {adFailed && (
+            <Text className="text-caption2 text-price-high dark:text-price-high-dark mt-sm">
+              {t('settings.rewards_ad_failed')}
             </Text>
           )}
         </View>
 
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+        <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
           {t('settings.rewards_palettes')}
         </Text>
         {PALETTE_ORDER.map((id) => {
@@ -175,21 +204,21 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
             >
               <View className="flex-row items-center flex-1">
                 <View className="mr-sm flex-row -space-x-1">
-                  <View style={[swatchStyle(palette.light.background, colors.separator), { width: 20, height: 20, borderRadius: 10 }]} />
-                  <View style={[swatchStyle(palette.dark.background, colors.separator), { width: 20, height: 20, borderRadius: 10 }]} />
+                  <View style={[swatchStyle(palette.light.background, isDark), { width: 20, height: 20, borderRadius: 10 }]} />
+                  <View style={[swatchStyle(palette.dark.background, isDark), { width: 20, height: 20, borderRadius: 10 }]} />
                 </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
+                <Text className={`text-body flex-1 ${selected ? 'text-tint dark:text-tint-dark font-semibold' : 'text-label dark:text-label-dark'}`}>
                   {t(`settings.palette_${id}`)}
                 </Text>
               </View>
-              {trailingFor(reward?.requiredWatches ?? 0, unlocked, id)}
+              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
             </TouchableOpacity>
           );
         })}
 
-        <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
+        <View className="h-px bg-separator dark:bg-separator-dark my-md" />
 
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+        <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark uppercase tracking-wide mb-sm">
           {t('settings.rewards_markers')}
         </Text>
         {SVG_REWARD_NAMES.map((name) => {
@@ -206,20 +235,20 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
             >
               <View className="flex-row items-center flex-1">
                 <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
-                  style={{ backgroundColor: colors.groupedBackground }}
+                  style={{ backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
                 >
-                  {SvgComponent && <SvgComponent size={20} color={colors.tint} />}
+                  {SvgComponent && <SvgComponent size={20} color="#0C8599" />}
                 </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
+                <Text className={`text-body flex-1 ${selected ? 'text-tint dark:text-tint-dark font-semibold' : 'text-label dark:text-label-dark'}`}>
                   {t(`settings.reward_svg_${name}`)}
                 </Text>
               </View>
-              {trailingFor(reward?.requiredWatches ?? 0, unlocked, name)}
+              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, name)}
             </TouchableOpacity>
           );
         })}
 
-        <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-md">
+        <Text className="text-caption2 text-tertiary-label dark:text-tertiary-label-dark mt-md">
           {t('settings.rewards_footnote')}
         </Text>
       </BottomSheetScrollView>

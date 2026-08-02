@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '../../src/components/ui/icon';
 import { StationCard } from '../../src/components/StationCard';
 import { FilterSheet } from '../../src/components/FilterSheet';
+import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStations, useLocationState, useUI } from '../../src/hooks/useApp';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 
@@ -25,7 +26,7 @@ export default function SearchScreen() {
   const { allStations } = useStations();
   const { setSelectedStation, favorites, toggleFavorite, searchFilter, setSearchFilter } = useUI();
   const { location } = useLocationState();
-  const colorScheme = useColorScheme();
+  const { colors } = useThemeTokens();
   const filterSheetRef = useRef<{ present: () => void }>(null);
 
   const [brandQuery, setBrandQuery] = useState('');
@@ -47,7 +48,7 @@ export default function SearchScreen() {
     [setSelectedStation]
   );
 
-  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
+  const secondaryLabel = colors.secondaryLabel;
 
   const results = useMemo(() => {
     let filtered = allStations;
@@ -118,21 +119,21 @@ export default function SearchScreen() {
   }, [brandQuery, allStations, searchFilter, location]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <View className="flex-1">
         <View className="px-4 flex-row items-center gap-2">
           <View className="flex-1">
             <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} secondaryLabel={secondaryLabel} />
           </View>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => filterSheetRef.current?.present()}
-            className="bg-grouped-background dark:bg-grouped-background-dark rounded-md p-3"
-          >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => filterSheetRef.current?.present()}
+              style={{ backgroundColor: colors.groupedBackground, borderRadius: 8, padding: 12 }}
+            >
             <View className="relative">
               <Icon name="filter_list" size={20} color={secondaryLabel} />
               {filterCount > 0 && (
-                <View className="absolute -top-1.5 -right-1.5 bg-tint rounded-full min-w-[16px] h-4 items-center justify-center px-1">
+                <View style={{ position: 'absolute', top: -6, right: -6, backgroundColor: colors.tint, borderRadius: 9999, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
                   <Text className="text-[10px] font-bold">{filterCount}</Text>
                 </View>
               )}
@@ -153,16 +154,17 @@ export default function SearchScreen() {
 
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
   const { t } = useTranslation();
+  const { colors } = useThemeTokens();
   return (
-    <View className="flex-row items-center bg-grouped-background dark:bg-grouped-background-dark rounded-md px-3 h-11">
+    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.groupedBackground, borderRadius: 8, paddingHorizontal: 12, height: 44 }}>
       <Icon name="magnifyingglass" size={20} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
         onChangeText={setBrandQuery}
         placeholder={t('search.placeholder')}
         placeholderTextColor={secondaryLabel}
-        className="flex-1 ml-2 text-label dark:text-label-dark py-0"
-        style={{ textAlignVertical: 'center' }}
+        className="flex-1 ml-2 py-0"
+        style={{ color: colors.label, textAlignVertical: 'center' }}
       />
     </View>
   );
@@ -170,10 +172,11 @@ function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: 
 
 function StationList({ results, handleStationPress, favorites, onToggleFavorite }: { results: FuelStationFeature[]; handleStationPress: (station: FuelStationFeature) => void; favorites?: Set<string>; onToggleFavorite?: (station: FuelStationFeature) => void }) {
   const { t } = useTranslation();
+  const { colors } = useThemeTokens();
   if (!results || results.length === 0) {
     return (
       <View className="flex-1 items-center justify-center">
-        <Text className="text-title-3 text-secondary-label dark:text-secondary-label-dark">
+        <Text className="text-title-3" style={{ color: colors.secondaryLabel }}>
           {t('search.no_results')}
         </Text>
       </View>
@@ -182,7 +185,7 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
 
   return (
     <View className="flex-1 gap-1 pt-lg">
-      <Text className="text-headline text-label dark:text-label-dark mb-sm px-4">
+        <Text className="text-headline mb-sm px-4" style={{ color: colors.label }}>
         {t('search.results_header')} ({results.length})
       </Text>
       <FlashList

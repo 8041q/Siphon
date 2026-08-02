@@ -1,6 +1,5 @@
 import { memo, useCallback } from 'react';
 import { Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
-import { useColorScheme } from 'nativewind';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
@@ -10,8 +9,7 @@ import { PriceBadge } from './PriceBadge';
 import { Icon } from '../theme/Icon';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { useStations } from '../hooks/useApp';
-
-const FAVORITE_COLOR = '#FFD60A';
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 interface StationCardProps {
   station: FuelStationFeature;
@@ -28,9 +26,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const locationParts = getLocationParts(station.properties);
   const { stationDistances } = useStations();
   const distanceKm = stationDistances.get(station.properties.id);
-  const { colorScheme } = useColorScheme();
-  const secondaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
-  const tertiaryLabel = colorScheme === 'dark' ? 'rgba(235, 235, 245, 0.75)' : 'rgba(60, 60, 67, 0.6)';
+  const { colors } = useThemeTokens();
 
   const handleToggleFavorite = (e: any) => {
     e.stopPropagation();
@@ -53,15 +49,16 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
       onPress={() => {
         onPress?.(station);
       }}
-      className="p-md rounded-md bg-grouped-background dark:bg-grouped-background-dark"
+      style={{ backgroundColor: colors.groupedBackground }}
+      className="p-md rounded-md"
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1 mr-2">
-          <Text className="text-headline text-label dark:text-label-dark">
+          <Text style={{ color: colors.label }} className="text-headline">
             {brand || name || t('common.unknown_station')}
           </Text>
           {brand && name && brand !== name && (
-            <Text className="text-subheadline text-secondary-label dark:text-secondary-label-dark mt-0.5">
+            <Text style={{ color: colors.secondaryLabel }} className="text-subheadline mt-0.5">
               {name}
             </Text>
           )}
@@ -71,24 +68,24 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
             <Icon
               name={favorite ? 'star.fill' : 'star'}
               size={18}
-              color={favorite ? FAVORITE_COLOR : tertiaryLabel}
+              color={favorite ? colors.favorite : colors.tertiaryLabel}
             />
           </View>
         </Pressable>
       </View>
       <View className="flex-row items-start mt-0.5">
         <View className="flex-1 mr-2">
-          <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+          <Text style={{ color: colors.secondaryLabel }} className="text-callout">
             {cleanAddress(station.properties)}
           </Text>
           {locationParts.length > 0 && (
-            <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-0.5">
+            <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-0.5">
               {locationParts.join(', ')}
               {(schedule || hours) ? ' · ' : ''}
             </Text>
           )}
           {distanceKm !== undefined && (
-            <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-0.5">
+            <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-0.5">
               {distanceKm < 1
                 ? `${(distanceKm * 1000).toFixed(0)} m`
                 : `${distanceKm.toFixed(1)} km`} {t('station.from_location')}
@@ -97,8 +94,8 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
         </View>
         <View className="flex-row items-center gap-1">
           <Pressable onPress={handleOpenInMaps} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View className="  rounded-sm p-1.5">
-              <Icon name="directions" size={19} color={secondaryLabel} />
+            <View className="rounded-sm p-1.5">
+              <Icon name="directions" size={19} color={colors.secondaryLabel} />
             </View>
           </Pressable>
         </View>

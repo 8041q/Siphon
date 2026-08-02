@@ -1,8 +1,9 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
+
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import { Field } from './ui/field';
 import {
@@ -51,8 +52,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['90%'], []);
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const { colors } = useThemeTokens();
 
     const [values, setValues] = useState<Record<string, string>>({});
     const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -134,7 +134,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
         enableDynamicSizing={false}
         handleStyle={{ marginVertical: 4 }}
         handleIndicatorStyle={{
-          backgroundColor: isDark ? 'rgba(235, 235, 245, 0.5)' : 'rgba(60, 60, 67, 0.3)',
+          backgroundColor: colors.handleIndicator,
           width: 40,
           height: 5,
           borderRadius: 3,
@@ -143,13 +143,13 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }}
+        backgroundStyle={{ backgroundColor: colors.sheet }}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-          <Text className="text-title2 font-semibold text-label dark:text-label-dark mb-lg">
+          <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
             {t('settings.ev_title')}
           </Text>
-          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark mb-lg">
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
             {t('settings.ev_caption')}
           </Text>
 
@@ -170,74 +170,74 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
           </View>
 
           {result && (
-            <View className="bg-grouped-background dark:bg-grouped-background-dark rounded-md p-md mt-lg gap-xs">
-              <Text className="text-footnote text-label dark:text-label-dark font-semibold uppercase tracking-wide mt-xs">
+            <View style={{ backgroundColor: colors.groupedBackground }} className="rounded-md p-md mt-lg gap-xs">
+              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
                 {t('settings.ev_per_year_title')}
               </Text>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{t('settings.ev_annual_cost_ev')}</Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.evRunningPerYear.toFixed(0)} €</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_annual_cost_ev')}</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.evRunningPerYear.toFixed(0)} €</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{t('settings.ev_annual_cost_gas')}</Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.petrolRunningPerYear.toFixed(0)} €</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_annual_cost_gas')}</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.petrolRunningPerYear.toFixed(0)} €</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{t('settings.ev_maintenance')}</Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">~{result.maintenancePerYear.toFixed(0)} €</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_maintenance')}</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">~{result.maintenancePerYear.toFixed(0)} €</Text>
               </View>
-              <View className="h-px bg-separator dark:bg-separator-dark my-xs" />
-              <Text className="text-footnote text-label dark:text-label-dark font-semibold uppercase tracking-wide mt-xs">
+              <View style={{ backgroundColor: colors.separator }} className="h-px my-xs" />
+              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
                 {t('settings.ev_once_title')}
               </Text>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
                   {t('settings.ev_battery_replacement_once', { year: result.batteryEndOfServiceYear })}
                 </Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{BATTERY_REPLACEMENT_COST.toFixed(0)} €</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{BATTERY_REPLACEMENT_COST.toFixed(0)} €</Text>
               </View>
-              <View className="h-px bg-separator dark:bg-separator-dark my-xs" />
+              <View style={{ backgroundColor: colors.separator }} className="h-px my-xs" />
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
                   {t('settings.ev_total_ev', { years: result.batteryEndOfServiceYear })}
                 </Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.evTotal(result.batteryEndOfServiceYear).toFixed(0)} €</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.evTotal(result.batteryEndOfServiceYear).toFixed(0)} €</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
                   {t('settings.ev_total_petrol', { years: result.batteryEndOfServiceYear })}
                 </Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.petrolTotal(result.batteryEndOfServiceYear).toFixed(0)} €</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.petrolTotal(result.batteryEndOfServiceYear).toFixed(0)} €</Text>
               </View>
               {result.breakEvenYear !== null ? (
-                <Text className="text-callout font-semibold text-label dark:text-label-dark mt-sm">
+                <Text style={{ color: colors.label }} className="text-callout font-semibold mt-sm">
                   {t('settings.ev_becomes_cheaper', { year: result.breakEvenYear })}
                 </Text>
               ) : (
-                <Text className="text-callout font-semibold text-destructive dark:text-destructive-dark mt-sm">
+                <Text style={{ color: colors.destructive }} className="text-callout font-semibold mt-sm">
                   {t('settings.ev_no_break_even')}
                 </Text>
               )}
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-xs">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-xs">
                 {t('settings.ev_break_even_hint')}
               </Text>
-              <View className="h-px bg-separator dark:bg-separator-dark my-xs" />
-              <Text className="text-footnote text-label dark:text-label-dark font-semibold uppercase tracking-wide mt-xs">
+              <View style={{ backgroundColor: colors.separator }} className="h-px my-xs" />
+              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
                 {t('settings.ev_co2_title')}
               </Text>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{t('settings.ev_co2_gas')}</Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.annualGasCo2.toFixed(0)} kg</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_co2_gas')}</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.annualGasCo2.toFixed(0)} kg</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{t('settings.ev_co2_ev')}</Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.annualEvCo2.toFixed(0)} kg</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_co2_ev')}</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.annualEvCo2.toFixed(0)} kg</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark">{t('settings.ev_co2_battery')}</Text>
-                <Text className="text-body font-semibold text-label dark:text-label-dark">{result.batteryCo2.toFixed(0)} kg</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_co2_battery')}</Text>
+                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.batteryCo2.toFixed(0)} kg</Text>
               </View>
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark mt-xs">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-xs">
                 {t('settings.ev_battery_note')}
               </Text>
             </View>
@@ -245,28 +245,28 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
 
           {result && (
             <View className="mt-lg gap-xs">
-              <Text className="text-footnote text-label dark:text-label-dark font-semibold uppercase tracking-wide">
+              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
                 {t('settings.ev_how_to_read')}
               </Text>
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
                 {t('settings.ev_help_ev')}
               </Text>
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
                 {t('settings.ev_help_gas')}
               </Text>
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
                 {t('settings.ev_help_battery')}
               </Text>
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
                 {t('settings.ev_help_break_even')}
               </Text>
-              <Text className="text-footnote text-tertiary-label dark:text-tertiary-label-dark">
+              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
                 {t('settings.ev_help_co2')}
               </Text>
             </View>
           )}
 
-          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark text-center mt-xl">
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center mt-xl">
             {t('settings.ev_auto_save')}
           </Text>
         </BottomSheetScrollView>

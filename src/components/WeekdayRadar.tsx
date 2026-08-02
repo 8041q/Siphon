@@ -1,12 +1,11 @@
 import { memo } from 'react';
 import { Text, View } from 'react-native';
 import { Circle, G, Line, Polygon, Svg, Text as SvgText } from 'react-native-svg';
-import { useColorScheme } from 'nativewind';
 import { useTranslation } from 'react-i18next';
 
 import type { PriceHistoryPoint } from '../api/siphonClient';
 import { weekdayCycle, WEEKDAY_ORDER, weekdayI18nKey } from '../utils/priceAnalysis';
-import { tokens } from '../theme/tokens';
+import { useThemeTokens } from '../hooks/useThemeTokens';
 
 interface WeekdayRadarProps {
   data: PriceHistoryPoint[];
@@ -27,21 +26,21 @@ function weekdayAngle(i: number): number {
   return -80 + (i * 360) / 7;
 }
 
+const WEEKDAY_COUNT = WEEKDAY_ORDER.length;
+
 const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
   const { t } = useTranslation();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const colors = tokens.color[isDark ? 'dark' : 'light'];
+  const { colors } = useThemeTokens();
 
   const cycle = weekdayCycle(data);
 
   if (!cycle) {
     return (
-      <View className="bg-surface dark:bg-surface-dark rounded-md p-lg">
-        <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-xs uppercase tracking-wide">
+      <View style={{ backgroundColor: colors.surface }} className="rounded-md p-lg">
+        <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
           {t('price_trends.weekday_title')}
         </Text>
-        <Text className="text-callout text-secondary-label dark:text-secondary-label-dark">
+        <Text style={{ color: colors.secondaryLabel }} className="text-callout">
           {t('price_trends.weekday_insufficient')}
         </Text>
       </View>
@@ -67,8 +66,8 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
     .join(' ');
 
   return (
-    <View className="bg-surface dark:bg-surface-dark rounded-md p-lg items-center">
-      <Text className="text-footnote text-label dark:text-label-dark font-semibold mb-sm uppercase tracking-wide self-start">
+    <View style={{ backgroundColor: colors.surface }} className="rounded-md p-lg items-center">
+      <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-sm uppercase tracking-wide self-start">
         {t('price_trends.weekday_title')}
       </Text>
       <Svg width={WIDTH} height={HEIGHT}>
@@ -79,7 +78,7 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
               cx={CENTER_X}
               cy={CENTER_Y}
               r={RADIUS * f}
-              stroke={colors.separator}
+              stroke={colors.radarGrid}
               strokeWidth={1}
               fill="none"
             />
@@ -89,10 +88,10 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
             const outer = polar(CENTER_X, CENTER_Y, RADIUS + 18, angle);
             const inner = polar(CENTER_X, CENTER_Y, RADIUS * 0.25, angle);
             return (
-              <Line key={`axis-${i}`} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={colors.separator} strokeWidth={1} />
+              <Line key={`axis-${i}`} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={colors.radarGrid} strokeWidth={1} />
             );
           })}
-          <Polygon points={polygon} fill={colors.tint} fillOpacity={0.18} stroke={colors.tint} strokeWidth={2} />
+          <Polygon points={polygon} fill={colors.radarLine} fillOpacity={0.18} stroke={colors.radarLine} strokeWidth={2} />
           {points.map((p, i) => {
             if (p.nullVal) return null;
             const isBest = p.day === bestDay;
@@ -102,7 +101,7 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
                 cx={p.x}
                 cy={p.y}
                 r={isBest ? 5 : 3.5}
-                fill={isBest ? colors.tint : colors.secondaryLabel}
+                fill={isBest ? colors.radarBest : colors.radarDot}
               />
             );
           })}
@@ -115,7 +114,7 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
                 key={`label-${i}`}
                 x={label.x}
                 y={label.y}
-                fill={isBest ? colors.tint : colors.secondaryLabel}
+                fill={isBest ? colors.radarBest : colors.radarLabel}
                 fontSize={11}
                 fontWeight={isBest ? '700' : '400'}
                 textAnchor="middle"
@@ -127,7 +126,7 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
           })}
         </G>
       </Svg>
-      <Text className="text-callout font-semibold text-label dark:text-label-dark mt-sm">
+      <Text style={{ color: colors.label }} className="text-callout font-semibold mt-sm">
         {t('price_trends.weekday_best_day', { day: t(`station.${weekdayI18nKey(bestDay)}`) })}
       </Text>
     </View>

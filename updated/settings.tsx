@@ -13,7 +13,6 @@ import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
 import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
-import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { getPalette } from '../../src/theme/palettes';
 import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
@@ -45,11 +44,10 @@ export default function SettingsScreen() {
   const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
   const donationSheetRef = useRef<DonationSheetHandle>(null);
 
-   const { watchedCount, isUnlocked, watchToUnlock, paletteId } = useSupport();
-   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
-   const { config: evConfig, setEvConfig } = useEvConfig();
-   const evResult = evBreakeven(evConfig);
-   const { colors } = useThemeTokens();
+  const { watchedCount, isUnlocked, paletteId } = useSupport();
+  const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
+  const { config: evConfig, setEvConfig } = useEvConfig();
+  const evResult = evBreakeven(evConfig);
 
   const handleDownloadUpdate = () => {
     Linking.openURL(getUpdateUrl()).catch(() => {});
@@ -104,7 +102,7 @@ export default function SettingsScreen() {
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
-  const { marker: currentMarker, setMarker } = useUserLocationMarker();
+  const { marker: currentMarker } = useUserLocationMarker();
   const markerLabel = currentMarker.type === 'icon'
     ? currentMarker.value.replace('_', ' ')
     : currentMarker.type === 'svg'
@@ -118,11 +116,11 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: colors.background }}>
+    <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" edges={['top']}>
       <ScrollView className="flex-1" contentContainerClassName="gap-lg pb-xl">
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.appearance')}
           </Text>
           {themeOptions.map((option) => (
@@ -134,18 +132,18 @@ export default function SettingsScreen() {
                 {option.label}
               </ListItem>
               {option.value !== themeOptions[themeOptions.length - 1].value && (
-                <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+                <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
               )}
             </View>
           ))}
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.palette_${paletteId}`)}>
             {t('settings.color_palette')}
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.language')}
           </Text>
           <ListItem onPress={() => languageSheetRef.current?.present()} trailing={langLabel}>
@@ -153,8 +151,8 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.location_marker')}
           </Text>
           <ListItem onPress={() => locationMarkerSheetRef.current?.present()} trailing={markerLabel}>
@@ -162,12 +160,12 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.my_vehicles')}
           </Text>
           {vehicles.length === 0 ? (
-            <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md">
+            <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md">
               {t('settings.no_vehicles')}
             </Text>
           ) : (
@@ -180,8 +178,7 @@ export default function SettingsScreen() {
                       {vehicle.fuels.map((f) => (
                         <Text
                           key={f.fuelType}
-                          style={{ color: colors.secondaryLabel }}
-                          className="text-body text-right"
+                          className="text-body text-secondary-label dark:text-secondary-label-dark text-right"
                         >
                           {fuelLabel(f.fuelType)} · {f.consumption} {consumptionUnit(f.fuelType)} · {f.capacity} {capacityUnit(f.fuelType)}
                         </Text>
@@ -192,22 +189,22 @@ export default function SettingsScreen() {
                   {vehicle.name}
                 </ListItem>
                 {idx < vehicles.length - 1 && (
-                  <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+                  <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
                 )}
               </View>
             ))
           )}
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem onPress={() => vehicleSheetRef.current?.present(null)} trailing="+">
             {t('settings.add_vehicle')}
           </ListItem>
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
             {t('settings.vehicles_caption')}
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.ev_vs_gas')}
           </Text>
           <ListItem
@@ -220,29 +217,29 @@ export default function SettingsScreen() {
           >
             {t('settings.ev_vs_gas_sub')}
           </ListItem>
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
             {t('settings.ev_caption')}
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.price_history')}
           </Text>
-          <View style={{ backgroundColor: colors.surface }} className="flex-row items-center justify-between px-lg py-md">
-            <Text style={{ color: colors.label }} className="text-callout flex-1 mr-2">
+          <View className="flex-row items-center justify-between px-lg py-md">
+            <Text className="text-callout text-label dark:text-label-dark flex-1 mr-2">
               {t('settings.save_history')}
             </Text>
             <Switch value={historyEnabled} onValueChange={handleToggleHistory} />
           </View>
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-md pt-xs">
             {t('settings.save_history_caption')}
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.updates')}
           </Text>
           <ListItem
@@ -256,11 +253,11 @@ export default function SettingsScreen() {
           >
             {t('settings.update_status')}
           </ListItem>
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem onPress={() => check(true)}>{t('settings.check_for_updates')}</ListItem>
           {updateAvailable && (
             <>
-              <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+              <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
               <View className="px-lg py-md">
                 <Button onPress={handleDownloadUpdate}>{t('settings.download_update')}</Button>
               </View>
@@ -268,8 +265,8 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.support')}
           </Text>
           <ListItem
@@ -278,20 +275,20 @@ export default function SettingsScreen() {
           >
             {t('settings.support_rewards')}
           </ListItem>
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem onPress={() => donationSheetRef.current?.present()}>
             {t('settings.support_donate')}
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+        <View className="mx-lg rounded-md overflow-hidden bg-surface dark:bg-surface-dark">
+          <Text className="text-footnote text-secondary-label dark:text-secondary-label-dark px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.about')}
           </Text>
           <ListItem trailing="Siphon">{t('settings.app_name')}</ListItem>
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem trailing="SiphonAPI">{t('settings.data_source')}</ListItem>
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <View className="h-px bg-separator dark:bg-separator-dark mx-lg" />
           <ListItem trailing={installedVersion}>{t('settings.version')}</ListItem>
         </View>
       </ScrollView>
@@ -305,11 +302,6 @@ export default function SettingsScreen() {
       <LocationMarkerSheet
         ref={locationMarkerSheetRef}
         isSvgUnlocked={isUnlocked}
-        onRequestUnlockSvg={(name) => {
-          watchToUnlock(name).then((ok) => {
-            if (ok) setMarker({ type: 'svg', value: name });
-          });
-        }}
       />
       <VehicleSheet
         ref={vehicleSheetRef}

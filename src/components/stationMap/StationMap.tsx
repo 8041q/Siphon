@@ -1,19 +1,18 @@
 import { memo, useEffect, useMemo, useRef } from 'react';
-import { Image, View, useColorScheme } from 'react-native';
+import { Image, View } from 'react-native';
 import { Map, Camera, Marker, GeoJSONSource, Layer, type CameraRef} from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '../../theme/Icon';
 
 import type { StationMapProps } from './types';
-import { tokens } from '../../theme/tokens';
+import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useUserLocationMarker } from '../../hooks/useUserLocationMarker';
 import { svgMarkers } from '../userLocationMarkers';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, flyToCoords, userLocation }: StationMapProps) {
-  const colorScheme = useColorScheme();
-  const tint = tokens.color[colorScheme === 'dark' ? 'dark' : 'light'].tint;
+  const { colors } = useThemeTokens();
   const cameraRef = useRef<CameraRef>(null);
   const { marker: markerConfig } = useUserLocationMarker();
   const onMapReadyFired = useRef(false);
@@ -123,7 +122,6 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
               width: 50,
               height: 50,
               borderRadius: 19,
-              // backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
               alignItems: 'center',
               justifyContent: 'center',
               shadowColor: '#000',
@@ -133,11 +131,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
               elevation: 5,
             }}>
               {markerConfig.type === 'icon' && (
-                <Icon name={markerConfig.value} size={50} color={tint} />
+                <Icon name={markerConfig.value} size={50} color={colors.pin} />
               )}
               {markerConfig.type === 'svg' && (() => {
                 const SvgComp = svgMarkers[markerConfig.value];
-                return SvgComp ? <SvgComp size={50} color={tint} /> : null;
+                return SvgComp ? <SvgComp size={50} color={colors.pin} /> : null;
               })()}
             </View>
           )}
@@ -166,9 +164,9 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           source="station-points"
           paint={{
             'circle-radius': 8,
-            'circle-color': tint,
+            'circle-color': colors.pin,
             'circle-stroke-width': 2,
-            'circle-stroke-color': 'rgba(255, 255, 255, 0.5)',
+            'circle-stroke-color': colors.pinStroke,
           }}
         />
       </GeoJSONSource>
