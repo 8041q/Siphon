@@ -42,10 +42,17 @@
       "expo-status-bar",
       "@maplibre/maplibre-react-native",
       [
+        "./plugins/withKotlinVersion",
+        {
+          "kotlinVersion": "2.3.0"
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
-            "cmakeVersion": "4.1.2"
+            "cmakeVersion": "4.1.2",
+            "kotlinVersion": "2.3.0"
           }
         }
       ],
