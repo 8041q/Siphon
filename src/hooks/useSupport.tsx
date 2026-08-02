@@ -6,7 +6,7 @@ import { useAdRewards, SVG_REWARDS, PALETTE_REWARDS } from './useAdRewards';
 import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
 import { useRewardedAd } from './useRewardedAd';
-import { useUserLocationMarker, DEFAULT_MARKER } from './useUserLocationMarker';
+import { useUserLocationMarker, DEFAULT_MARKER, type UserLocationMarkerConfig } from './useUserLocationMarker';
 import type { Palette, PaletteId } from '../theme/palettes';
 
 export const ALL_REWARDS: RewardItem[] = [...SVG_REWARDS, ...PALETTE_REWARDS];
@@ -30,6 +30,13 @@ interface SupportValue {
   paletteId: PaletteId;
   setPaletteId: (id: PaletteId) => void;
   paletteVariables: Record<string, string>;
+  /**
+   * Single shared location-marker instance
+   */
+  marker: UserLocationMarkerConfig;
+  setMarker: (config: UserLocationMarkerConfig) => void;
+  markerLoaded: boolean;
+  availableIcons: readonly string[];
 }
 
 const SupportContext = createContext<SupportValue | null>(null);
@@ -93,8 +100,12 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
       paletteId: palette.paletteId,
       setPaletteId: palette.setPaletteId,
       paletteVariables: palette.variables,
+      marker: locationMarker.marker,
+      setMarker: locationMarker.setMarker,
+      markerLoaded: locationMarker.loaded,
+      availableIcons: locationMarker.availableIcons,
     }),
-    [rewards, palette, rewarded, watchAd, remainingFor, unlockedItemAfter],
+    [rewards, palette, rewarded, watchAd, remainingFor, unlockedItemAfter, locationMarker],
   );
 
   return <SupportContext.Provider value={value}>{children}</SupportContext.Provider>;

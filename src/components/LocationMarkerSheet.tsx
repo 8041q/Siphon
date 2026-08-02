@@ -6,16 +6,16 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Icon } from '../theme/Icon';
-import { useUserLocationMarker, saveMarkerImage, type UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
+import type { UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
+import { useSupport } from '../hooks/useSupport';
 import { useThemeTokens } from '../hooks/useThemeTokens';
-import { svgMarkers, SVG_MARKER_NAMES, SVG_REWARD_NAMES } from './userLocationMarkers';
+import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
 
 export type LocationMarkerSheetHandle = { present: () => void };
 
 const LOCKED_NOTICE_MS = 1800;
 
 interface LocationMarkerSheetProps {
-  isSvgUnlocked?: (name: string) => boolean;
   /**
    * Fired when a locked reward marker is tapped, purely as a notification
    * This must never trigger an ad watch or unlock anything itself
@@ -25,13 +25,13 @@ interface LocationMarkerSheetProps {
 }
 
 export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, LocationMarkerSheetProps>(
-  function LocationMarkerSheet({ isSvgUnlocked, onRequestUnlockSvg }, ref) {
+  function LocationMarkerSheet({ onRequestUnlockSvg }, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['50%'], []);
     const { colors } = useThemeTokens();
 
-    const { marker: currentMarker, setMarker, availableIcons } = useUserLocationMarker();
+    const { marker: currentMarker, setMarker, availableIcons, isUnlocked } = useSupport();
     const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
@@ -65,10 +65,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        const uri = await saveMarkerImage(result.assets[0].uri);
-        if (uri) {
-          setMarker({ type: 'image', value: uri });
-        }
+        setMarker({ type: 'image', value: result.assets[0].uri });
         bottomSheetRef.current?.dismiss();
       }
     }, [setMarker]);
@@ -152,8 +149,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                 {SVG_MARKER_NAMES.map((name) => {
                   const SvgComponent = svgMarkers[name];
                   const selected = isSelected({ type: 'svg', value: name });
-                  const isReward = SVG_REWARD_NAMES.includes(name as (typeof SVG_REWARD_NAMES)[number]);
-                  const unlocked = !isReward || (isSvgUnlocked ? isSvgUnlocked(name) : true);
+                  const unlocked = isUnlocked(name);
                   return (
                     <TouchableOpacity
                       key={name}

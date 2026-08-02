@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { client, useUI } from '../../src/hooks/useApp';
 import { useSupport } from '../../src/hooks/useSupport';
 import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
-import { useUserLocationMarker } from '../../src/hooks/useUserLocationMarker';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
@@ -45,7 +44,7 @@ export default function SettingsScreen() {
   const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
   const donationSheetRef = useRef<DonationSheetHandle>(null);
 
-  const { watchedCount, isUnlocked, paletteId } = useSupport();
+  const { watchedCount, paletteId, marker: currentMarker } = useSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const evResult = evBreakeven(evConfig);
@@ -104,7 +103,6 @@ export default function SettingsScreen() {
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
-  const { marker: currentMarker, setMarker } = useUserLocationMarker();
   const markerLabel = currentMarker.type === 'icon'
     ? currentMarker.value.replace('_', ' ')
     : currentMarker.type === 'svg'
@@ -304,7 +302,6 @@ export default function SettingsScreen() {
       />
       <LocationMarkerSheet
         ref={locationMarkerSheetRef}
-        isSvgUnlocked={isUnlocked}
       />
       <VehicleSheet
         ref={vehicleSheetRef}

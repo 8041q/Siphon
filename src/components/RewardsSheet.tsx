@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
 import { useSupport, ALL_REWARDS } from '../hooks/useSupport';
-import { useUserLocationMarker } from '../hooks/useUserLocationMarker';
 import { PALETTES, PALETTE_ORDER } from '../theme/palettes';
 import type { PaletteId } from '../theme/palettes';
 import { rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
@@ -47,8 +46,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     rewardsLoaded,
     paletteId,
     setPaletteId,
+    setMarker,
   } = useSupport();
-  const { setMarker } = useUserLocationMarker();
 
   const [lastUnlockedId, setLastUnlockedId] = useState<string | null>(null);
   const [noticeId, setNoticeId] = useState<string | null>(null);
