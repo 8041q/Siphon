@@ -10,6 +10,9 @@ import { Icon } from '../theme/Icon';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { useStations } from '../hooks/useApp';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useSupport } from '../hooks/useSupport';
+import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
+import { GlassBackdrop } from './ui/glass';
 
 interface StationCardProps {
   station: FuelStationFeature;
@@ -27,6 +30,9 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const { stationDistances, distanceLoading } = useStations();
   const distanceKm = stationDistances.get(station.properties.id);
   const { colors } = useThemeTokens();
+  const { styleRules } = useSupport();
+  const rules = useStyleConfig(styleRules, 'stationCard');
+  const glass = isGlass(rules);
 
   const handleToggleFavorite = (e: any) => {
     e.stopPropagation();
@@ -49,9 +55,10 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
       onPress={() => {
         onPress?.(station);
       }}
-      style={{ backgroundColor: colors.groupedBackground }}
+      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules)]}
       className="p-md rounded-md"
     >
+      {glass && <GlassBackdrop color={colors.groupedBackground} />}
       <View className="flex-row items-start justify-between">
         <View className="flex-1 mr-2">
           <Text style={{ color: colors.label }} className="text-headline">

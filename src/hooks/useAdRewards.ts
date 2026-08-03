@@ -15,6 +15,18 @@ export const PALETTE_REWARDS: RewardItem[] = [
   { id: 'mono', requiredWatches: 25 },
 ];
 
+export const ICON_REWARDS: RewardItem[] = [
+  { id: 'material', requiredWatches: 5 },
+  { id: 'fontawesome', requiredWatches: 10 },
+  { id: 'custom-svg', requiredWatches: 15 },
+];
+
+export const STYLE_REWARDS: RewardItem[] = [
+  { id: 'liquid-glass', requiredWatches: 3 },
+  { id: 'dotted', requiredWatches: 8 },
+  { id: 'retro', requiredWatches: 15 },
+];
+
 export const SVG_REWARDS: RewardItem[] = [
   { id: 'flame', requiredWatches: 3 },
   { id: 'leaf', requiredWatches: 8 },
@@ -31,6 +43,14 @@ export function rewardForPalette(id: PaletteId): RewardItem | undefined {
 
 export function rewardForSvg(id: SvgMarkerRewardId): RewardItem | undefined {
   return SVG_REWARDS.find((r) => r.id === id);
+}
+
+export function rewardForIcon(id: string): RewardItem | undefined {
+  return ICON_REWARDS.find((r) => r.id === id);
+}
+
+export function rewardForStyle(id: string): RewardItem | undefined {
+  return STYLE_REWARDS.find((r) => r.id === id);
 }
 
 type AdRewardsState = {

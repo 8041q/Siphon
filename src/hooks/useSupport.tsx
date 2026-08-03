@@ -2,14 +2,19 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo } fro
 
 import { useAdConsent } from '../hooks/useAdConsent';
 
-import { useAdRewards, SVG_REWARDS, PALETTE_REWARDS } from './useAdRewards';
+import { useAdRewards, SVG_REWARDS, PALETTE_REWARDS, ICON_REWARDS, STYLE_REWARDS } from './useAdRewards';
 import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
+import { useIconSet } from './useIconSet';
+import { useStyleSet } from './useStyleSet';
+import type { IconSetId, IconSetDef } from '../theme/icons';
+
 import { useRewardedAd } from './useRewardedAd';
 import { useUserLocationMarker, DEFAULT_MARKER, type UserLocationMarkerConfig } from './useUserLocationMarker';
 import type { Palette, PaletteId } from '../theme/palettes';
+import type { StyleSetId, StyleRules } from '../theme/styles';
 
-export const ALL_REWARDS: RewardItem[] = [...SVG_REWARDS, ...PALETTE_REWARDS];
+export const ALL_REWARDS: RewardItem[] = [...SVG_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS, ...PALETTE_REWARDS];
 
 type WatchResult =
   | { earned: true; unlockedItem: RewardItem | null }
@@ -30,6 +35,12 @@ interface SupportValue {
   paletteId: PaletteId;
   setPaletteId: (id: PaletteId) => void;
   paletteVariables: Record<string, string>;
+  iconSetId: IconSetId;
+  setIconSetId: (id: IconSetId) => void;
+  iconSet: IconSetDef;
+  styleSetId: StyleSetId;
+  setStyleSetId: (id: StyleSetId) => void;
+  styleRules: StyleRules;
   /**
    * Single shared location-marker instance
    */
@@ -44,6 +55,8 @@ const SupportContext = createContext<SupportValue | null>(null);
 export function SupportProvider({ children }: { children: React.ReactNode }) {
   const rewards = useAdRewards();
   const palette = usePalette();
+  const iconSet = useIconSet();
+  const styleSet = useStyleSet();
   const rewarded = useRewardedAd();
   const consent = useAdConsent();
   const locationMarker = useUserLocationMarker();
@@ -100,12 +113,18 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
       paletteId: palette.paletteId,
       setPaletteId: palette.setPaletteId,
       paletteVariables: palette.variables,
+      iconSetId: iconSet.iconSetId,
+      setIconSetId: iconSet.setIconSetId,
+      iconSet: iconSet.iconSet,
+      styleSetId: styleSet.styleSetId,
+      setStyleSetId: styleSet.setStyleSetId,
+      styleRules: styleSet.rules,
       marker: locationMarker.marker,
       setMarker: locationMarker.setMarker,
       markerLoaded: locationMarker.loaded,
       availableIcons: locationMarker.availableIcons,
     }),
-    [rewards, palette, rewarded, watchAd, remainingFor, unlockedItemAfter, locationMarker],
+    [rewards, palette, iconSet, styleSet, rewarded, watchAd, remainingFor, unlockedItemAfter, locationMarker],
   );
 
   return <SupportContext.Provider value={value}>{children}</SupportContext.Provider>;

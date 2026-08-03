@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
   const donationSheetRef = useRef<DonationSheetHandle>(null);
 
-  const { watchedCount, paletteId, marker: currentMarker } = useSupport();
+  const { watchedCount, paletteId, iconSetId, styleSetId, marker: currentMarker } = useSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const evResult = evBreakeven(evConfig);
@@ -139,6 +139,14 @@ export default function SettingsScreen() {
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.palette_${paletteId}`)}>
             {t('settings.color_palette')}
+          </ListItem>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.iconset_${iconSetId}`)}>
+            {t('settings.icon_set')}
+          </ListItem>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.styleset_${styleSetId}`)}>
+            {t('settings.style_set')}
           </ListItem>
         </View>
 

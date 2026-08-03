@@ -14,6 +14,7 @@ import { Icon } from '../theme/Icon';
 import { useUI, useStations } from '../hooks/useApp';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { WorthTheDrive } from './WorthTheDrive';
+import { SheetBackground } from './ui/SheetBackground';
 
 const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
 
@@ -276,9 +277,7 @@ export function StationDetailSheet() {
       backdropComponent={(props) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
-      backgroundStyle={{
-        backgroundColor: colors.sheet,
-      }}
+      backgroundComponent={SheetBackground}
     >
       <View className="flex-1">
         <BottomSheetScrollView>

@@ -10,6 +10,7 @@ import type { UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
 import { useSupport } from '../hooks/useSupport';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
+import { SheetBackground } from './ui/SheetBackground';
 
 export type LocationMarkerSheetHandle = { present: () => void };
 
@@ -92,7 +93,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{ backgroundColor: colors.sheet }}
+        backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">

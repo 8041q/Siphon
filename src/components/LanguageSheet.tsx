@@ -5,6 +5,7 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SheetBackground } from './ui/SheetBackground';
 
 interface LanguageOption {
   code: string;
@@ -64,9 +65,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{
-          backgroundColor: colors.sheet,
-        }}
+        backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
           {LANGUAGES.map((lang) => {

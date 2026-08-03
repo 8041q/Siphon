@@ -6,6 +6,9 @@ import { useTranslation } from 'react-i18next';
 import type { PriceHistoryPoint } from '../api/siphonClient';
 import { weekdayCycle, WEEKDAY_ORDER, weekdayI18nKey } from '../utils/priceAnalysis';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useSupport } from '../hooks/useSupport';
+import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
+import { GlassBackdrop } from './ui/glass';
 
 interface WeekdayRadarProps {
   data: PriceHistoryPoint[];
@@ -31,12 +34,16 @@ const WEEKDAY_COUNT = WEEKDAY_ORDER.length;
 const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { styleRules } = useSupport();
+  const cardRules = useStyleConfig(styleRules, 'card');
+  const cardGlass = isGlass(cardRules);
 
   const cycle = weekdayCycle(data);
 
   if (!cycle) {
     return (
-      <View style={{ backgroundColor: colors.surface }} className="rounded-md p-lg">
+      <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg">
+        {cardGlass && <GlassBackdrop color={colors.surface} />}
         <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
           {t('price_trends.weekday_title')}
         </Text>
@@ -66,7 +73,8 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
     .join(' ');
 
   return (
-    <View style={{ backgroundColor: colors.surface }} className="rounded-md p-lg items-center">
+    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg items-center">
+      {cardGlass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-sm uppercase tracking-wide self-start">
         {t('price_trends.weekday_title')}
       </Text>

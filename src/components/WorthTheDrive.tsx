@@ -3,6 +3,9 @@ import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useSupport } from '../hooks/useSupport';
+import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
+import { GlassBackdrop } from './ui/glass';
 import type { FuelStationFeature } from '../api/siphonClient';
 import { useStations } from '../hooks/useApp';
 import { useVehicles } from '../hooks/useVehicles';
@@ -24,6 +27,10 @@ interface WorthTheDriveProps {
 const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDriveProps) => {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { styleRules } = useSupport();
+  const cardRules = useStyleConfig(styleRules, 'card');
+  const cardGlass = isGlass(cardRules);
+  const chipRules = useStyleConfig(styleRules, 'chip');
   const { vehicles } = useVehicles();
   const { stations, stationDistances } = useStations();
 
@@ -46,7 +53,8 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
   if (!matching.length) return null;
 
   return (
-    <View style={{ backgroundColor: colors.surface }} className="rounded-md p-lg gap-md">
+    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg gap-md">
+      {cardGlass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
         {t('settings.drive_cost_title')}
       </Text>
@@ -100,7 +108,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
                     if (costToCheapest !== undefined) {
                       const worth = saving > costToCheapest;
                       return (
-                        <View className="flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs" style={{ backgroundColor: worth ? colors.priceLowTint : colors.priceHighTint }}>
+                        <View className="flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs" style={[{ backgroundColor: worth ? colors.priceLowTint : colors.priceHighTint }, applyComponentRules(chipRules)]}>
                           <Text className="text-subheadline font-semibold" style={{ color: worth ? colors.priceLow : colors.priceHigh }}>
                             {worth ? '✓ ' : '✕ '}
                           </Text>

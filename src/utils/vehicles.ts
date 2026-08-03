@@ -89,10 +89,10 @@ export const RANGE_MAX = 1000;
 
 export const EV_RATE_MIN = 0.01;
 export const EV_RATE_MAX = 1;
-export const GAS_PRICE_MIN = 0.5;
-export const GAS_PRICE_MAX = 5;
+export const GAS_PRICE_MIN = 0.4;
+export const GAS_PRICE_MAX = 10;
 export const EV_PRICE_MIN = 1000;
-export const EV_PRICE_MAX = 500000;
+export const EV_PRICE_MAX = 1000000;
 export const PETROL_PRICE_MIN = 1000;
 export const PETROL_PRICE_MAX = 500000;
 export const ANNUAL_KM_MIN = 100;
@@ -102,7 +102,7 @@ export const ANNUAL_KM_MAX = 200000;
 // EvConfig fields; these are built in.
 export const EV_CONSUMPTION_KWH_100KM = 17;
 export const GAS_CONSUMPTION_L_100KM = 5.5;
-export const BATTERY_REPLACEMENT_COST = 12000;
+export const BATTERY_REPLACEMENT_COST = 10000;
 export const BATTERY_REPLACEMENT_YEAR = 13;
 export const MAINTENANCE_PER_YEAR = 320;
 export const BATTERY_CO2_KG = 6000;
@@ -222,6 +222,6 @@ export const DEFAULT_EV_CONFIG: EvConfig = {
   evPrice: 40000,
   petrolPrice: 35000,
   annualKm: 15000,
-  gasPrice: 1.6,
+  gasPrice: 1.9,
   electricityRate: 0.15,
 };

@@ -8,6 +8,7 @@ import { Icon } from './ui/icon';
 import { SearchFilter } from '../hooks/useApp';
 import { FUEL_KEYS, fuelLabel } from '../utils/fuelNames';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SheetBackground } from './ui/SheetBackground';
 import type { CountryCode } from '../api/siphonClient';
 
 const PRICE_OPTIONS = [1.65, 1.87, 2.0] as const;
@@ -120,12 +121,10 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{
-          backgroundColor: colors.sheet,
-        }}
+        backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 13 }}>
-          <View className="gap-3">
+          <View className="gap-1">
             {/* Country */}
             <View>
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">

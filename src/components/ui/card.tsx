@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
+import { useSupport } from '../../hooks/useSupport';
+import { useStyleConfig, applyComponentRules, isGlass } from '../../hooks/useStyleConfig';
+import { GlassBackdrop } from './glass';
 
 type CardProps = {
   children: ReactNode;
@@ -10,9 +13,16 @@ type CardProps = {
 
 export function Card({ children, className = '' }: CardProps) {
   const { colors } = useThemeTokens();
+  const { styleRules } = useSupport();
+  const rules = useStyleConfig(styleRules, 'card');
+  const glass = isGlass(rules);
 
   return (
-    <View style={{ backgroundColor: colors.groupedBackground }} className={`rounded-md p-md ${className}`}>
+    <View
+      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules)]}
+      className={`rounded-md p-md ${className}`}
+    >
+      {glass && <GlassBackdrop color={colors.groupedBackground} />}
       {children}
     </View>
   );

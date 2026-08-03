@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SUPPORT } from '../config/support';
 import { Icon } from '../theme/Icon';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SheetBackground } from './ui/SheetBackground';
 
 export type DonationSheetHandle = { present: () => void };
 
@@ -65,9 +66,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(function Do
       backdropComponent={(props) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
-      backgroundStyle={{
-        backgroundColor: colors.sheet,
-      }}
+      backgroundComponent={SheetBackground}
     >
       <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">

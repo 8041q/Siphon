@@ -7,10 +7,15 @@ import * as Haptics from 'expo-haptics';
 import { useSupport, ALL_REWARDS } from '../hooks/useSupport';
 import { PALETTES, PALETTE_ORDER } from '../theme/palettes';
 import type { PaletteId } from '../theme/palettes';
-import { rewardForPalette, rewardForSvg } from '../hooks/useAdRewards';
+import { ICON_SET_ORDER, ICON_SETS } from '../theme/icons';
+import type { IconSetId } from '../theme/icons';
+import { STYLE_SET_ORDER } from '../theme/styles';
+import type { StyleSetId } from '../theme/styles';
+import { rewardForPalette, rewardForSvg, rewardForIcon, rewardForStyle } from '../hooks/useAdRewards';
 import { svgRewards, SVG_REWARD_NAMES, type SvgMarkerRewardId } from './userLocationMarkers/rewards';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { Button } from './ui/button';
+import { SheetBackground } from './ui/SheetBackground';
 
 export type RewardsSheetHandle = { present: () => void };
 
@@ -47,6 +52,10 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     paletteId,
     setPaletteId,
     setMarker,
+    iconSetId,
+    setIconSetId,
+    styleSetId,
+    setStyleSetId,
   } = useSupport();
 
   const [lastUnlockedId, setLastUnlockedId] = useState<string | null>(null);
@@ -114,6 +123,34 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     [isUnlocked, setMarker, showLockedNotice],
   );
 
+  const handleSelectIcon = useCallback(
+    (id: IconSetId) => {
+      const reward = rewardForIcon(id);
+      if (reward && !isUnlocked(reward.id)) {
+        showLockedNotice(id);
+        return;
+      }
+      Haptics.selectionAsync();
+      setIconSetId(id);
+      bottomSheetRef.current?.dismiss();
+    },
+    [isUnlocked, setIconSetId, showLockedNotice],
+  );
+
+  const handleSelectStyle = useCallback(
+    (id: StyleSetId) => {
+      const reward = rewardForStyle(id);
+      if (reward && !isUnlocked(reward.id)) {
+        showLockedNotice(id);
+        return;
+      }
+      Haptics.selectionAsync();
+      setStyleSetId(id);
+      bottomSheetRef.current?.dismiss();
+    },
+    [isUnlocked, setStyleSetId, showLockedNotice],
+  );
+
   const trailingFor = (remaining: number, unlocked: boolean, id: string) => {
     if (lastUnlockedId === id) {
       return <Text style={{ color: colors.priceLow }} className="text-callout font-semibold">{t('settings.reward_unlocked')}</Text>;
@@ -145,9 +182,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       backdropComponent={(props) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
-      backgroundStyle={{
-        backgroundColor: colors.sheet,
-      }}
+      backgroundComponent={SheetBackground}
     >
       <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
@@ -205,6 +240,76 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
                 </View>
                 <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
                   {t(`settings.palette_${id}`)}
+                </Text>
+              </View>
+              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
+            </TouchableOpacity>
+          );
+        })}
+
+        <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
+
+        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+          {t('settings.rewards_icons')}
+        </Text>
+        {ICON_SET_ORDER.map((id) => {
+          const iconSet = ICON_SETS[id];
+          const reward = rewardForIcon(id);
+          const unlocked = !reward || isUnlocked(reward.id);
+          const selected = iconSetId === id;
+          return (
+            <TouchableOpacity
+              key={id}
+              activeOpacity={0.7}
+              onPress={() => handleSelectIcon(id)}
+              className="flex-row items-center justify-between py-md px-sm"
+            >
+              <View className="flex-row items-center flex-1">
+                <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
+                  style={{ backgroundColor: colors.groupedBackground }}
+                >
+                  {iconSet.render({ name: 'star.fill', size: 18, color: colors.tint })}
+                </View>
+                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
+                  {t(`settings.iconset_${id}`)}
+                </Text>
+              </View>
+              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
+            </TouchableOpacity>
+          );
+        })}
+
+        <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
+
+        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+          {t('settings.rewards_styles')}
+        </Text>
+        {STYLE_SET_ORDER.map((id) => {
+          const reward = rewardForStyle(id);
+          const unlocked = !reward || isUnlocked(reward.id);
+          const selected = styleSetId === id;
+          return (
+            <TouchableOpacity
+              key={id}
+              activeOpacity={0.7}
+              onPress={() => handleSelectStyle(id)}
+              className="flex-row items-center justify-between py-md px-sm"
+            >
+              <View className="flex-row items-center flex-1">
+                <View
+                  className="w-10 h-10 items-center justify-center mr-sm border"
+                  style={{ backgroundColor: colors.groupedBackground, borderColor: colors.separator }}
+                >
+                  <View
+                    className="w-5 h-5"
+                    style={{
+                      backgroundColor: colors.tint,
+                      borderRadius: id === 'liquid-glass' ? 10 : id === 'retro' ? 2 : 5,
+                    }}
+                  />
+                </View>
+                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
+                  {t(`settings.styleset_${id}`)}
                 </Text>
               </View>
               {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}

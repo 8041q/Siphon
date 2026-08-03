@@ -2,6 +2,9 @@ import { memo, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useSupport } from '../hooks/useSupport';
+import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
+import { GlassBackdrop } from './ui/glass';
 
 interface PriceBadgeProps {
   fuel: string;
@@ -11,6 +14,9 @@ interface PriceBadgeProps {
 
 function PriceBadgeComponent({ fuel, price, source }: PriceBadgeProps) {
   const { colors } = useThemeTokens();
+  const { styleRules } = useSupport();
+  const rules = useStyleConfig(styleRules, 'chip');
+  const glass = isGlass(rules);
 
   const priceColor = useMemo(() => {
     if (price < 1.65) return colors.priceLow;
@@ -19,7 +25,11 @@ function PriceBadgeComponent({ fuel, price, source }: PriceBadgeProps) {
   }, [price, colors]);
 
   return (
-    <View style={{ backgroundColor: colors.surface }} className="rounded-sm px-3 py-2 gap-0.5 min-w-[110px]">
+    <View
+      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules)]}
+      className="rounded-sm px-3 py-2 gap-0.5 min-w-[110px]"
+    >
+      {glass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.secondaryLabel }} className="text-callout">
         {fuelLabel(fuel)}
       </Text>

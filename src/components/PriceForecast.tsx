@@ -3,6 +3,9 @@ import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useSupport } from '../hooks/useSupport';
+import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
+import { GlassBackdrop } from './ui/glass';
 import type { PriceHistoryPoint } from '../api/siphonClient';
 import { forecast, FORECAST_HORIZONS, FORECAST_MIN_DAYS, historyCoverageDays } from '../utils/priceAnalysis';
 
@@ -31,6 +34,9 @@ function ForecastCell({ labelKey, value, range }: { labelKey: string; value: str
 const PriceForecastComponent = ({ data, unit }: PriceForecastProps) => {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { styleRules } = useSupport();
+  const cardRules = useStyleConfig(styleRules, 'card');
+  const cardGlass = isGlass(cardRules);
   const coverage = historyCoverageDays(data);
 
   const locked = coverage < FORECAST_MIN_DAYS;
@@ -41,7 +47,8 @@ const PriceForecastComponent = ({ data, unit }: PriceForecastProps) => {
     : FORECAST_HORIZONS.map((h) => forecast(data, h)).filter((r): r is NonNullable<typeof r> => r !== null);
 
   return (
-    <View style={{ backgroundColor: colors.surface }} className="rounded-md p-lg gap-sm">
+    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg gap-sm">
+      {cardGlass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
         {t('price_trends.forecast_title')}
       </Text>

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import { Field } from './ui/field';
+import { SheetBackground } from './ui/SheetBackground';
 import {
   parseDecimal,
   inRange,
@@ -143,7 +144,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
-        backgroundStyle={{ backgroundColor: colors.sheet }}
+        backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
