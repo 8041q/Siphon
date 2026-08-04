@@ -36,6 +36,26 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
 
   const source = station.properties.source as string | undefined;
 
+  // Per-fuel sorted list of stations by normalized price. Computed once per
+  // `stations` change instead of re-filtering/sorting inside the render for
+  // every vehicle/fuel, which stalls the UI on Android when the map viewport
+  // holds many stations.
+  const fuelIndex = useMemo(() => {
+    const index = new Map<string, Array<{ station: FuelStationFeature; norm: number }>>();
+    for (const s of stations) {
+      const fuels = s.properties.fuels ?? {};
+      for (const ft of Object.keys(fuels)) {
+        const price = normalizeFuelPrice(ft, fuels[ft], s.properties.source);
+        if (typeof price !== 'number' || !Number.isFinite(price)) continue;
+        const arr = index.get(ft) ?? [];
+        arr.push({ station: s, norm: price });
+        index.set(ft, arr);
+      }
+    }
+    for (const arr of index.values()) arr.sort((a, b) => a.norm - b.norm);
+    return index;
+  }, [stations]);
+
   const matching = useMemo(() => {
     if (!vehicles.length) return [];
     return vehicles
@@ -67,16 +87,9 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
             const rawPrice = station.properties.fuels?.[f.fuelType] as number;
             const fuelPrice = normalizeFuelPrice(f.fuelType, rawPrice, source);
 
-            const norm = (s: FuelStationFeature) =>
-              normalizeFuelPrice(f.fuelType, s.properties.fuels?.[f.fuelType] as number, s.properties.source);
-
-            const candidates = stations
-              .filter((s) => {
-                const p = s.properties.fuels?.[f.fuelType];
-                return typeof p === 'number' && norm(s) < fuelPrice;
-              })
-              .sort((a, b) => norm(a) - norm(b));
-            const cheapest = candidates[0];
+            const candid = fuelIndex.get(f.fuelType) ?? [];
+            const cheapestEntry = candid.find((c) => c.norm < fuelPrice);
+            const cheapest = cheapestEntry?.station;
 
             const driveCost = distanceKm !== undefined ? roundTripFuelCostKm(distanceKm, f.consumption, fuelPrice) : null;
             const co2 = f.capacity > 0 ? co2PerTank(f.capacity, f.fuelType, f.consumption) : null;
@@ -98,7 +111,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
                 )}
                 {cheapest ? (
                   (() => {
-                    const minPrice = norm(cheapest);
+                    const minPrice = cheapestEntry!.norm;
                     const saving = savingPerTank(fuelPrice - minPrice, f.capacity);
                     const cheapestDistance = stationDistances.get(cheapest.properties.id);
                     const costToCheapest =
@@ -122,7 +135,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
                     }
                     return (
                       <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-xs">
-                        {t('settings.cheapest_nearby', { price: (cheapest.properties.fuels?.[f.fuelType] as number).toFixed(3) })}
+                        {t('settings.cheapest_nearby', { price: cheapestEntry!.norm.toFixed(3) })}
                       </Text>
                     );
                   })()

@@ -52,6 +52,16 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     }
   };
 
+  type StationIdIndex = Record<string, (typeof stations)[number]>;
+
+  const stationsById = useMemo<StationIdIndex>(() => {
+    const index: StationIdIndex = {};
+    for (const s of stations) {
+      if (s.properties.id) index[s.properties.id] = s;
+    }
+    return index;
+  }, [stations]);
+
   const stationsSourceData = useMemo<GeoJSON.FeatureCollection>(() => {
     if (__DEV__) {
       for (const f of stations) {
@@ -169,7 +179,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           const feature = event.nativeEvent.features?.[0];
           const featureId = feature?.properties?.id;
           if (featureId) {
-            const station = stations.find((s) => s.properties.id === featureId);
+            const station = stationsById[featureId];
             if (station) {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onMarkerPress(station);

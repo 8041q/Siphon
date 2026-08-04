@@ -222,6 +222,7 @@ export function StationDetailSheet() {
   const distanceKm = selectedStation ? stationDistances.get(selectedStation.properties.id) : undefined;
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const isPresentedRef = useRef(false);
+  const lastPresentedIdRef = useRef<string | null>(null);
   const [snapIndex, setSnapIndex] = useState(0);
   const snapPoints = useMemo(() => {
     const entries = Object.keys(selectedStation?.properties.fuels ?? {}).length;
@@ -239,18 +240,29 @@ export function StationDetailSheet() {
   }, []);
 
   useEffect(() => {
-    if (selectedStation && !isPresentedRef.current) {
-      isPresentedRef.current = true;
-      setSnapIndex(0);
+    if (!selectedStation) return;
+    lastPresentedIdRef.current = selectedStation.properties.id;
+    if (isPresentedRef.current) return;
+    isPresentedRef.current = true;
+    setSnapIndex(0);
+    // Defer present() so it never collides with an in-flight dismiss animation
+    // (calling present() mid-dismiss is silently ignored and leaves the sheet
+    // "closed" but stuck, which felt like taps doing nothing on Android).
+    requestAnimationFrame(() => {
       bottomSheetRef.current?.present();
-    }
+    });
   }, [selectedStation]);
 
   const handleDismiss = useCallback(() => {
     isPresentedRef.current = false;
     setSnapIndex(0);
-    setSelectedStation(null);
-  }, [setSelectedStation]);
+    // Only clear the selection if it's still the station this sheet presented.
+    // If the user tapped a different station while dismissing the old sheet,
+    // keep that newer selection so the effect re-presents it on the next pass.
+    if (selectedStation && selectedStation.properties.id === lastPresentedIdRef.current) {
+      setSelectedStation(null);
+    }
+  }, [setSelectedStation, selectedStation]);
 
   const handleChange = useCallback((index: number) => {
     setSnapIndex(index);
