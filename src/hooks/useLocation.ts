@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 
 export interface LocationState {
@@ -10,12 +11,17 @@ export interface LocationState {
 
 const DEFAULT_COORDS = { latitude: 37.5, longitude: -8.0 };
 const LOCATION_KEY = 'siphon:lastLocation';
+const PERMISSION_KEY = 'siphon:location:permissionGranted';
 
 async function fetchGpsLocation(): Promise<LocationState | null> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return null;
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    await AsyncStorage.setItem(PERMISSION_KEY, 'true');
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Platform.OS === 'android' ? Location.Accuracy.Low : Location.Accuracy.Balanced,
+      mayShowUserSettingsDialog: false,
+    });
     return { latitude: loc.coords.latitude, longitude: loc.coords.longitude, approximate: false };
   } catch {
     return null;

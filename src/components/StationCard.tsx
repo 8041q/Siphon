@@ -27,7 +27,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
   const entries = Object.entries(fuels ?? {});
   const favorite = favorites?.has(station.properties.id) ?? false;
   const locationParts = getLocationParts(station.properties);
-  const { stationDistances, distanceLoading } = useStations();
+  const { stationDistances, distanceLoading, distanceImproving, improveDistances } = useStations();
   const distanceKm = stationDistances.get(station.properties.id);
   const { colors } = useThemeTokens();
   const { styleRules } = useSupport();
@@ -103,6 +103,13 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
                 <Text style={{ color: colors.priceMid }} className="text-[10px]">
                   ({t('station.distance_optimizing')})
                 </Text>
+              )}
+              {!distanceLoading && !distanceImproving && (
+                <Pressable onPress={improveDistances} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} disabled={distanceImproving}>
+                  <Text style={{ color: colors.tint }} className="text-[10px] underline">
+                    {t('station.improve_calculation')}
+                  </Text>
+                </Pressable>
               )}
             </View>
           )}

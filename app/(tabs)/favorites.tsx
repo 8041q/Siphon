@@ -11,11 +11,11 @@ import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 
 export default function FavoritesScreen() {
   const { t } = useTranslation();
-  const { filteredStations } = useStations();
+  const { allStations } = useStations();
   const { favorites, setSelectedStation, toggleFavorite } = useUI();
   const { colors } = useThemeTokens();
 
-  const favoriteStations = filteredStations.filter(
+  const favoriteStations = allStations.filter(
     (station) => favorites?.has(station.properties.id)
   );
 

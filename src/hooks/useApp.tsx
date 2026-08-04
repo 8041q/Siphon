@@ -10,11 +10,15 @@ import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
 import i18n from '../i18n';
 
+const OSRM_ENRICH_LIMIT = 100;
+
 interface StationState {
   stations: FuelStationFeature[];
   allStations: FuelStationFeature[];
   stationDistances: Map<string, number>;
   distanceLoading: boolean;
+  distanceImproving: boolean;
+  improveDistances: () => void;
   loading: boolean;
   error: string | null;
   offline: boolean;
@@ -67,6 +71,7 @@ export const client = new FuelDataClient({
 
 const SEARCH_FILTER_KEY = 'siphon:search:filters';
 const HISTORY_ENABLED_KEY = 'siphon:settings:historyEnabled';
+const FAVORITES_KEY = 'siphon:favorites';
 
 function defaultSearchFilter(): SearchFilter {
   return {};
@@ -78,8 +83,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [allStations, setAllStations] = useState<FuelStationFeature[]>([]);
   const [stationDistances, setStationDistances] = useState<Map<string, number>>(new Map());
   const [distanceLoading, setDistanceLoading] = useState(false);
+  const [distanceImproving, setDistanceImproving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const stationDistancesRef = useRef<Map<string, number>>(stationDistances);
+  stationDistancesRef.current = stationDistances;
+
   const [offline, setOffline] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
@@ -108,6 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         newSet.add(id);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
+      AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify([...newSet]));
       return newSet;
     });
   }, []);
@@ -138,6 +148,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               delete (parsed as any).fuelType;
             }
             setSearchFilter(parsed);
+          } catch {}
+        }
+      });
+      AsyncStorage.getItem(FAVORITES_KEY).then((val) => {
+        if (val) {
+          try {
+            const parsed = JSON.parse(val) as string[];
+            setFavorites(new Set(parsed));
           } catch {}
         }
       });
@@ -231,58 +249,87 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [requestingLocation, load]);
 
+  // Instant, low-accuracy road estimates for every station as soon as we know
+  // the user's location. This is synchronous and never blocks the UI.
   useEffect(() => {
     if (!allStations.length) return;
     if (location.latitude === 0 && location.longitude === 0) return;
 
+    // A new location invalidates any in-flight OSRM enrichment from the old spot.
+    enrichSeqRef.current += 1;
+    if (enrichingRef.current) {
+      setDistanceLoading(false);
+      setDistanceImproving(false);
+      enrichingRef.current = false;
+    }
+
     const userLat = location.latitude;
     const userLng = location.longitude;
-    const userId = `user:${Math.round(userLat * 100)}:${Math.round(userLng * 100)}`;
 
-    (async () => {
-      setDistanceLoading(true);
-
-      const map = new Map<string, number>();
-      const pending: Array<{ stationId: string; slng: number; slat: number }> = [];
-
-      for (const s of allStations) {
-        const [slng, slat] = s.geometry.coordinates;
-        const sid = s.properties.id;
-
-        // First: instant estimate for all stations
-        const estimate = roadEstimateKm(userLat, userLng, slat, slng);
-        map.set(sid, estimate);
-        pending.push({ stationId: sid, slng, slat });
-      }
-
-      setStationDistances(new Map(map));
-
-      // Then: batch-enrich with actual OSRM distances (5 concurrent, short timeout)
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < pending.length; i += BATCH_SIZE) {
-        const batch = pending.slice(i, i + BATCH_SIZE);
-        const results = await Promise.allSettled(
-          batch.map((p) =>
-            roadDistanceKm(userLat, userLng, p.slat, p.slng, userId, p.stationId)
-          )
-        );
-
-        let hasOSRM = false;
-        results.forEach((r, j) => {
-          if (r.status === 'fulfilled') {
-            map.set(batch[j].stationId, r.value.value);
-            hasOSRM = true;
-          }
-        });
-
-        if (hasOSRM) {
-          setStationDistances(new Map(map));
-        }
-      }
-
-      setDistanceLoading(false);
-    })();
+    const map = new Map<string, number>();
+    for (const s of allStations) {
+      const [slng, slat] = s.geometry.coordinates;
+      map.set(s.properties.id, roadEstimateKm(userLat, userLng, slat, slng));
+    }
+    setStationDistances(new Map(map));
   }, [allStations, location.latitude, location.longitude]);
+
+  const enrichSeqRef = useRef(0);
+  const enrichingRef = useRef(false);
+
+  // On-demand OSRM refinement. Only the N nearest stations are enriched, batched
+  // with bounded concurrency. Each batch updates the map as it completes, and a
+  // per-run sequence guard ensures a stale run (triggered by an old location)
+  // never overwrites a newer one.
+  const improveDistances = useCallback(async () => {
+    if (enrichingRef.current) return;
+    const { latitude: lat, longitude: lng } = location;
+    if (location.approximate) return;
+    if (!allStations.length) return;
+
+    enrichingRef.current = true;
+    enrichSeqRef.current += 1;
+    const run = enrichSeqRef.current;
+    setDistanceLoading(true);
+    setDistanceImproving(true);
+
+    const userId = `user:${Math.round(lat * 100)}:${Math.round(lng * 100)}`;
+
+    const ranked = [...allStations]
+      .map((s) => {
+        const [slng, slat] = s.geometry.coordinates;
+        return { stationId: s.properties.id, slat, slng, estimate: roadEstimateKm(lat, lng, slat, slng) };
+      })
+      .sort((a, b) => a.estimate - b.estimate)
+      .slice(0, OSRM_ENRICH_LIMIT);
+
+    const map = new Map<string, number>(stationDistancesRef.current);
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < ranked.length && enrichSeqRef.current === run; i += BATCH_SIZE) {
+      const batch = ranked.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((p) => roadDistanceKm(lat, lng, p.slat, p.slng, userId, p.stationId))
+      );
+
+      let hasOSRM = false;
+      results.forEach((r, j) => {
+        if (r.status === 'fulfilled') {
+          map.set(batch[j].stationId, r.value.value);
+          hasOSRM = true;
+        }
+      });
+
+      if (hasOSRM) {
+        setStationDistances(new Map(map));
+      }
+    }
+
+    if (enrichSeqRef.current === run) {
+      setDistanceLoading(false);
+      setDistanceImproving(false);
+    }
+    enrichingRef.current = false;
+  }, [location, allStations]);
 
   useEffect(() => {
     return () => {
@@ -347,6 +394,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       allStations,
       stationDistances,
       distanceLoading,
+      distanceImproving,
+      improveDistances,
       loading,
       error,
       offline,
@@ -355,7 +404,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       filteredStations,
       reload: load,
     }),
-    [stations, allStations, stationDistances, distanceLoading, loading, error, offline, rateLimited, syncProgress, filteredStations, load]
+    [stations, allStations, stationDistances, distanceLoading, distanceImproving, improveDistances, loading, error, offline, rateLimited, syncProgress, filteredStations, load]
   );
 
   const locationValue = useMemo<LocationState>(
