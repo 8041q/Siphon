@@ -15,6 +15,7 @@ import { useUI, useStations } from '../hooks/useApp';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { WorthTheDrive } from './WorthTheDrive';
 import { SheetBackground } from './ui/SheetBackground';
+import { GlassBox } from './ui/GlassBox';
 
 const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
 
@@ -84,14 +85,14 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
         </View>
         <View className="flex-row items-center gap-1">
           <Pressable onPress={handleOpenInMaps} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View style={{ backgroundColor: colors.surface }} className="rounded-sm p-1.5">
+            <GlassBox component="card" className="rounded-sm p-1.5">
               <Icon name="directions" size={19} color={colors.secondaryLabel} />
-            </View>
+            </GlassBox>
           </Pressable>
           <Pressable onPress={handleCopyAddress} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <View style={{ backgroundColor: colors.surface }} className="rounded-sm p-1.5">
+            <GlassBox component="card" className="rounded-sm p-1.5">
               <Icon name="copy" size={19} color={colors.secondaryLabel} />
-            </View>
+            </GlassBox>
           </Pressable>
         </View>
       </View>
@@ -99,14 +100,14 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
       {entries.length > 0 && (
         <View className="flex-row flex-wrap gap-sm">
           {entries.map(([fuel, price]) => (
-            <View key={fuel} style={{ backgroundColor: colors.surface }} className="rounded-md px-md py-sm min-w-[140px] flex-1 basis-[45%]">
+            <GlassBox key={fuel} component="card" className="rounded-md px-md py-sm min-w-[140px] flex-1 basis-[45%]">
               <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                 {fuelLabel(fuel)}
               </Text>
               <Text style={priceColorStyle(price, colors)} className="text-title-3 font-bold mt-0.5">
                 {price.toFixed(3)}{fuelUnit(fuel, source)}
               </Text>
-            </View>
+            </GlassBox>
           ))}
         </View>
       )}
@@ -179,9 +180,9 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
                 </View>
                 {showPaymentTip && (
                   <Pressable onPress={() => setShowPaymentTip(false)}>
-                    <View style={{ backgroundColor: colors.surface, borderColor: colors.separator }} className="mt-2 p-md rounded-md border">
+                    <GlassBox component="card" color={colors.surface} style={{ borderColor: colors.separator }} className="mt-2 p-md rounded-md border">
                       <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('station.payment_disclaimer')}</Text>
-                    </View>
+                    </GlassBox>
                   </Pressable>
                 )}
               </View>
@@ -307,17 +308,19 @@ export function StationDetailSheet() {
         </BottomSheetScrollView>
         {selectedStation && snapIndex >= 1 && (
           <View style={{ borderColor: colors.separator }} className="px-lg pt-sm pb-lg">
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={handleReport}
-              style={{ backgroundColor: colors.surface, borderColor: colors.separator }}
-              className="rounded-md py-md items-center flex-row justify-center gap-sm"
-            >
-              <Icon name="flag" size={16} color={colors.tint} />
-              <Text style={{ color: colors.tint }} className="font-semibold text-callout">
-                {t('station.report_incorrect_info')}
-              </Text>
-            </TouchableOpacity>
+            <GlassBox component="card" className="rounded-md overflow-hidden">
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={handleReport}
+                style={{ borderColor: colors.separator }}
+                className="rounded-md py-md items-center flex-row justify-center gap-sm"
+              >
+                <Icon name="flag" size={16} color={colors.tint} />
+                <Text style={{ color: colors.tint }} className="font-semibold text-callout">
+                  {t('station.report_incorrect_info')}
+                </Text>
+              </TouchableOpacity>
+            </GlassBox>
             <Text style={{ color: colors.tertiaryLabel }} className="text-footnote text-center mt-xs">
               {t('station.report_hint')}
             </Text>

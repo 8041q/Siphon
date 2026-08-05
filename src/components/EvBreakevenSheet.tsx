@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import { Field } from './ui/field';
+import { GlassBox } from './ui/GlassBox';
 import { SheetBackground } from './ui/SheetBackground';
 import {
   parseDecimal,
@@ -171,7 +172,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
           </View>
 
           {result && (
-            <View style={{ backgroundColor: colors.groupedBackground }} className="rounded-md p-md mt-lg gap-xs">
+            <GlassBox component="card" color={colors.groupedBackground} className="rounded-md p-md mt-lg gap-xs">
               <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
                 {t('settings.ev_per_year_title')}
               </Text>
@@ -241,7 +242,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
               <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-xs">
                 {t('settings.ev_battery_note')}
               </Text>
-            </View>
+            </GlassBox>
           )}
 
           {result && (

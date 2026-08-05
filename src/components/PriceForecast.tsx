@@ -6,6 +6,7 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useSupport } from '../hooks/useSupport';
 import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
 import { GlassBackdrop } from './ui/glass';
+import { GlassBox } from './ui/GlassBox';
 import type { PriceHistoryPoint } from '../api/siphonClient';
 import { forecast, FORECAST_HORIZONS, FORECAST_MIN_DAYS, historyCoverageDays } from '../utils/priceAnalysis';
 
@@ -23,11 +24,11 @@ const CONFIDENCE_KEYS: Record<string, string> = {
 function ForecastCell({ labelKey, value, range }: { labelKey: string; value: string; range: string }) {
   const { colors } = useThemeTokens();
   return (
-    <View style={{ backgroundColor: colors.groupedBackground }} className="rounded-md px-md py-sm">
+    <GlassBox component="card" color={colors.groupedBackground} className="rounded-md px-md py-sm flex-1">
       <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{labelKey}</Text>
       <Text style={{ color: colors.label }} className="text-title-3 font-bold mt-0.5">{value}</Text>
       <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-0.5">{range}</Text>
-    </View>
+    </GlassBox>
   );
 }
 

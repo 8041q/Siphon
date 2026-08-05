@@ -15,6 +15,7 @@ import { rewardForPalette, rewardForSvg, rewardForIcon, rewardForStyle } from '.
 import { svgRewards, SVG_REWARD_NAMES, type SvgMarkerRewardId } from './userLocationMarkers/rewards';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { Button } from './ui/button';
+import { GlassBox } from './ui/GlassBox';
 import { SheetBackground } from './ui/SheetBackground';
 
 export type RewardsSheetHandle = { present: () => void };
@@ -192,7 +193,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
           {t('settings.rewards_caption')}
         </Text>
 
-        <View style={{ backgroundColor: colors.fieldBackground }} className="rounded-md p-md mb-lg">
+        <GlassBox component="card" color={colors.fieldBackground} className="rounded-md p-md mb-lg">
           <View className="flex-row items-center justify-between mb-sm">
             <Text style={{ color: colors.label }} className="text-body font-semibold">
               {t('settings.rewards_progress', { count: watchedCount })}
@@ -216,7 +217,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
               {t('settings.rewards_ad_failed')}
             </Text>
           )}
-        </View>
+        </GlassBox>
 
         <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
           {t('settings.rewards_palettes')}

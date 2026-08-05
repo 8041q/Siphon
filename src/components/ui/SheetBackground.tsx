@@ -9,6 +9,13 @@ type SheetBackgroundProps = {
   pointerEvents?: any;
 };
 
+// See note in GlassBackdrop: `blurReductionFactor` default 4 silences the blur
+// on Android; `dimezisBlurView` fallback keeps blur on Android < 12.
+function androidBlurMethod() {
+  if (Platform.OS !== 'android') return undefined;
+  return (Platform.Version as number) >= 31 ? 'dimezisBlurViewSdk31Plus' : 'dimezisBlurView';
+}
+
 /**
  * Reusable background for @gorhom/bottom-sheet `backgroundComponent`.
  *
@@ -58,7 +65,8 @@ export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
         style={StyleSheet.absoluteFill}
         tint={tint}
         intensity={70}
-        blurMethod={Platform.OS === 'android' ? 'dimezisBlurViewSdk31Plus' : undefined}
+        blurReductionFactor={1}
+        blurMethod={androidBlurMethod()}
       />
       <View
         pointerEvents="none"

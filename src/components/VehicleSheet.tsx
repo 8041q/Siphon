@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import { Field } from './ui/field';
+import { Chip } from './ui/chip';
 import { SheetBackground } from './ui/SheetBackground';
 import { fuelLabel } from '../utils/fuelNames';
 import {
@@ -193,8 +194,6 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
       bottomSheetRef.current?.dismiss();
     }, [editing, onRemove]);
 
-    const chipBg = (selected: boolean) =>
-      selected ? { backgroundColor: colors.tint } : { backgroundColor: colors.surface };
     const chipText = (selected: boolean) =>
       selected ? { color: colors.labelOnTint } : { color: colors.label };
 
@@ -246,16 +245,15 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
                   const selected = fuels.some((f) => f.fuelType === key);
                   const atMax = fuels.length >= MAX_FUELS && !selected;
                   return (
-                    <TouchableOpacity
+                    <Chip
                       key={key}
-                      activeOpacity={0.7}
+                      selected={selected}
                       onPress={() => toggleFuel(key)}
                       disabled={atMax}
-                      style={chipBg(selected)}
                       className={`px-3.5 py-1.5 rounded-full ${atMax ? 'opacity-40' : ''}`}
                     >
                       <Text style={chipText(selected)} className="text-caption-1 font-semibold">{fuelLabel(key)}</Text>
-                    </TouchableOpacity>
+                    </Chip>
                   );
                 })}
               </View>

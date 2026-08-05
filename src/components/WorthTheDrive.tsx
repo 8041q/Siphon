@@ -6,6 +6,7 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useSupport } from '../hooks/useSupport';
 import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
 import { GlassBackdrop } from './ui/glass';
+import { GlassBox } from './ui/GlassBox';
 import type { FuelStationFeature } from '../api/siphonClient';
 import { useStations } from '../hooks/useApp';
 import { useVehicles } from '../hooks/useVehicles';
@@ -79,7 +80,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
         {t('settings.drive_cost_title')}
       </Text>
       {matching.map(({ vehicle: v, fuels }) => (
-        <View key={v.id} style={{ backgroundColor: colors.groupedBackground }} className="rounded-md p-lg gap-sm">
+        <GlassBox key={v.id} component="card" color={colors.groupedBackground} className="rounded-md p-lg gap-sm">
           <Text style={{ color: colors.label }} className="text-callout font-semibold">
             {v.name}
           </Text>
@@ -147,7 +148,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
               </View>
             );
           })}
-        </View>
+        </GlassBox>
       ))}
     </View>
   );

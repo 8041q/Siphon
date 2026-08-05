@@ -2,7 +2,7 @@ import { TextInput } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useSupport } from '../../hooks/useSupport';
-import { useStyleConfig, applyComponentRules } from '../../hooks/useStyleConfig';
+import { useStyleConfig, applyComponentRules, isGlass } from '../../hooks/useStyleConfig';
 
 type InputProps = {
   value: string;
@@ -15,6 +15,7 @@ export function Input({ value, onChangeText, placeholder, className = '' }: Inpu
   const { colors } = useThemeTokens();
   const { styleRules } = useSupport();
   const rules = useStyleConfig(styleRules, 'input');
+  const glass = isGlass(rules);
 
   return (
     <TextInput
@@ -22,7 +23,7 @@ export function Input({ value, onChangeText, placeholder, className = '' }: Inpu
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={colors.placeholder}
-      style={applyComponentRules(rules)}
+      style={[{ backgroundColor: glass ? 'transparent' : undefined }, applyComponentRules(rules)]}
       className={`flex-1 px-1 ${className}`}
     />
   );

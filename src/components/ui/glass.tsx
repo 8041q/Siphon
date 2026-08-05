@@ -14,6 +14,17 @@ import { useThemeTokens } from '../../hooks/useThemeTokens';
  * `applyComponentRules` applies automatically for glass rules) and for its own
  * padding/spacing.
  */
+
+// On Android expo-blur defaults to `blurReductionFactor = 4`, which divides the
+// iOS intensity and renders the blur nearly invisible. `1` matches iOS so the
+// glass actually reads as glass on Android.
+// `dimezisBlurViewSdk31Plus` falls back to 'none' (plain transparency) below
+// Android 12; use plain `dimezisBlurView` there so blur still renders.
+function androidBlurMethod() {
+  if (Platform.OS !== 'android') return undefined;
+  return (Platform.Version as number) >= 31 ? 'dimezisBlurViewSdk31Plus' : 'dimezisBlurView';
+}
+
 export function GlassBackdrop({ color }: { color?: string }) {
   const { scheme, colors } = useThemeTokens();
 
@@ -26,7 +37,8 @@ export function GlassBackdrop({ color }: { color?: string }) {
         style={StyleSheet.absoluteFill}
         tint={tint}
         intensity={70}
-        blurMethod={Platform.OS === 'android' ? 'dimezisBlurViewSdk31Plus' : undefined}
+        blurReductionFactor={1}
+        blurMethod={androidBlurMethod()}
       />
       <View
         pointerEvents="none"

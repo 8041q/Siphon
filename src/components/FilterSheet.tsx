@@ -5,6 +5,8 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from './ui/icon';
+import { Chip } from './ui/chip';
+import { GlassBox } from './ui/GlassBox';
 import { SearchFilter } from '../hooks/useApp';
 import { FUEL_KEYS, fuelLabel } from '../utils/fuelNames';
 import { useThemeTokens } from '../hooks/useThemeTokens';
@@ -97,8 +99,6 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
       return count;
     }, [localFilters]);
 
-    const chipBg = (selected: boolean) =>
-      selected ? { backgroundColor: colors.tint } : { backgroundColor: colors.surface };
     const chipText = (selected: boolean) =>
       selected ? { color: colors.labelOnTint } : { color: colors.label };
 
@@ -134,17 +134,16 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 {(['PT', 'ES'] as CountryCode[]).map((code) => {
                   const selected = (localFilters.countries ?? []).includes(code);
                   return (
-                <TouchableOpacity
-                  key={code}
-                  activeOpacity={0.7}
-                  onPress={() => toggleCountry(code)}
-                  style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                  className="rounded-full"
-                >
+                    <Chip
+                      key={code}
+                      selected={selected}
+                      onPress={() => toggleCountry(code)}
+                      className="rounded-full px-4 py-2"
+                    >
                       <Text style={chipText(selected)} className="text-subheadline">
                         {code === 'PT' ? t('search.portugal') : t('search.spain')}
                       </Text>
-                    </TouchableOpacity>
+                    </Chip>
                   );
                 })}
               </View>
@@ -156,31 +155,29 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 {t('search.fuel_type')}
               </Text>
               <View className="flex-row flex-wrap gap-2">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Chip
+                  selected={!localFilters.fuelTypes || localFilters.fuelTypes.length === 0}
                   onPress={() => setLocalFilters({ ...localFilters, fuelTypes: undefined })}
-                  style={[chipBg(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                  className="rounded-full"
+                  className="rounded-full px-4 py-2"
                 >
                   <Text style={chipText(!localFilters.fuelTypes || localFilters.fuelTypes.length === 0)} className="text-subheadline">
                     {t('search.any_fuel')}
                   </Text>
-                </TouchableOpacity>
+                </Chip>
                 {FUEL_KEYS.map((key) => {
                   const selected = (localFilters.fuelTypes ?? []).includes(key);
                   const label = fuelLabel(key);
                   return (
-                    <TouchableOpacity
+                    <Chip
                       key={key}
-                      activeOpacity={0.7}
+                      selected={selected}
                       onPress={() => toggleFuelType(key)}
-                      style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                      className="rounded-full"
+                      className="rounded-full px-4 py-2"
                     >
                       <Text style={chipText(selected)} className="text-subheadline">
                         {label}
                       </Text>
-                    </TouchableOpacity>
+                    </Chip>
                   );
                 })}
               </View>
@@ -192,30 +189,28 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 {t('search.price_range')}
               </Text>
               <View className="flex-row gap-2 flex-wrap">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Chip
+                  selected={!localFilters.priceRange}
                   onPress={() => setPriceRange(undefined)}
-                  style={[chipBg(!localFilters.priceRange), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                  className="rounded-full"
+                  className="rounded-full px-4 py-2"
                 >
                   <Text style={chipText(!localFilters.priceRange)} className="text-subheadline">
                     {t('search.any_price')}
                   </Text>
-                </TouchableOpacity>
+                </Chip>
                 {PRICE_OPTIONS.map((max) => {
                   const selected = localFilters.priceRange?.max === max;
                   return (
-                  <TouchableOpacity
-                    key={max}
-                    activeOpacity={0.7}
-                    onPress={() => setPriceRange(selected ? undefined : max)}
-                    style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                    className="rounded-full"
-                  >
+                    <Chip
+                      key={max}
+                      selected={selected}
+                      onPress={() => setPriceRange(selected ? undefined : max)}
+                      className="rounded-full px-4 py-2"
+                    >
                       <Text style={chipText(selected)} className="text-subheadline">
                         {t('search.under', { max: max.toFixed(2) })}
                       </Text>
-                    </TouchableOpacity>
+                    </Chip>
                   );
                 })}
               </View>
@@ -226,14 +221,16 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                 {t('search.city')}
               </Text>
-              <TextInput
-                value={localFilters.city ?? ''}
-                onChangeText={setCity}
-                placeholder={t('search.city_placeholder')}
-                placeholderTextColor={colors.placeholder}
-                style={{ backgroundColor: colors.surface, color: colors.label }}
-                className="rounded-md px-3 py-2"
-              />
+              <GlassBox component="input" className="rounded-md">
+                <TextInput
+                  value={localFilters.city ?? ''}
+                  onChangeText={setCity}
+                  placeholder={t('search.city_placeholder')}
+                  placeholderTextColor={colors.placeholder}
+                  style={{ backgroundColor: 'transparent', color: colors.label }}
+                  className="rounded-md px-3 py-2"
+                />
+              </GlassBox>
             </View>
 
             {/* Distance */}
@@ -242,30 +239,28 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 {t('search.distance')}
               </Text>
               <View className="flex-row gap-2 flex-wrap">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Chip
+                  selected={!localFilters.maxDistance}
                   onPress={() => setDistance(undefined)}
-                  style={[chipBg(!localFilters.maxDistance), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                  className="rounded-full"
+                  className="rounded-full px-4 py-2"
                 >
                   <Text style={chipText(!localFilters.maxDistance)} className="text-subheadline">
                     {t('search.any_distance')}
                   </Text>
-                </TouchableOpacity>
+                </Chip>
                 {DISTANCE_OPTIONS.map((km) => {
                   const selected = localFilters.maxDistance === km;
                   return (
-                  <TouchableOpacity
-                    key={km}
-                    activeOpacity={0.7}
-                    onPress={() => setDistance(selected ? undefined : km)}
-                    style={[chipBg(selected), { paddingHorizontal: 16, paddingVertical: 8 }]}
-                    className="rounded-full"
-                  >
+                    <Chip
+                      key={km}
+                      selected={selected}
+                      onPress={() => setDistance(selected ? undefined : km)}
+                      className="rounded-full px-4 py-2"
+                    >
                       <Text style={chipText(selected)} className="text-subheadline">
                         {km} km
                       </Text>
-                    </TouchableOpacity>
+                    </Chip>
                   );
                 })}
               </View>
@@ -273,16 +268,17 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
 
             {/* Action buttons */}
             <View className="flex-row gap-3 pt-sm">
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handleClear}
-                style={{ backgroundColor: colors.surface }}
-                className="flex-1 py-3 rounded-md items-center"
-              >
-                <Text style={{ color: colors.label }} className="text-body">
-                  {t('search.clear_filters')}
-                </Text>
-              </TouchableOpacity>
+              <GlassBox component="card" className="flex-1 rounded-md overflow-hidden">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleClear}
+                  className="py-3 items-center"
+                >
+                  <Text style={{ color: colors.label }} className="text-body">
+                    {t('search.clear_filters')}
+                  </Text>
+                </TouchableOpacity>
+              </GlassBox>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handleApply}

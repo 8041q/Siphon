@@ -7,6 +7,7 @@ import { SUPPORT } from '../config/support';
 import { Icon } from '../theme/Icon';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { SheetBackground } from './ui/SheetBackground';
+import { GlassBox } from './ui/GlassBox';
 
 export type DonationSheetHandle = { present: () => void };
 
@@ -78,29 +79,30 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(function Do
 
         {OPTIONS.map((option, idx) => (
           <View key={option.key} className="mb-md">
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => handleOpen(option.url)}
-              style={{ backgroundColor: colors.fieldBackground }}
-              className="flex-row items-center justify-between py-md px-sm rounded-md"
-            >
-              <View className="flex-row items-center flex-1">
-                <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
-                  style={{ backgroundColor: colors.groupedBackground }}
-                >
-                  <Icon name={option.icon} size={20} color={colors.tint} />
+            <GlassBox component="card" color={colors.fieldBackground} className="rounded-md">
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => handleOpen(option.url)}
+                className="flex-row items-center justify-between py-md px-sm rounded-md"
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
+                    style={{ backgroundColor: colors.groupedBackground }}
+                  >
+                    <Icon name={option.icon} size={20} color={colors.tint} />
+                  </View>
+                  <View className="flex-1">
+                    <Text style={{ color: colors.label }} className="text-body font-semibold">
+                      {t(option.titleKey)}
+                    </Text>
+                    <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+                      {t(option.captionKey)}
+                    </Text>
+                  </View>
                 </View>
-                <View className="flex-1">
-                  <Text style={{ color: colors.label }} className="text-body font-semibold">
-                    {t(option.titleKey)}
-                  </Text>
-                  <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
-                    {t(option.captionKey)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={{ color: colors.tint }} className="text-body ml-sm">›</Text>
-            </TouchableOpacity>
+                <Text style={{ color: colors.tint }} className="text-body ml-sm">›</Text>
+              </TouchableOpacity>
+            </GlassBox>
             <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 px-sm pt-xs">
               {t(option.feeKey)}
             </Text>

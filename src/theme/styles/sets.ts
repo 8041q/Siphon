@@ -15,7 +15,7 @@ const DEFAULT_RULES: StyleRules = {
 const LIQUID_GLASS: StyleRules = {
   card: { glass: true, borderRadius: 16 },
   button: { borderRadius: 24 },
-  input: { borderRadius: 12 },
+  input: { glass: true, borderRadius: 12 },
   badge: { glass: true, borderRadius: 8 },
   listItem: { glass: true },
   sheet: { glass: true, borderRadius: 20 },
