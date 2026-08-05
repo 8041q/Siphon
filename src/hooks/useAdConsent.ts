@@ -1,7 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AdsConsent, AdsConsentStatus } from 'react-native-google-mobile-ads';
 import * as TrackingTransparency from 'expo-tracking-transparency';
+
+const STORAGE_KEY = 'siphon:adConsent';
 
 async function adsAllowed(status: AdsConsentStatus | null): Promise<boolean> {
   if (status === AdsConsentStatus.NOT_REQUIRED) return true;
@@ -20,6 +23,22 @@ export function useAdConsent() {
   const [consentStatus, setConsentStatus] = useState<AdsConsentStatus | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  // Restore the previously recorded consent on launch so a returning user is
+  // not asked again until their native choice actually changes.
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((val) => {
+        if (val === null) return;
+        setConsentStatus(val as AdsConsentStatus);
+        setInitialized(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  const persist = useCallback((status: AdsConsentStatus) => {
+    AsyncStorage.setItem(STORAGE_KEY, status).catch(() => {});
+  }, []);
+
   const gatherConsent = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'ios') {
       try {
@@ -32,6 +51,7 @@ export function useAdConsent() {
     } catch {
       setConsentStatus(AdsConsentStatus.NOT_REQUIRED);
       setInitialized(true);
+      persist(AdsConsentStatus.NOT_REQUIRED);
       return true;
     }
     let status = info.status;
@@ -45,8 +65,9 @@ export function useAdConsent() {
     }
     setConsentStatus(status);
     setInitialized(true);
+    persist(status);
     return adsAllowed(status);
-  }, []);
+  }, [persist]);
 
   // Gatekeeper: consent is requested on every "watch an ad" attempt. If the
   // user declines or dismisses the form, their stored choice is reset so the
@@ -64,6 +85,7 @@ export function useAdConsent() {
   const reset = useCallback(() => {
     setConsentStatus(null);
     setInitialized(false);
+    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
   }, []);
 
   return {
