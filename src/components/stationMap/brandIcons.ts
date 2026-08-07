@@ -31,10 +31,16 @@ export const BRAND_MATCH: Record<string, string> = {
  * icon image name registered in BRAND_ICONS. Unknown values fall back to the
  * default teardrop.
  */
-export function buildIconImageExpression(): ExpressionSpecification {
+export function buildIconImageExpression(): ExpressionSpecification | string {
   const pairs: unknown[] = [];
   for (const [normalized, iconKey] of Object.entries(BRAND_MATCH)) {
     pairs.push(normalized, iconKey);
   }
+
+  // If no brand match rules exist, avoid generating an invalid 'match' expression
+  if (pairs.length === 0) {
+    return 'default';
+  }
+
   return ['match', ['get', '_icon'], ...pairs, 'default'] as unknown as ExpressionSpecification;
 }
