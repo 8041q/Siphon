@@ -21,7 +21,11 @@ export const BRAND_ICONS: ImagesProps['images'] = {
   'marker-shape': { source: require('../../../assets/brands/marker-shape.png'), sdf: true },
   // Generic teardrop used as the marker-body / logo fallback.
   default: require('../../../assets/brands/default.png'),
+
+  // Add here all brands so they can get rendered
+  galp: require('../../../assets/brands/galp.png'),
 };
+
 
 /**
  * Brand logo images, keyed by the same normalized brand string used by

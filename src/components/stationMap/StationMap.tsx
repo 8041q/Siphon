@@ -225,7 +225,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'icon-ignore-placement': true,
             'text-field': ['get', '_priceLabel'],
             'text-anchor': 'top',
-            'text-offset': [0, 0.4],
+            'text-offset': [0, -5.0],
             'text-size': 11,
             'text-font': ['Noto Sans Bold'],
             'text-allow-overlap': false,
@@ -249,7 +249,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'icon-image': buildLogoImageExpression(),
             'icon-anchor': 'center',
             'icon-size': 0.5,
-            'icon-offset': [0, -38],
+            'icon-offset': [0, -144],
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
           } as const}
