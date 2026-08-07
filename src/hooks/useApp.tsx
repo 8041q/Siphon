@@ -380,12 +380,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           (s.properties.name ?? '').toLowerCase().includes(q)
       );
     }
+
+    if (searchFilter.countries && searchFilter.countries.length > 0) {
+      result = result.filter((s) =>
+        searchFilter.countries!.includes(s.properties.source)
+      );
+    }
+
     if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
       result = result.filter((s) => {
         const fuels = s.properties.fuels ?? {};
         return searchFilter.fuelTypes!.some((key) => key in fuels);
       });
     }
+
+    if (searchFilter.priceRange) {
+      const max = searchFilter.priceRange.max;
+      result = result.filter((s) => {
+        const fuels = s.properties.fuels ?? {};
+        if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
+          return searchFilter.fuelTypes.some((key) => typeof fuels[key] === 'number' && fuels[key] < max);
+        }
+        return Object.values(fuels).some((p) => Number(p) < max);
+      });
+    }
+
+    if (searchFilter.city?.trim()) {
+      const q = searchFilter.city.trim().toLowerCase();
+      result = result.filter((s) => {
+        const p = s.properties;
+        return (
+          (p.municipality ?? '').toLowerCase().includes(q) ||
+          (p.city ?? '').toLowerCase().includes(q) ||
+          (p.address ?? '').toLowerCase().includes(q)
+        );
+      });
+    }
+
     return result;
   }, [stations, searchFilter]);
 
