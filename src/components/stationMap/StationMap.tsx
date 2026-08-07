@@ -14,7 +14,7 @@ const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 // Below this zoom we fall back to the lightweight circle dots so the whole
 // country is never rendered as individual markers.
-export const STATION_MARKER_MIN_ZOOM = 12.7;
+export const STATION_MARKER_MIN_ZOOM = 13;
 
 function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, flyToCoords, userLocation }: StationMapProps) {
   const { colors } = useThemeTokens();
@@ -223,6 +223,23 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'icon-size': 1,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
+          } as const}
+          paint={{
+            'icon-halo-color': '#111111',
+            'icon-halo-width': 1,
+          }}
+        />
+        <Layer
+          id="station-prices"
+          type="symbol"
+          source="station-points"
+          minzoom={STATION_MARKER_MIN_ZOOM}
+          layout={{
+            'icon-image': MARKER_SHAPE_ICON,
+            'icon-anchor': 'bottom',
+            'icon-size': 1,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
             'text-field': ['get', '_priceLabel'],
             'text-anchor': 'top',
             'text-offset': [0, -5.0],
@@ -232,8 +249,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'text-transform': 'uppercase',
           } as const}
           paint={{
-            'icon-halo-color': '#111111',
-            'icon-halo-width': 1,
+            'icon-opacity': 0,
             'text-color': '#FFFFFF',
             'text-halo-color': '#111111',
             'text-halo-width': 2,
