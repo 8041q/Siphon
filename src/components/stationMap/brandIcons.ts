@@ -17,8 +17,8 @@ import type { ImagesProps } from '@maplibre/maplibre-react-native';
 
 // Image name -> asset used by the map <Images> component.
 export const BRAND_ICONS: ImagesProps['images'] = {
-  // Shared teardrop silhouette (SDF): tinted via 'icon-color' to markerBody.
-  'marker-shape': { source: require('../../../assets/brands/marker-shape.png'), sdf: true },
+  // Shared teardrop silhouette (plain image with baked-in coloring).
+  'marker-shape': require('../../../assets/brands/marker-shape.png'),
   // Generic teardrop used as the marker-body / logo fallback.
   default: require('../../../assets/brands/default.png'),
 
