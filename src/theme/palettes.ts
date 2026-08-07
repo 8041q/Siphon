@@ -45,6 +45,11 @@ export const midnight: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#2563EB',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#16A34A',
+    markerClosed: '#DC2626',
+    markerUnknown: 'rgba(120, 130, 135, 0.9)',
+    markerPriceText: '#0B1B2B',
+    markerPriceHalo: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#16A34A',
     priceLowTint: 'rgba(22, 163, 74, 0.1)',
@@ -99,6 +104,11 @@ export const midnight: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#60A5FA',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#4ADE80',
+    markerClosed: '#F87171',
+    markerUnknown: 'rgba(170, 180, 185, 0.9)',
+    markerPriceText: '#EAF1FB',
+    markerPriceHalo: '#0B1424',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#4ADE80',
     priceLowTint: 'rgba(74, 222, 128, 0.1)',
@@ -158,6 +168,11 @@ export const sunset: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#E8590C',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#2F9E44',
+    markerClosed: '#C92A2A',
+    markerUnknown: 'rgba(120, 130, 135, 0.9)',
+    markerPriceText: '#3B1D12',
+    markerPriceHalo: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#2F9E44',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
@@ -212,6 +227,11 @@ export const sunset: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#FF922B',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#69DB7C',
+    markerClosed: '#FF8787',
+    markerUnknown: 'rgba(170, 180, 185, 0.9)',
+    markerPriceText: '#FDEBE0',
+    markerPriceHalo: '#25140C',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#69DB7C',
     priceLowTint: 'rgba(105, 219, 124, 0.1)',
@@ -271,6 +291,11 @@ export const forest: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#1F6B45',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#2F9E44',
+    markerClosed: '#C92A2A',
+    markerUnknown: 'rgba(120, 130, 135, 0.9)',
+    markerPriceText: '#12241A',
+    markerPriceHalo: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#2F9E44',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
@@ -325,6 +350,11 @@ export const forest: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#378d5e',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#69DB7C',
+    markerClosed: '#FF8787',
+    markerUnknown: 'rgba(170, 180, 185, 0.9)',
+    markerPriceText: '#E9F5EC',
+    markerPriceHalo: '#0E1B13',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#69DB7C',
     priceLowTint: 'rgba(105, 219, 124, 0.1)',
@@ -384,6 +414,11 @@ export const mono: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#404040',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#1C7C54',
+    markerClosed: '#B3261E',
+    markerUnknown: 'rgba(120, 130, 135, 0.9)',
+    markerPriceText: '#111111',
+    markerPriceHalo: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#1C7C54',
     priceLowTint: 'rgba(28, 124, 84, 0.1)',
@@ -438,6 +473,11 @@ export const mono: Palette = {
     // ── Map ───────────────────────────────────────────────────────
     pin: '#404040',
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    markerOpen: '#4ADE80',
+    markerClosed: '#FF8A80',
+    markerUnknown: 'rgba(170, 180, 185, 0.9)',
+    markerPriceText: '#F5F5F5',
+    markerPriceHalo: '#111111',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#4ADE80',
     priceLowTint: 'rgba(74, 222, 128, 0.1)',

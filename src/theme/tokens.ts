@@ -108,6 +108,16 @@ export const station = {
     pin: '#0C8599',
     /** Map pin stroke */
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    /** Station open marker halo/dot */
+    markerOpen: '#1E9E67',
+    /** Station closed marker halo/dot */
+    markerClosed: '#E24C4C',
+    /** Station status unknown marker halo/dot */
+    markerUnknown: 'rgba(120, 130, 135, 0.9)',
+    /** Marker price label text */
+    markerPriceText: '#0B1F22',
+    /** Marker price label halo */
+    markerPriceHalo: '#FFFFFF',
 
     // ── Price badges ─────────────────────────────────────────────
     /** Low price indicator */
@@ -170,6 +180,16 @@ export const station = {
     pin: '#22B8CD',
     /** Map pin stroke */
     pinStroke: 'rgba(255, 255, 255, 0.5)',
+    /** Station open marker halo/dot */
+    markerOpen: '#3BCB8E',
+    /** Station closed marker halo/dot */
+    markerClosed: '#FF6259',
+    /** Station status unknown marker halo/dot */
+    markerUnknown: 'rgba(170, 180, 185, 0.9)',
+    /** Marker price label text */
+    markerPriceText: '#F1FAFA',
+    /** Marker price label halo */
+    markerPriceHalo: '#0D1717',
 
     // ── Price badges ─────────────────────────────────────────────
     /** Low price indicator */

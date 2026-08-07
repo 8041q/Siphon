@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { Image, View } from 'react-native';
-import { Map, Camera, Marker, GeoJSONSource, Layer, type CameraRef} from '@maplibre/maplibre-react-native';
+import { Map, Camera, Marker, GeoJSONSource, Layer, Images, type CameraRef} from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '../../theme/Icon';
 
@@ -8,8 +8,13 @@ import type { StationMapProps } from './types';
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useUserLocationMarker } from '../../hooks/useUserLocationMarker';
 import { svgMarkers } from '../userLocationMarkers';
+import { BRAND_ICONS, buildIconImageExpression } from './brandIcons';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+
+// Below this zoom we fall back to the lightweight circle dots so the whole
+// country is never rendered as individual markers.
+export const STATION_MARKER_MIN_ZOOM = 12;
 
 function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, flyToCoords, userLocation }: StationMapProps) {
   const { colors } = useThemeTokens();
@@ -63,18 +68,25 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   }, [stations]);
 
   const stationsSourceData = useMemo<GeoJSON.FeatureCollection>(() => {
+    const features = stations.map((f) => {
+      const { _price95, _priceDiesel } = f.properties;
+      let _priceLabel = '';
+      if (_price95 != null && _priceDiesel != null) _priceLabel = `95 ${_price95}\nD ${_priceDiesel}`;
+      else if (_price95 != null) _priceLabel = `95 ${_price95}`;
+      else if (_priceDiesel != null) _priceLabel = `D ${_priceDiesel}`;
+      return { ...f, properties: { ...f.properties, _priceLabel } };
+    });
+
     if (__DEV__) {
-      for (const f of stations) {
+      for (const f of features) {
         const [lng, lat] = f.geometry.coordinates;
         if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
           console.warn('[StationMap] BAD COORDS', f.properties.id, f.geometry.coordinates);
         }
-        try { JSON.stringify(f); } catch (e) {
-          console.warn('[StationMap] UNSERIALIZABLE FEATURE', f.properties.id, e);
-        }
       }
     }
-    return { type: 'FeatureCollection', features: stations };
+
+    return { type: 'FeatureCollection', features };
   }, [stations]);
 
   return (
@@ -171,6 +183,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         </Marker>
       )}
 
+      <Images images={BRAND_ICONS} />
 
       <GeoJSONSource
         id="station-points"
@@ -191,11 +204,64 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           id="station-dots"
           type="circle"
           source="station-points"
+          maxzoom={STATION_MARKER_MIN_ZOOM}
           paint={{
             'circle-radius': 8,
             'circle-color': colors.pin,
             'circle-stroke-width': 2,
             'circle-stroke-color': colors.pinStroke,
+          }}
+        />
+        <Layer
+          id="station-markers"
+          type="symbol"
+          source="station-points"
+          minzoom={STATION_MARKER_MIN_ZOOM}
+          layout={{
+            'icon-image': buildIconImageExpression(),
+            'icon-anchor': 'bottom',
+            'icon-size': 1,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'text-field': ['get', '_priceLabel'],
+            'text-anchor': 'top',
+            'text-offset': [0, 0.4],
+            'text-size': 11,
+            'text-font': ['Noto Sans Bold'],
+            'text-allow-overlap': false,
+          } as const}
+          paint={{
+            'text-color': colors.markerPriceText,
+            'text-halo-color': colors.markerPriceHalo,
+            'text-halo-width': 2,
+          }}
+        />
+        <Layer
+          id="station-marker-status"
+          type="symbol"
+          source="station-points"
+          minzoom={STATION_MARKER_MIN_ZOOM}
+          layout={{
+            'icon-image': 'status-dot',
+            'icon-anchor': 'center',
+            'icon-size': 1,
+            'icon-offset': [16, -40],
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          } as const}
+          paint={{
+            'icon-color': [
+              'match',
+              ['get', '_status'],
+              'open',
+              colors.markerOpen,
+              'closed',
+              colors.markerClosed,
+              colors.markerUnknown,
+            ],
+            'icon-halo-color': colors.markerPriceHalo,
+            'icon-halo-width': 1.5,
+            'icon-halo-blur': 0.5,
           }}
         />
       </GeoJSONSource>

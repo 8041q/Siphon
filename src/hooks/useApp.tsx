@@ -6,6 +6,7 @@ import { RateLimitedError } from '../api/rateLimit';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
 import { roadEstimateKm, roadDistanceKm } from '../utils/routeDistance';
+import { enrichStations } from '../utils/markerEnrichment';
 import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
 import i18n from '../i18n';
@@ -359,7 +360,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             resolve([]);
             return;
           }
-          setStations(nearby);
+          setStations(enrichStations(nearby));
           resolve(nearby);
         } catch (e) {
           console.warn('[loadStationsForRegion] failed:', e);
