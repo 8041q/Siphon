@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useCommodities } from '../../src/hooks/useCommodities';
 import { CommodityChart } from '../../src/components/CommodityChart';
 import { fuelLabel } from '../../src/utils/fuelNames';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
+import { tabBarClearance } from '../../src/theme/layout';
 
 import type { CommodityMetrics } from '../../src/api/siphonClient';
 
@@ -36,6 +37,7 @@ function trendColor(v: number | null | undefined, neutral: string): string {
 export default function MarketScreen() {
   const { t } = useTranslation();
   const { colors, scheme } = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const isDark = scheme === 'dark';
 
   const { dashboard, loading } = useCommodities();
@@ -66,7 +68,7 @@ export default function MarketScreen() {
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
       >
         <Text style={{ fontSize: 28, fontWeight: '700', color: colors.label, marginBottom: 16 }}>
           {t('market.title')}

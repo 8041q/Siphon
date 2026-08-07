@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Appearance, Linking, ScrollView, Switch, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setBackgroundColorAsync } from 'expo-system-ui';
@@ -14,6 +14,7 @@ import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { getPalette } from '../../src/theme/palettes';
+import { tabBarClearance } from '../../src/theme/layout';
 import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
@@ -35,6 +36,7 @@ export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { historyEnabled, setHistoryEnabled } = useUI();
   const { updateAvailable, latestVersion, installedVersion, checking, check } = useAppUpdate();
+  const insets = useSafeAreaInsets();
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
@@ -117,7 +119,11 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: colors.background }}>
-      <ScrollView className="flex-1" contentContainerClassName="gap-lg pb-xl">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-lg"
+        contentContainerStyle={{ paddingBottom: tabBarClearance(insets.bottom) + 16 }}
+      >
 
         <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">

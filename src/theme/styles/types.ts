@@ -22,6 +22,7 @@ export type StyleRules = {
   stationCard: ComponentRules;
   chip: ComponentRules;
   banner: ComponentRules;
+  tabBar: ComponentRules;
 };
 
 export type StyleSetMap = Record<StyleSetId, StyleRules>;

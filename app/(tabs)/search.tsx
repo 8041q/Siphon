@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../src/components/ui/icon';
@@ -9,6 +9,7 @@ import { StationCard } from '../../src/components/StationCard';
 import { FilterSheet } from '../../src/components/FilterSheet';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStations, useLocationState, useUI } from '../../src/hooks/useApp';
+import { tabBarClearance } from '../../src/theme/layout';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 import { roadEstimateKm } from '../../src/utils/routeDistance';
 
@@ -164,6 +165,7 @@ function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: 
 function StationList({ results, handleStationPress, favorites, onToggleFavorite }: { results: FuelStationFeature[]; handleStationPress: (station: FuelStationFeature) => void; favorites?: Set<string>; onToggleFavorite?: (station: FuelStationFeature) => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const insets = useSafeAreaInsets();
   if (!results || results.length === 0) {
     return (
       <View className="flex-1 items-center justify-center">
@@ -182,7 +184,7 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
       <FlashList
         data={results}
         keyExtractor={(item) => item.properties.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => (
           <StationCard station={item} onPress={handleStationPress} favorites={favorites} onToggleFavorite={onToggleFavorite} />

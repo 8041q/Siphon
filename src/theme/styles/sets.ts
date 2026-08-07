@@ -10,6 +10,7 @@ const DEFAULT_RULES: StyleRules = {
   stationCard: {},
   chip: {},
   banner: {},
+  tabBar: { borderRadius: 32 },
 };
 
 const LIQUID_GLASS: StyleRules = {
@@ -22,6 +23,7 @@ const LIQUID_GLASS: StyleRules = {
   stationCard: { glass: true, borderRadius: 16 },
   chip: { glass: true, borderRadius: 20 },
   banner: { borderRadius: 12 },
+  tabBar: { glass: true, borderRadius: 32 },
 };
 
 const DOTTED: StyleRules = {
@@ -34,6 +36,7 @@ const DOTTED: StyleRules = {
   stationCard: { borderStyle: 'dotted', borderWidth: 1.5, borderRadius: 8 },
   chip: { borderStyle: 'dotted', borderWidth: 1, borderRadius: 20 },
   banner: { borderStyle: 'dotted', borderWidth: 1, borderRadius: 8 },
+  tabBar: { borderStyle: 'dotted', borderWidth: 1.5, borderRadius: 28 },
 };
 
 const RETRO: StyleRules = {
@@ -46,6 +49,7 @@ const RETRO: StyleRules = {
   stationCard: { borderRadius: 4, borderStyle: 'dashed', borderWidth: 2 },
   chip: { borderRadius: 4, borderStyle: 'dashed', borderWidth: 1.5 },
   banner: { borderRadius: 4, borderStyle: 'dashed', borderWidth: 2 },
+  tabBar: { borderRadius: 12, borderStyle: 'dashed', borderWidth: 2 },
 };
 
 export const STYLE_SETS: Record<StyleSetId, StyleRules> = {
