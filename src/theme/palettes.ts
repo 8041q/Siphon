@@ -50,6 +50,7 @@ export const midnight: Palette = {
     markerUnknown: 'rgba(120, 130, 135, 0.9)',
     markerPriceText: '#0B1B2B',
     markerPriceHalo: '#FFFFFF',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#16A34A',
     priceLowTint: 'rgba(22, 163, 74, 0.1)',
@@ -109,6 +110,7 @@ export const midnight: Palette = {
     markerUnknown: 'rgba(170, 180, 185, 0.9)',
     markerPriceText: '#EAF1FB',
     markerPriceHalo: '#0B1424',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#4ADE80',
     priceLowTint: 'rgba(74, 222, 128, 0.1)',
@@ -173,6 +175,7 @@ export const sunset: Palette = {
     markerUnknown: 'rgba(120, 130, 135, 0.9)',
     markerPriceText: '#3B1D12',
     markerPriceHalo: '#FFFFFF',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#2F9E44',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
@@ -232,6 +235,7 @@ export const sunset: Palette = {
     markerUnknown: 'rgba(170, 180, 185, 0.9)',
     markerPriceText: '#FDEBE0',
     markerPriceHalo: '#25140C',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#69DB7C',
     priceLowTint: 'rgba(105, 219, 124, 0.1)',
@@ -296,6 +300,7 @@ export const forest: Palette = {
     markerUnknown: 'rgba(120, 130, 135, 0.9)',
     markerPriceText: '#12241A',
     markerPriceHalo: '#FFFFFF',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#2F9E44',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
@@ -355,6 +360,7 @@ export const forest: Palette = {
     markerUnknown: 'rgba(170, 180, 185, 0.9)',
     markerPriceText: '#E9F5EC',
     markerPriceHalo: '#0E1B13',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#69DB7C',
     priceLowTint: 'rgba(105, 219, 124, 0.1)',
@@ -419,6 +425,7 @@ export const mono: Palette = {
     markerUnknown: 'rgba(120, 130, 135, 0.9)',
     markerPriceText: '#111111',
     markerPriceHalo: '#FFFFFF',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#1C7C54',
     priceLowTint: 'rgba(28, 124, 84, 0.1)',
@@ -478,6 +485,7 @@ export const mono: Palette = {
     markerUnknown: 'rgba(170, 180, 185, 0.9)',
     markerPriceText: '#F5F5F5',
     markerPriceHalo: '#111111',
+    markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#4ADE80',
     priceLowTint: 'rgba(74, 222, 128, 0.1)',

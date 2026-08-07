@@ -8,7 +8,7 @@ import type { StationMapProps } from './types';
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useUserLocationMarker } from '../../hooks/useUserLocationMarker';
 import { svgMarkers } from '../userLocationMarkers';
-import { BRAND_ICONS, buildIconImageExpression } from './brandIcons';
+import { BRAND_ICONS, BRAND_LOGO_IMAGES, MARKER_SHAPE_ICON, buildLogoImageExpression } from './brandIcons';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
@@ -78,7 +78,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     });
 
     if (__DEV__) {
-      for (const f of features) {
+      for (const f of stations) {
         const [lng, lat] = f.geometry.coordinates;
         if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
           console.warn('[StationMap] BAD COORDS', f.properties.id, f.geometry.coordinates);
@@ -183,7 +183,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         </Marker>
       )}
 
-      <Images images={BRAND_ICONS} />
+      <Images images={{ ...BRAND_ICONS, ...BRAND_LOGO_IMAGES }} />
 
       <GeoJSONSource
         id="station-points"
@@ -218,7 +218,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           source="station-points"
           minzoom={STATION_MARKER_MIN_ZOOM}
           layout={{
-            'icon-image': buildIconImageExpression(),
+            'icon-image': MARKER_SHAPE_ICON,
             'icon-anchor': 'bottom',
             'icon-size': 1,
             'icon-allow-overlap': true,
@@ -229,39 +229,33 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'text-size': 11,
             'text-font': ['Noto Sans Bold'],
             'text-allow-overlap': false,
+            'text-transform': 'uppercase',
           } as const}
           paint={{
+            'icon-color': colors.markerBody,
+            'icon-halo-color': colors.markerPriceHalo,
+            'icon-halo-width': 1,
             'text-color': colors.markerPriceText,
             'text-halo-color': colors.markerPriceHalo,
             'text-halo-width': 2,
           }}
         />
         <Layer
-          id="station-marker-status"
+          id="station-marker-logo"
           type="symbol"
           source="station-points"
           minzoom={STATION_MARKER_MIN_ZOOM}
           layout={{
-            'icon-image': 'status-dot',
+            'icon-image': buildLogoImageExpression(),
             'icon-anchor': 'center',
-            'icon-size': 1,
-            'icon-offset': [16, -40],
+            'icon-size': 0.5,
+            'icon-offset': [0, -38],
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
           } as const}
           paint={{
-            'icon-color': [
-              'match',
-              ['get', '_status'],
-              'open',
-              colors.markerOpen,
-              'closed',
-              colors.markerClosed,
-              colors.markerUnknown,
-            ],
             'icon-halo-color': colors.markerPriceHalo,
-            'icon-halo-width': 1.5,
-            'icon-halo-blur': 0.5,
+            'icon-halo-width': 1,
           }}
         />
       </GeoJSONSource>

@@ -118,6 +118,8 @@ export const station = {
     markerPriceText: '#0B1F22',
     /** Marker price label halo */
     markerPriceHalo: '#FFFFFF',
+    /** Station marker pin body fill */
+    markerBody: '#FFFFFF',
 
     // ── Price badges ─────────────────────────────────────────────
     /** Low price indicator */
@@ -190,6 +192,8 @@ export const station = {
     markerPriceText: '#F1FAFA',
     /** Marker price label halo */
     markerPriceHalo: '#0D1717',
+    /** Station marker pin body fill */
+    markerBody: '#FFFFFF',
 
     // ── Price badges ─────────────────────────────────────────────
     /** Low price indicator */
