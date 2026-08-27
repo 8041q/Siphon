@@ -136,6 +136,7 @@ function brandToIconKey(brand: string | undefined | null): string {
  */
 export function enrichStation(station: FuelStationFeature, now = new Date()): FuelStationFeature {
   const { status, icon, price95, priceDiesel } = computeMarkerData(station, now);
+  const sortLat = station.geometry.coordinates[1];
   return {
     type: 'Feature',
     geometry: station.geometry,
@@ -145,6 +146,7 @@ export function enrichStation(station: FuelStationFeature, now = new Date()): Fu
       _icon: icon,
       _price95: price95,
       _priceDiesel: priceDiesel,
+      _sortLat: sortLat,
     },
   };
 }

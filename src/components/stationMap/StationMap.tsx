@@ -213,24 +213,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           }}
         />
         <Layer
-          id="station-markers"
-          type="symbol"
-          source="station-points"
-          minzoom={STATION_MARKER_MIN_ZOOM}
-          layout={{
-            'icon-image': MARKER_SHAPE_ICON,
-            'icon-anchor': 'bottom',
-            'icon-size': 1,
-            'icon-allow-overlap': true,
-            'icon-ignore-placement': true,
-          } as const}
-          paint={{
-            'icon-halo-color': '#111111',
-            'icon-halo-width': 1,
-          }}
-        />
-        <Layer
-          id="station-prices"
+          id="station-markers-with-prices"
           type="symbol"
           source="station-points"
           minzoom={STATION_MARKER_MIN_ZOOM}
@@ -242,15 +225,17 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'icon-ignore-placement': true,
             'text-field': ['get', '_priceLabel'],
             'text-anchor': 'top',
-            'text-offset': [0, -5.0],
+            'text-offset': [0, -5.1],
             'text-size': 11,
             'text-font': ['Noto Sans Bold'],
             'text-allow-overlap': true,
             'text-ignore-placement': true,
             'text-transform': 'uppercase',
+            'symbol-sort-key': ['get', '_sortLat'],
           } as const}
           paint={{
-            'icon-opacity': 0,
+            'icon-halo-color': '#111111',
+            'icon-halo-width': 1,
             'text-color': '#FFFFFF',
             'text-halo-color': '#111111',
             'text-halo-width': 2,
@@ -268,6 +253,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'icon-offset': [0, -144],
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
+            'symbol-sort-key': ['get', '_sortLat'],
           } as const}
           paint={{
             'icon-halo-color': '#111111',
