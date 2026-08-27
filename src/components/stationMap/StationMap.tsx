@@ -245,7 +245,8 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'text-offset': [0, -5.0],
             'text-size': 11,
             'text-font': ['Noto Sans Bold'],
-            'text-allow-overlap': false,
+            'text-allow-overlap': true,
+            'text-ignore-placement': true,
             'text-transform': 'uppercase',
           } as const}
           paint={{
