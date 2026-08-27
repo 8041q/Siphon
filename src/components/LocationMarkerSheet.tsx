@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Icon } from '../theme/Icon';
-import type { UserLocationMarkerConfig } from '../hooks/useUserLocationMarker';
+import { type UserLocationMarkerConfig, saveMarkerImage } from '../hooks/useUserLocationMarker';
 import { useSupport } from '../hooks/useSupport';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
@@ -66,8 +66,11 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        setMarker({ type: 'image', value: result.assets[0].uri });
-        bottomSheetRef.current?.dismiss();
+        const savedUri = await saveMarkerImage(result.assets[0].uri);
+        if (savedUri) {
+          setMarker({ type: 'image', value: savedUri });
+          bottomSheetRef.current?.dismiss();
+        }
       }
     }, [setMarker]);
 
