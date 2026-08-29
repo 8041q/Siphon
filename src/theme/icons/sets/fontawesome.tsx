@@ -1,8 +1,8 @@
-import { FontAwesome } from '@expo/vector-icons';
+import FontAwesome, { type FontAwesomeIconName } from "@react-native-vector-icons/fontawesome/static";
 
 import type { IconRenderer } from '../types';
 
-type FaName = keyof typeof FontAwesome.glyphMap;
+type FaName = FontAwesomeIconName;
 
 const MAPPING: Record<string, FaName> = {
   'map.fill': 'globe',

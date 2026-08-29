@@ -1,8 +1,8 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons, { type MaterialIconsIconName } from "@react-native-vector-icons/material-icons/static";
 
 import type { IconRenderer } from '../types';
 
-type MaterialName = keyof typeof MaterialIcons.glyphMap;
+type MaterialName = MaterialIconsIconName;
 
 const MAPPING: Record<string, MaterialName> = {
   'map.fill': 'map',

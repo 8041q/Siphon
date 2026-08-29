@@ -41,6 +41,9 @@
       "expo-router",
       "expo-status-bar",
       "@maplibre/maplibre-react-native",
+      "@react-native-vector-icons/ionicons",
+      "@react-native-vector-icons/fontawesome",
+      "@react-native-vector-icons/material-icons",
       [
         "./plugins/withKotlinVersion",
         {

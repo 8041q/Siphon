@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons, { type IoniconsIconName } from "@react-native-vector-icons/ionicons/static";
 
 import type { IconRenderer } from '../types';
 
-type IoniconsName = keyof typeof Ionicons.glyphMap;
+type IoniconsName = IoniconsIconName;
 
 const MAPPING: Record<string, IoniconsName> = {
   'map.fill': 'map',

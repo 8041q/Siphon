@@ -21,6 +21,25 @@ export const BRAND_ICONS: ImagesProps['images'] = {
 
   // Add here all brands so they can get rendered
   galp: require('../../../assets/brands/galp.png'),
+  bp: require('../../../assets/brands/bp.png'),
+  campsa: require('../../../assets/brands/campsa.png'),
+  cepsa: require('../../../assets/brands/cepsa.png'),
+  auchan: require('../../../assets/brands/auchan.png'),
+  autojulio: require('../../../assets/brands/autojulio.png'),
+  alvesbandeira: require('../../../assets/brands/alvesbandeira.png'),
+  dourogas: require('../../../assets/brands/dourogas.png'),
+  moeve: require('../../../assets/brands/moeve.png'),
+  nova: require('../../../assets/brands/nova.png'),
+  plenergy: require('../../../assets/brands/plenergy.png'),
+  prio: require('../../../assets/brands/prio.png'),
+  recheio: require('../../../assets/brands/recheio.png'),
+  repsol: require('../../../assets/brands/repsol.png'),
+  shell: require('../../../assets/brands/shell.png'),
+  tfuel: require('../../../assets/brands/tfuel.png'),
+  ozenergia: require('../../../assets/brands/ozenergia.png'),
+  petronor: require('../../../assets/brands/petronor.png'),
+  petroprix: require('../../../assets/brands/petroprix.png'),
+  intermarch: require('../../../assets/brands/intermarch.png'),
 };
 
 
@@ -32,13 +51,31 @@ export const BRAND_ICONS: ImagesProps['images'] = {
 export const BRAND_LOGO_IMAGES: ImagesProps['images'] = {
   // Provided later by the user, e.g.:
   // 'logo-reposol': require('../../../assets/brands/logo-reposol.png'),
-};
+}
 
 /** Normalized brand string -> logo image key in BRAND_LOGO_IMAGES. */
 export const BRAND_MATCH: Record<string, string> = {
-  galp: 'galp'
-  // e.g. reposol: 'logo-reposol',
-};
+  galp: 'galp',
+  bp: 'bp',
+  campsa: 'campsa',
+  cepsa: 'cepsa',
+  auchan: 'auchan',
+  autojulio: 'autojulio',
+  alvesbandeira: 'alvesbandeira',
+  dourogas: 'dourogas',
+  moeve: 'moeve',
+  nova: 'nova',
+  plenergy: 'plenergy',
+  prio: 'prio',
+  recheio: 'recheio',
+  repsol: 'repsol',
+  shell: 'shell',
+  tfuel: 'tfuel',
+  ozenergia: 'ozenergia',
+  petronor: 'petronor',
+  petroprix: 'petroprix',
+  intermarch: 'intermarch',
+}
 
 /** Image key for the shared teardrop body. */
 export const MARKER_SHAPE_ICON = 'marker-shape';

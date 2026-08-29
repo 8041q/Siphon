@@ -1,8 +1,8 @@
-import type { Ionicons } from '@expo/vector-icons';
+import Ionicons, { type IoniconsIconName } from "@react-native-vector-icons/ionicons/static";
 
 export type IconSetId = 'ionicons' | 'material' | 'fontawesome' | 'custom-svg';
 
-type IoniconsName = keyof typeof Ionicons.glyphMap;
+type IoniconsName = IoniconsIconName;
 type MaterialName = string;
 type FontAwesomeName = string;
 
