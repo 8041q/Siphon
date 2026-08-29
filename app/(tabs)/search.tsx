@@ -43,12 +43,12 @@ export default function SearchScreen() {
 
   const secondaryLabel = colors.secondaryLabel;
 
-  const results = useMemo(() => {
-    let filtered = allStations;
+  const filtered = useMemo(() => {
+    let result = allStations;
 
     if (brandQuery.trim()) {
       const q = brandQuery.trim().toLowerCase();
-      filtered = filtered.filter(
+      result = result.filter(
         (s) =>
           (s.properties.brand ?? '').toLowerCase().includes(q) ||
           (s.properties.name ?? '').toLowerCase().includes(q)
@@ -56,13 +56,13 @@ export default function SearchScreen() {
     }
 
     if (searchFilter.countries && searchFilter.countries.length > 0) {
-      filtered = filtered.filter((s) =>
+      result = result.filter((s) =>
         searchFilter.countries!.includes(s.properties.source)
       );
     }
 
     if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
-      filtered = filtered.filter((s) => {
+      result = result.filter((s) => {
         const fuels = s.properties.fuels ?? {};
         return searchFilter.fuelTypes!.some((key) => key in fuels);
       });
@@ -70,7 +70,7 @@ export default function SearchScreen() {
 
     if (searchFilter.priceRange) {
       const max = searchFilter.priceRange.max;
-      filtered = filtered.filter((s) => {
+      result = result.filter((s) => {
         const fuels = s.properties.fuels ?? {};
         if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
           return searchFilter.fuelTypes.some((key) => typeof fuels[key] === 'number' && fuels[key] < max);
@@ -81,7 +81,7 @@ export default function SearchScreen() {
 
     if (searchFilter.city?.trim()) {
       const q = searchFilter.city.trim().toLowerCase();
-      filtered = filtered.filter((s) => {
+      result = result.filter((s) => {
         const p = s.properties;
         return (
           (p.municipality ?? '').toLowerCase().includes(q) ||
@@ -96,7 +96,7 @@ export default function SearchScreen() {
       const userLat = location.latitude;
       const userLng = location.longitude;
 
-      const withDistance = filtered.map((s) => {
+      const withDistance = result.map((s) => {
         const [slng, slat] = s.geometry.coordinates;
         const dist = roadEstimateKm(userLat, userLng, slat, slng);
         return { station: s, distance: dist };
@@ -108,28 +108,32 @@ export default function SearchScreen() {
       return withinRange.map((d) => d.station);
     }
 
-    if (searchFilter.sortBy) {
-      filtered = [...filtered];
-      if (searchFilter.sortBy === 'price') {
-        const fuelKey = searchFilter.fuelTypes?.[0] ?? 'gasoline95';
-        filtered.sort((a, b) => {
-          const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
-          const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
-          return priceA - priceB;
-        });
-      } else if (searchFilter.sortBy === 'distance' && location) {
-        const userLat = location.latitude;
-        const userLng = location.longitude;
-        filtered.sort((a, b) => {
-          const [aLng, aLat] = a.geometry.coordinates;
-          const [bLng, bLat] = b.geometry.coordinates;
-          return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
-        });
-      }
+    return result;
+  }, [brandQuery, allStations, searchFilter.countries, searchFilter.fuelTypes, searchFilter.priceRange, searchFilter.city, searchFilter.maxDistance, location]);
+
+  const results = useMemo(() => {
+    if (!searchFilter.sortBy) return filtered;
+
+    const result = [...filtered];
+    if (searchFilter.sortBy === 'price') {
+      const fuelKey = searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95';
+      result.sort((a, b) => {
+        const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
+        const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
+        return priceA - priceB;
+      });
+    } else if (searchFilter.sortBy === 'distance' && location) {
+      const userLat = location.latitude;
+      const userLng = location.longitude;
+      result.sort((a, b) => {
+        const [aLng, aLat] = a.geometry.coordinates;
+        const [bLng, bLat] = b.geometry.coordinates;
+        return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
+      });
     }
 
-    return filtered;
-  }, [brandQuery, allStations, searchFilter, location]);
+    return result;
+  }, [filtered, searchFilter.sortBy, searchFilter.sortByFuel, searchFilter.fuelTypes, location]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>

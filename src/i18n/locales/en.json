@@ -43,7 +43,8 @@
     "sort_by": "Sort By",
     "no_sort": "Default",
     "sort_price": "Price",
-    "sort_distance": "Distance"
+    "sort_distance": "Distance",
+    "sort_fuel": "Fuel for price sort"
   },
   "favorites": {
     "empty_title": "No favorites yet",

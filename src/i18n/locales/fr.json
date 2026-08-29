@@ -43,7 +43,8 @@
     "sort_by": "Trier Par",
     "no_sort": "Par défaut",
     "sort_price": "Prix",
-    "sort_distance": "Distance"
+    "sort_distance": "Distance",
+    "sort_fuel": "Carburant pour le tri"
   },
   "favorites": {
     "empty_title": "Pas encore de favoris",

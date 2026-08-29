@@ -43,7 +43,8 @@
     "sort_by": "Sortieren Nach",
     "no_sort": "Standard",
     "sort_price": "Preis",
-    "sort_distance": "Entfernung"
+    "sort_distance": "Entfernung",
+    "sort_fuel": "Kraftstoff für Preisreihenfolge"
   },
   "favorites": {
     "empty_title": "Noch keine Favoriten",

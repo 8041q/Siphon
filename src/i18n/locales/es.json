@@ -43,7 +43,8 @@
     "sort_by": "Ordenar Por",
     "no_sort": "Predeterminado",
     "sort_price": "Precio",
-    "sort_distance": "Distancia"
+    "sort_distance": "Distancia",
+    "sort_fuel": "Combustible para ordenar"
   },
   "favorites": {
     "empty_title": "Aún sin favoritos",

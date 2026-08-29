@@ -71,8 +71,8 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "androidAppId": "ca-app-pub-9869503535733811~5440722415",
+          "iosAppId": "ca-app-pub-9869503535733811~6073428605",
           "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "Your data is used to keep Siphon free. Enabling tracking lets us show you relevant ads and supports development."
         }

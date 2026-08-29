@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 
@@ -56,7 +56,12 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
       const next = current.includes(key)
         ? current.filter((k) => k !== key)
         : [...current, key];
-      setLocalFilters({ ...localFilters, fuelTypes: next.length > 0 ? next : undefined });
+      const patch: Partial<SearchFilter> = { fuelTypes: next.length > 0 ? next : undefined };
+      if (current.includes(key) && localFilters.sortByFuel === key) {
+        patch.sortByFuel = undefined;
+        setSortFuelOpen(false);
+      }
+      setLocalFilters({ ...localFilters, ...patch });
     };
 
     const setPriceRange = (max: number | undefined) => {
@@ -71,8 +76,19 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
       setLocalFilters({ ...localFilters, maxDistance: km });
     };
 
+    const setSortByFuel = (fuelKey: string) => {
+      Haptics.selectionAsync();
+      setLocalFilters({ ...localFilters, sortByFuel: localFilters.sortByFuel === fuelKey ? undefined : fuelKey });
+      setSortFuelOpen(false);
+    };
+
+    const [sortFuelOpen, setSortFuelOpen] = useState(false);
+    const [sortFuelBtnHeight, setSortFuelBtnHeight] = useState(0);
+
     const handleClear = () => {
-      setLocalFilters({});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      pendingApplyRef.current = {};
+      bottomSheetRef.current?.dismiss();
     };
 
     const handleApply = () => {
@@ -102,6 +118,20 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
 
     const chipText = (selected: boolean) =>
       selected ? { color: colors.labelOnTint } : { color: colors.label };
+
+    const sortFuelOptions = useMemo(() => {
+      if (localFilters.sortBy !== 'price') return [];
+      const selected = localFilters.fuelTypes;
+      if (!selected || selected.length === 0) return [];
+      if (selected.length === 1) return [];
+      return selected;
+    }, [localFilters.sortBy, localFilters.fuelTypes]);
+
+    const activeSortFuel = useMemo(() => {
+      if (localFilters.sortBy !== 'price') return undefined;
+      if (sortFuelOptions.length <= 1) return sortFuelOptions[0] ?? localFilters.fuelTypes?.[0] ?? 'gasoline95';
+      return localFilters.sortByFuel ?? sortFuelOptions[0];
+    }, [localFilters.sortBy, localFilters.sortByFuel, sortFuelOptions, localFilters.fuelTypes]);
 
     return (
       <BottomSheetModal
@@ -275,7 +305,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
               <View className="flex-row gap-2 flex-wrap">
                 <Chip
                   selected={!localFilters.sortBy}
-                  onPress={() => setLocalFilters({ ...localFilters, sortBy: undefined })}
+                  onPress={() => setLocalFilters({ ...localFilters, sortBy: undefined, sortByFuel: undefined })}
                   className="rounded-full px-4 py-2"
                 >
                   <Text style={chipText(!localFilters.sortBy)} className="text-subheadline">
@@ -284,7 +314,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 </Chip>
                 <Chip
                   selected={localFilters.sortBy === 'price'}
-                  onPress={() => setLocalFilters({ ...localFilters, sortBy: localFilters.sortBy === 'price' ? undefined : 'price' })}
+                  onPress={() => { setSortFuelOpen(false); setLocalFilters({ ...localFilters, sortBy: localFilters.sortBy === 'price' ? undefined : 'price' }); }}
                   className="rounded-full px-4 py-2"
                 >
                   <Text style={chipText(localFilters.sortBy === 'price')} className="text-subheadline">
@@ -293,7 +323,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 </Chip>
                 <Chip
                   selected={localFilters.sortBy === 'distance'}
-                  onPress={() => setLocalFilters({ ...localFilters, sortBy: localFilters.sortBy === 'distance' ? undefined : 'distance' })}
+                  onPress={() => { setSortFuelOpen(false); setLocalFilters({ ...localFilters, sortBy: localFilters.sortBy === 'distance' ? undefined : 'distance' }); }}
                   className="rounded-full px-4 py-2"
                 >
                   <Text style={chipText(localFilters.sortBy === 'distance')} className="text-subheadline">
@@ -302,6 +332,84 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 </Chip>
               </View>
             </View>
+
+            {/* Sort by Fuel (only when price sort is active and multiple fuels selected) */}
+            {localFilters.sortBy === 'price' && sortFuelOptions.length > 1 && (
+              <View>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+                  {t('search.sort_fuel')}
+                </Text>
+                <View style={{ position: 'relative' }}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setSortFuelOpen(!sortFuelOpen)}
+                    onLayout={(e: LayoutChangeEvent) => setSortFuelBtnHeight(e.nativeEvent.layout.height)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: colors.surface,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Text style={{ color: colors.label }} className="text-subheadline">
+                      {fuelLabel(activeSortFuel ?? 'gasoline95')}
+                    </Text>
+                    <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+                      {sortFuelOpen ? '▲' : '▼'}
+                    </Text>
+                  </TouchableOpacity>
+                  {sortFuelOpen && (
+                    <>
+                      <Pressable
+                        style={{ position: 'absolute', top: -(sortFuelBtnHeight + 200), left: 0, right: 0, bottom: 0 }}
+                        onPress={() => setSortFuelOpen(false)}
+                      />
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: sortFuelBtnHeight + 4,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: colors.surface,
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          maxHeight: 200,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: -2 },
+                          shadowOpacity: 0.15,
+                          shadowRadius: 6,
+                          elevation: 8,
+                          zIndex: 100,
+                        }}
+                      >
+                        {sortFuelOptions.map((key) => {
+                          const isActive = activeSortFuel === key;
+                          return (
+                            <TouchableOpacity
+                              key={key}
+                              activeOpacity={0.7}
+                              onPress={() => setSortByFuel(key)}
+                              style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 10,
+                                backgroundColor: isActive ? colors.tint + '18' : 'transparent',
+                              }}
+                            >
+                              <Text style={{ color: isActive ? colors.tint : colors.label }} className="text-subheadline">
+                                {fuelLabel(key)}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </>
+                  )}
+                </View>
+              </View>
+            )}
 
             {/* Action buttons */}
             <View className="flex-row gap-3 pt-sm">

@@ -46,6 +46,7 @@ export type SearchFilter = {
   city?: string;
   maxDistance?: number;
   sortBy?: SortOption;
+  sortByFuel?: string;
 };
 
 interface UIState {
@@ -420,28 +421,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    if (searchFilter.sortBy) {
-      result = [...result];
-      if (searchFilter.sortBy === 'price') {
-        const fuelKey = searchFilter.fuelTypes?.[0] ?? 'gasoline95';
-        result.sort((a, b) => {
-          const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
-          const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
-          return priceA - priceB;
-        });
-      } else if (searchFilter.sortBy === 'distance') {
-        const userLat = location.latitude;
-        const userLng = location.longitude;
-        result.sort((a, b) => {
-          const [aLng, aLat] = a.geometry.coordinates;
-          const [bLng, bLat] = b.geometry.coordinates;
-          return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
-        });
-      }
+    return result;
+  }, [stations, searchFilter.brand, searchFilter.countries, searchFilter.fuelTypes, searchFilter.priceRange, searchFilter.city]);
+
+  const sortedStations = useMemo(() => {
+    if (!searchFilter.sortBy) return filteredStations;
+
+    const result = [...filteredStations];
+    if (searchFilter.sortBy === 'price') {
+      const fuelKey = searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95';
+      result.sort((a, b) => {
+        const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
+        const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
+        return priceA - priceB;
+      });
+    } else if (searchFilter.sortBy === 'distance') {
+      const userLat = location.latitude;
+      const userLng = location.longitude;
+      result.sort((a, b) => {
+        const [aLng, aLat] = a.geometry.coordinates;
+        const [bLng, bLat] = b.geometry.coordinates;
+        return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
+      });
     }
 
     return result;
-  }, [stations, searchFilter, location.latitude, location.longitude]);
+  }, [filteredStations, searchFilter.sortBy, searchFilter.sortByFuel, searchFilter.fuelTypes, location.latitude, location.longitude]);
 
   const stationValue = useMemo<StationState>(
     () => ({
@@ -456,10 +461,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       offline,
       rateLimited,
       syncProgress,
-      filteredStations,
+      filteredStations: sortedStations,
       reload: load,
     }),
-    [stations, allStations, stationDistances, distanceLoading, distanceImproving, improveDistances, loading, error, offline, rateLimited, syncProgress, filteredStations, load]
+    [stations, allStations, stationDistances, distanceLoading, distanceImproving, improveDistances, loading, error, offline, rateLimited, syncProgress, sortedStations, load]
   );
 
   const locationValue = useMemo<LocationState>(

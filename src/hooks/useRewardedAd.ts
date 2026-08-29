@@ -7,10 +7,14 @@ import {
   MobileAds,
 } from 'react-native-google-mobile-ads';
 
+import { Platform } from 'react-native';
+
 // TODO(release): replace with your real AdMob rewarded ad unit IDs.
 // Test IDs are used until then so the flow works end-to-end. The matching
 // AdMob App IDs live in app.json under the react-native-google-mobile-ads plugin.
-export const REWARDED_AD_UNIT_ID = TestIds.REWARDED;
+export const REWARDED_AD_UNIT_ID = Platform.OS === 'ios'
+  ? 'ca-app-pub-9869503535733811/3385404717'
+  : 'ca-app-pub-9869503535733811/3093760673';
 
 const LOAD_TIMEOUT_MS = 15000;
 
