@@ -31,6 +31,8 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
   const [showPaymentTip, setShowPaymentTip] = useState(false);
   const entries = Object.entries(fuels ?? {}) as [string, number][];
   const locationParts = getLocationParts(station.properties);
+  const { favorites, toggleFavorite } = useUI();
+  const favorite = favorites?.has(station.properties.id) ?? false;
 
   const handleCopyAddress = useCallback(() => {
     const formatted = formatStationAddress(station.properties);
@@ -57,6 +59,15 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
             </Text>
           )}
         </View>
+        <Pressable onPress={() => toggleFavorite(station)} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <View className="rounded-sm p-1.5">
+            <Icon
+              name={favorite ? 'star.fill' : 'star'}
+              size={18}
+              color={favorite ? colors.favorite : colors.tertiaryLabel}
+            />
+          </View>
+        </Pressable>
       </View>
 
       <View className="flex-row items-start">

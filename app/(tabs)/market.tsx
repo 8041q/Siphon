@@ -201,7 +201,7 @@ export default function MarketScreen() {
                   {metrics && metrics.status === 'ok' ? (
                     <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
                       {t('market.rocket_feather_desc', {
-                        rock: formatRatio(metrics.rocket),
+                        rocket: formatRatio(metrics.rocket),
                         feather: formatRatio(metrics.feather),
                         asymmetry: metrics.asymmetry.toFixed(2),
                       })}

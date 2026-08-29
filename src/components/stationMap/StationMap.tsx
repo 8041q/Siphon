@@ -231,7 +231,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'text-allow-overlap': true,
             'text-ignore-placement': true,
             'text-transform': 'uppercase',
-            'symbol-sort-key': ['get', '_sortLat'],
+            'symbol-sort-key': ['*', -1, ['get', '_sortLat']],
           } as const}
           paint={{
             'icon-halo-color': '#111111',
@@ -253,7 +253,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
             'icon-offset': [0, -144],
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
-            'symbol-sort-key': ['get', '_sortLat'],
+            'symbol-sort-key': ['*', -1, ['get', '_sortLat']],
           } as const}
           paint={{
             'icon-halo-color': '#111111',
