@@ -25,6 +25,7 @@ export const midnight: Palette = {
     groupedBackground: '#E8EEF6',
     surface: '#FFFFFF',
     sheet: '#FFFFFF',
+    markerBackground: '#FFFFFF',
     // ── Text ──────────────────────────────────────────────────────
     label: '#0B1B2B',
     secondaryLabel: 'rgba(11, 27, 43, 0.7)',
@@ -85,6 +86,7 @@ export const midnight: Palette = {
     groupedBackground: '#142036',
     surface: '#1C2A44',
     sheet: '#0B1424',
+    markerBackground: '#52729a',
     // ── Text ──────────────────────────────────────────────────────
     label: '#EAF1FB',
     secondaryLabel: 'rgba(234, 241, 251, 0.75)',
@@ -150,6 +152,7 @@ export const sunset: Palette = {
     groupedBackground: '#F7ECE3',
     surface: '#FFFFFF',
     sheet: '#FFFFFF',
+    markerBackground: '#FFFFFF',
     // ── Text ──────────────────────────────────────────────────────
     label: '#3B1D12',
     secondaryLabel: 'rgba(59, 29, 18, 0.7)',
@@ -210,6 +213,7 @@ export const sunset: Palette = {
     groupedBackground: '#352017',
     surface: '#46291D',
     sheet: '#25140C',
+    markerBackground: '#ac765f',
     // ── Text ──────────────────────────────────────────────────────
     label: '#FDEBE0',
     secondaryLabel: 'rgba(253, 235, 224, 0.75)',
@@ -275,6 +279,7 @@ export const forest: Palette = {
     groupedBackground: '#E6F0E9',
     surface: '#FFFFFF',
     sheet: '#FFFFFF',
+    markerBackground: '#FFFFFF',
     // ── Text ──────────────────────────────────────────────────────
     label: '#12241A',
     secondaryLabel: 'rgba(18, 36, 26, 0.7)',
@@ -335,6 +340,7 @@ export const forest: Palette = {
     groupedBackground: '#16271B',
     surface: '#1E3325',
     sheet: '#0E1B13',
+    markerBackground: '#69a179',
     // ── Text ──────────────────────────────────────────────────────
     label: '#E9F5EC',
     secondaryLabel: 'rgba(233, 245, 236, 0.75)',
@@ -400,6 +406,7 @@ export const mono: Palette = {
     groupedBackground: '#F0F0F0',
     surface: '#FFFFFF',
     sheet: '#FFFFFF',
+    markerBackground: '#FFFFFF',
     // ── Text ──────────────────────────────────────────────────────
     label: '#111111',
     secondaryLabel: 'rgba(17, 17, 17, 0.7)',
@@ -460,6 +467,7 @@ export const mono: Palette = {
     groupedBackground: '#1B1B1B',
     surface: '#262626',
     sheet: '#111111',
+    markerBackground: '#cdcdcd',
     // ── Text ──────────────────────────────────────────────────────
     label: '#F5F5F5',
     secondaryLabel: 'rgba(245, 245, 245, 0.75)',

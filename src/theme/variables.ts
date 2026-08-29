@@ -7,6 +7,7 @@ const COLOR_SLOTS = [
   'grouped-background',
   'surface',
   'sheet',
+  'marker-background',
   // ── Text ────────────────────────────────────────────────────────
   'label',
   'secondary-label',

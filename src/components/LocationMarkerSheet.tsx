@@ -118,7 +118,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     width: 54,
                     height: 54,
                     borderRadius: 27,
-                    backgroundColor: colors.surface,
+                        backgroundColor: colors.markerBackground,
                     alignItems: 'center',
                     justifyContent: 'center',
                     shadowColor: '#000',
@@ -139,7 +139,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                         width: 18,
                         height: 18,
                         borderRadius: 9,
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.markerBackground,
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}>

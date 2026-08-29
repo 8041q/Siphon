@@ -13,6 +13,8 @@ export const ui = {
     surface: '#F6FAFB',
     /** Bottom sheet background (distinct from surface when needed) */
     sheet: '#FFFFFF',
+    /** Lighter background for marker picker circles */
+    markerBackground: '#F6FAFB',
 
     // ── Text ──────────────────────────────────────────────────────
     /** Primary text */
@@ -59,6 +61,8 @@ export const ui = {
     surface: '#1B2C2C',
     /** Bottom sheet background */
     sheet: '#0D1717',
+    /** Lighter background for marker picker circles */
+    markerBackground: '#cbbdbd',
 
     // ── Text ──────────────────────────────────────────────────────
     /** Primary text */

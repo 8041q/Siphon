@@ -69,10 +69,9 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const stationsSourceData = useMemo<GeoJSON.FeatureCollection>(() => {
     const features = stations.map((f) => {
       const { _price95, _priceDiesel } = f.properties;
-      let _priceLabel = '';
-      if (_price95 != null && _priceDiesel != null) _priceLabel = `95 ${_price95}\nD ${_priceDiesel}`;
-      else if (_price95 != null) _priceLabel = `95 ${_price95}`;
-      else if (_priceDiesel != null) _priceLabel = `D ${_priceDiesel}`;
+      const price95 = _price95 != null ? _price95 : '-';
+      const priceDiesel = _priceDiesel != null ? _priceDiesel : '-';
+      const _priceLabel = `95 ${price95}\nD ${priceDiesel}`;
       return { ...f, properties: { ...f.properties, _priceLabel } };
     });
 
