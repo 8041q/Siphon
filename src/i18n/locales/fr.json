@@ -39,7 +39,11 @@
     "city": "Ville",
     "city_placeholder": "Filtrer par ville, municipalité...",
     "distance": "Distance",
-    "any_distance": "Toute"
+    "any_distance": "Toute",
+    "sort_by": "Trier Par",
+    "no_sort": "Par défaut",
+    "sort_price": "Prix",
+    "sort_distance": "Distance"
   },
   "favorites": {
     "empty_title": "Pas encore de favoris",
@@ -110,7 +114,7 @@
     "worth_it": "Ça vaut le coup — vous économisez €{{saving}}, le trajet coûte €{{cost}}",
     "not_worth": "Pas rentable — le trajet coûte €{{cost}}, les économies sont de €{{saving}}",
     "cheapest_nearby": "Moins chère à proximité : €{{price}}",
-    "this_is_cheapest": "La moins chère pour ce carburant à proximité",
+    "this_is_cheapest": "Le moins cher à proximité",
     "ev_vs_gas": "VE vs Carburant - comparaison",
     "ev_vs_gas_sub": "Délai de rentabilité dúne voiture électrique",
     "ev_caption": "Comparez le coût total et le CO₂ d'une voiture électrique à ceux d'une essence/diesel sur toute sa durée de vie, remplacement unique de la batterie inclus.",

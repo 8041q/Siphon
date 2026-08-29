@@ -39,7 +39,11 @@
     "city": "Cidade",
     "city_placeholder": "Filtrar por cidade, município...",
     "distance": "Distância",
-    "any_distance": "Qualquer"
+    "any_distance": "Qualquer",
+    "sort_by": "Ordenar Por",
+    "no_sort": "Predefinido",
+    "sort_price": "Preço",
+    "sort_distance": "Distância"
   },
   "favorites": {
     "empty_title": "Ainda sem favoritos",
@@ -110,7 +114,7 @@
     "worth_it": "Vale a pena — poupa €{{saving}}, a viagem custa €{{cost}}",
     "not_worth": "Não vale a pena — a viagem custa €{{cost}}, a poupança é de €{{saving}}",
     "cheapest_nearby": "Mais barata perto: €{{price}}",
-    "this_is_cheapest": "A mais barata para este combustível perto",
+    "this_is_cheapest": "A mais barata por perto",
     "ev_vs_gas": "EV vs Combustão - Comparação",
     "ev_vs_gas_sub": "Tempo para que vale a pena",
     "ev_caption": "Compare o custo total e o CO₂ de um carro elétrico com um a gasolina/gasóleo ao longo da sua vida útil, incluindo a substituição única da bateria.",

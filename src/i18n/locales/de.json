@@ -39,7 +39,11 @@
     "city": "Stadt",
     "city_placeholder": "Nach Stadt, Gemeinde filtern...",
     "distance": "Entfernung",
-    "any_distance": "Beliebig"
+    "any_distance": "Beliebig",
+    "sort_by": "Sortieren Nach",
+    "no_sort": "Standard",
+    "sort_price": "Preis",
+    "sort_distance": "Entfernung"
   },
   "favorites": {
     "empty_title": "Noch keine Favoriten",
@@ -110,7 +114,7 @@
     "worth_it": "Lohnt sich — Sie sparen €{{saving}}, die Fahrt kostet €{{cost}}",
     "not_worth": "Lohnt sich nicht — die Fahrt kostet €{{cost}}, die Ersparnis beträgt €{{saving}}",
     "cheapest_nearby": "Günstigste in der Nähe: €{{price}}",
-    "this_is_cheapest": "Günstigste für diesen Kraftstoff in der Nähe",
+    "this_is_cheapest": "De goedkoopste",
     "ev_vs_gas": "EV vs Verbrenner - vergelijking",
     "ev_vs_gas_sub": "Terugverdientijd van een elektrische auto",
     "ev_caption": "Vergleicht die Gesamtkosten und CO₂ eines E-Autos mit einem Benzin-/Dieselauto über die gesamte Lebensdauer, inklusive dem einmaligen Batterietausch.",

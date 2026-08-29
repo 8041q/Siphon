@@ -36,6 +36,8 @@ interface LocationState {
   locateWithGps: () => Promise<{ latitude: number; longitude: number } | null>;
 }
 
+export type SortOption = 'price' | 'distance';
+
 export type SearchFilter = {
   brand?: string;
   countries?: CountryCode[];
@@ -43,6 +45,7 @@ export type SearchFilter = {
   priceRange?: { max: number } | null;
   city?: string;
   maxDistance?: number;
+  sortBy?: SortOption;
 };
 
 interface UIState {
@@ -417,8 +420,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    if (searchFilter.sortBy) {
+      result = [...result];
+      if (searchFilter.sortBy === 'price') {
+        const fuelKey = searchFilter.fuelTypes?.[0] ?? 'gasoline95';
+        result.sort((a, b) => {
+          const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
+          const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
+          return priceA - priceB;
+        });
+      } else if (searchFilter.sortBy === 'distance') {
+        const userLat = location.latitude;
+        const userLng = location.longitude;
+        result.sort((a, b) => {
+          const [aLng, aLat] = a.geometry.coordinates;
+          const [bLng, bLat] = b.geometry.coordinates;
+          return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
+        });
+      }
+    }
+
     return result;
-  }, [stations, searchFilter]);
+  }, [stations, searchFilter, location.latitude, location.longitude]);
 
   const stationValue = useMemo<StationState>(
     () => ({

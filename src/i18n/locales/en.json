@@ -39,7 +39,11 @@
     "city": "City",
     "city_placeholder": "Filter by city, municipality...",
     "distance": "Distance",
-    "any_distance": "Any"
+    "any_distance": "Any",
+    "sort_by": "Sort By",
+    "no_sort": "Default",
+    "sort_price": "Price",
+    "sort_distance": "Distance"
   },
   "favorites": {
     "empty_title": "No favorites yet",
@@ -109,8 +113,8 @@
     "co2_tank_label": "Full-tank CO₂",
     "worth_it": "Worth it — you save €{{saving}}, trip costs €{{cost}}",
     "not_worth": "Not worth it — trip costs €{{cost}}, savings are €{{saving}}",
-    "cheapest_nearby": "Cheapest nearby: €{{price}}",
-    "this_is_cheapest": "Cheapest for this fuel nearby",
+    "cheapest_nearby": "Cheapest nearby is: €{{price}}",
+    "this_is_cheapest": "The cheapest nearby",
     "ev_vs_gas": "EV vs Gas - Comparison",
     "ev_vs_gas_sub": "Time for EV to be worth it",
     "ev_caption": "Compare the total cost and CO₂ of an electric car vs a petrol/diesel car over its lifetime, including the one-time battery replacement.",

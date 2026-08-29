@@ -96,6 +96,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
       if (localFilters.priceRange) count++;
       if (localFilters.city?.trim()) count++;
       if (localFilters.maxDistance) count++;
+      if (localFilters.sortBy) count++;
       return count;
     }, [localFilters]);
 
@@ -263,6 +264,42 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                     </Chip>
                   );
                 })}
+              </View>
+            </View>
+
+            {/* Sort By */}
+            <View>
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+                {t('search.sort_by')}
+              </Text>
+              <View className="flex-row gap-2 flex-wrap">
+                <Chip
+                  selected={!localFilters.sortBy}
+                  onPress={() => setLocalFilters({ ...localFilters, sortBy: undefined })}
+                  className="rounded-full px-4 py-2"
+                >
+                  <Text style={chipText(!localFilters.sortBy)} className="text-subheadline">
+                    {t('search.no_sort')}
+                  </Text>
+                </Chip>
+                <Chip
+                  selected={localFilters.sortBy === 'price'}
+                  onPress={() => setLocalFilters({ ...localFilters, sortBy: localFilters.sortBy === 'price' ? undefined : 'price' })}
+                  className="rounded-full px-4 py-2"
+                >
+                  <Text style={chipText(localFilters.sortBy === 'price')} className="text-subheadline">
+                    {t('search.sort_price')}
+                  </Text>
+                </Chip>
+                <Chip
+                  selected={localFilters.sortBy === 'distance'}
+                  onPress={() => setLocalFilters({ ...localFilters, sortBy: localFilters.sortBy === 'distance' ? undefined : 'distance' })}
+                  className="rounded-full px-4 py-2"
+                >
+                  <Text style={chipText(localFilters.sortBy === 'distance')} className="text-subheadline">
+                    {t('search.sort_distance')}
+                  </Text>
+                </Chip>
               </View>
             </View>
 

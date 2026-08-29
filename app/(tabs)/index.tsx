@@ -28,6 +28,7 @@ export default function MapScreen() {
     if (searchFilter.priceRange) count++;
     if (searchFilter.city?.trim()) count++;
     if (searchFilter.maxDistance) count++;
+    if (searchFilter.sortBy) count++;
     return count;
   }, [searchFilter]);
 

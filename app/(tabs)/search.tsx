@@ -30,6 +30,7 @@ export default function SearchScreen() {
     if (searchFilter.priceRange) count++;
     if (searchFilter.city?.trim()) count++;
     if (searchFilter.maxDistance) count++;
+    if (searchFilter.sortBy) count++;
     return count;
   }, [searchFilter]);
 
@@ -105,6 +106,26 @@ export default function SearchScreen() {
       withinRange.sort((a, b) => a.distance - b.distance);
 
       return withinRange.map((d) => d.station);
+    }
+
+    if (searchFilter.sortBy) {
+      filtered = [...filtered];
+      if (searchFilter.sortBy === 'price') {
+        const fuelKey = searchFilter.fuelTypes?.[0] ?? 'gasoline95';
+        filtered.sort((a, b) => {
+          const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
+          const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
+          return priceA - priceB;
+        });
+      } else if (searchFilter.sortBy === 'distance' && location) {
+        const userLat = location.latitude;
+        const userLng = location.longitude;
+        filtered.sort((a, b) => {
+          const [aLng, aLat] = a.geometry.coordinates;
+          const [bLng, bLat] = b.geometry.coordinates;
+          return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
+        });
+      }
     }
 
     return filtered;
