@@ -61,9 +61,9 @@ export const STYLE_SETS: Record<StyleSetId, StyleRules> = {
 
 export const STYLE_SET_ORDER: StyleSetId[] = [
   'default',
-  'liquid-glass',
   'dotted',
   'retro',
+  'liquid-glass',
 ];
 
 export function getStyleSet(id: StyleSetId): StyleRules {

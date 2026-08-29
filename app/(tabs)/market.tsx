@@ -63,7 +63,7 @@ export default function MarketScreen() {
   const chipText = (sel: boolean) => ({
     fontSize: 13,
     fontWeight: '600' as const,
-    color: sel ? '#FFFFFF' : colors.label,
+    color: sel ? colors.labelOnTint : colors.label,
   });
 
   return (

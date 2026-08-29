@@ -8,26 +8,26 @@ const STORAGE_KEY = 'siphon:adRewards';
 export type RewardItem = { id: string; requiredWatches: number };
 
 export const PALETTE_REWARDS: RewardItem[] = [
-  { id: 'midnight', requiredWatches: 5 },
-  { id: 'sunset', requiredWatches: 10 },
-  { id: 'forest', requiredWatches: 15 },
-  { id: 'mono', requiredWatches: 25 },
+  { id: 'midnight', requiredWatches: 3 },
+  { id: 'sunset', requiredWatches: 6 },
+  { id: 'forest', requiredWatches: 10 },
+  { id: 'mono', requiredWatches: 15 },
 ];
 
 export const ICON_REWARDS: RewardItem[] = [
-  { id: 'material', requiredWatches: 5 },
+  { id: 'material', requiredWatches: 3 },
   { id: 'fontawesome', requiredWatches: 10 },
   { id: 'custom-svg', requiredWatches: 15 },
 ];
 
 export const STYLE_REWARDS: RewardItem[] = [
-  { id: 'liquid-glass', requiredWatches: 3 },
-  { id: 'dotted', requiredWatches: 8 },
-  { id: 'retro', requiredWatches: 15 },
+  { id: 'dotted', requiredWatches: 4 },
+  { id: 'retro', requiredWatches: 4 },
+  { id: 'liquid-glass', requiredWatches: 10 },
 ];
 
 export function rewardForId(id: string): RewardItem | undefined {
-  return [...PALETTE_REWARDS].find((r) => r.id === id);
+  return [...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS].find((r) => r.id === id);
 }
 
 export function rewardForPalette(id: PaletteId): RewardItem | undefined {
@@ -50,7 +50,7 @@ type AdRewardsState = {
 const EMPTY: AdRewardsState = { watchedCount: 0, unlocked: [] };
 
 function nextReward(watchedCount: number): RewardItem | undefined {
-  return [...PALETTE_REWARDS]
+  return [...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS]
     .filter((r) => r.requiredWatches > watchedCount)
     .sort((a, b) => a.requiredWatches - b.requiredWatches)[0];
 }
@@ -66,8 +66,8 @@ export function useAdRewards() {
           try {
             const parsed = JSON.parse(val) as AdRewardsState;
             const watchedCount = Math.max(0, Number(parsed.watchedCount) || 0);
-            const unlocked = Array.isArray(parsed.unlocked) ? parsed.unlocked : [];
-            // const unlocked = [...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS].map((r) => r.id);
+            // const unlocked = Array.isArray(parsed.unlocked) ? parsed.unlocked : [];
+            const unlocked = [...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS].map((r) => r.id);
             setState({ watchedCount, unlocked });
           } catch {}
         }
@@ -89,7 +89,7 @@ export function useAdRewards() {
     setState((prev) => {
       const watchedCount = prev.watchedCount + 1;
       const unlocked = [...prev.unlocked];
-      for (const reward of [...PALETTE_REWARDS]) {
+      for (const reward of [...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS]) {
         if (reward.requiredWatches <= watchedCount && !unlocked.includes(reward.id)) {
           unlocked.push(reward.id);
         }

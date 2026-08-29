@@ -5,8 +5,8 @@ import type { IconRenderer } from '../types';
 type FaName = keyof typeof FontAwesome.glyphMap;
 
 const MAPPING: Record<string, FaName> = {
-  'map.fill': 'map',
-  'map': 'map',
+  'map.fill': 'globe',
+  'map': 'globe',
   'list.bullet': 'list',
   'list': 'list',
   'magnifyingglass': 'search',

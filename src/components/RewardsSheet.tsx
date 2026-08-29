@@ -9,7 +9,7 @@ import { PALETTES, PALETTE_ORDER } from '../theme/palettes';
 import type { PaletteId } from '../theme/palettes';
 import { ICON_SET_ORDER, ICON_SETS } from '../theme/icons';
 import type { IconSetId } from '../theme/icons';
-import { STYLE_SET_ORDER } from '../theme/styles';
+import { STYLE_SET_ORDER, STYLE_SETS } from '../theme/styles';
 import type { StyleSetId } from '../theme/styles';
 import { rewardForPalette, rewardForIcon, rewardForStyle } from '../hooks/useAdRewards';
 import { useThemeTokens } from '../hooks/useThemeTokens';
@@ -22,14 +22,6 @@ export type RewardsSheetHandle = { present: () => void };
 const LOCKED_NOTICE_MS = 1800;
 const UNLOCKED_FLASH_MS = 2500;
 const AD_FAILED_MS = 2500;
-
-function swatchStyle(base: string, borderColor: string) {
-  return {
-    backgroundColor: base,
-    borderColor,
-    borderWidth: 1,
-  };
-}
 
 export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function RewardsSheet(
   _props,
@@ -206,31 +198,53 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
         <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
           {t('settings.rewards_palettes')}
         </Text>
-        {PALETTE_ORDER.map((id) => {
-          const palette = PALETTES[id];
-          const reward = rewardForPalette(id);
-          const unlocked = !reward || isUnlocked(reward.id);
-          const selected = paletteId === id;
-          return (
-            <TouchableOpacity
-              key={id}
-              activeOpacity={0.7}
-              onPress={() => handleSelectPalette(id)}
-              className="flex-row items-center justify-between py-md px-sm"
-            >
-              <View className="flex-row items-center flex-1">
-                <View className="mr-sm flex-row -space-x-1">
-                  <View style={[swatchStyle(palette.light.background, colors.separator), { width: 20, height: 20, borderRadius: 10 }]} />
-                  <View style={[swatchStyle(palette.dark.background, colors.separator), { width: 20, height: 20, borderRadius: 10 }]} />
+{PALETTE_ORDER.map((id) => {
+            const palette = PALETTES[id];
+            const reward = rewardForPalette(id);
+            const unlocked = !reward || isUnlocked(reward.id);
+            const selected = paletteId === id;
+            const paletteKeys = ['surface', 'tint'] as const;
+            return (
+              <TouchableOpacity
+                key={id}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPalette(id)}
+                className="flex-row items-center justify-between py-md px-sm"
+              >
+                <View className="flex-row items-center flex-1">
+                  <View
+                    style={{
+                      backgroundColor: '#f5efef',
+                      borderRadius: 8,
+                      paddingHorizontal: 6,
+                      paddingVertical: 4,
+                    }}
+                  >
+                    <View className="flex-row items-center -space-x-2">
+                      <View style={{ width: 0 }} />
+                      {paletteKeys.map((key) => (
+                        <View
+                          key={`${key}-dark`}
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: 8,
+                            backgroundColor: palette.dark[key],
+                            borderWidth: 1,
+                            borderColor: '#999',
+                          }}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ml-sm ${selected ? 'font-semibold' : ''}`}>
+                    {t(`settings.palette_${id}`)}
+                  </Text>
                 </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
-                  {t(`settings.palette_${id}`)}
-                </Text>
-              </View>
-              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
-            </TouchableOpacity>
-          );
-        })}
+                {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
+              </TouchableOpacity>
+            );
+          })}
 
         <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
 
@@ -250,11 +264,11 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
               className="flex-row items-center justify-between py-md px-sm"
             >
               <View className="flex-row items-center flex-1">
-                <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
-                  style={{ backgroundColor: colors.groupedBackground }}
-                >
-                  {iconSet.render({ name: 'star.fill', size: 18, color: colors.tint })}
-                </View>
+<View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
+                    style={{ backgroundColor: colors.groupedBackground }}
+                  >
+                    {iconSet.render({ name: 'map.fill', size: 18, color: colors.tint })}
+                  </View>
                 <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
                   {t(`settings.iconset_${id}`)}
                 </Text>
@@ -269,38 +283,52 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
         <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
           {t('settings.rewards_styles')}
         </Text>
-        {STYLE_SET_ORDER.map((id) => {
-          const reward = rewardForStyle(id);
-          const unlocked = !reward || isUnlocked(reward.id);
-          const selected = styleSetId === id;
-          return (
-            <TouchableOpacity
-              key={id}
-              activeOpacity={0.7}
-              onPress={() => handleSelectStyle(id)}
-              className="flex-row items-center justify-between py-md px-sm"
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="w-10 h-10 items-center justify-center mr-sm border"
-                  style={{ backgroundColor: colors.groupedBackground, borderColor: colors.separator }}
-                >
+{STYLE_SET_ORDER.map((id) => {
+            const styleSet = STYLE_SETS[id];
+            const cardRules = styleSet.card;
+            const reward = rewardForStyle(id);
+            const unlocked = !reward || isUnlocked(reward.id);
+            const selected = styleSetId === id;
+            const isGlass = cardRules.glass === true;
+            return (
+              <TouchableOpacity
+                key={id}
+                activeOpacity={0.7}
+                onPress={() => handleSelectStyle(id)}
+                className="flex-row items-center justify-between py-md px-sm"
+              >
+                <View className="flex-row items-center flex-1">
                   <View
-                    className="w-5 h-5"
+                    className="w-10 h-10 items-center justify-center mr-sm border"
                     style={{
-                      backgroundColor: colors.tint,
-                      borderRadius: id === 'liquid-glass' ? 10 : id === 'retro' ? 2 : 5,
+                      backgroundColor: isGlass
+                        ? colors.tint + '15'
+                        : colors.groupedBackground,
+                      borderColor: isGlass ? colors.tint + '80' : colors.separator,
+                      borderRadius: cardRules.borderRadius ?? 8,
+                      borderStyle: cardRules.borderStyle ?? 'solid',
+                      borderWidth: isGlass ? 1.5 : (cardRules.borderWidth ?? 0),
                     }}
-                  />
+                  >
+                    {isGlass && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          inset: 2,
+                          borderRadius: (cardRules.borderRadius ?? 8) - 2,
+                          backgroundColor: 'rgba(255,255,255,0.3)',
+                        }}
+                      />
+                    )}
+                  </View>
+                  <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
+                    {t(`settings.styleset_${id}`)}
+                  </Text>
                 </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
-                  {t(`settings.styleset_${id}`)}
-                </Text>
-              </View>
-              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
-            </TouchableOpacity>
-          );
-        })}
+                {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
+              </TouchableOpacity>
+            );
+          })}
 
         <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-md">
           {t('settings.rewards_footnote')}
