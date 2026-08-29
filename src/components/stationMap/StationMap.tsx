@@ -220,7 +220,8 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           layout={{
             'icon-image': MARKER_SHAPE_ICON,
             'icon-anchor': 'bottom',
-            'icon-size': 1,
+            'icon-size': 0.098,
+            'icon-rotate': 180,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'text-field': ['get', '_priceLabel'],

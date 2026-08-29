@@ -1,8 +1,5 @@
 // Marker assets and brand logo registry for the station map.
 //
-// Shared SDF shapes (generated once by scripts/generate-teardrop.mjs):
-//   - marker-shape: teardrop silhouette, tinted via `icon-color`.
-//
 // To add a brand:
 //   1. Drop a transparent PNG logo at assets/brands/<key>.png. Aim for ~48x48
 //      (the logo layer uses icon-size 0.5, so ~24px on screen inside the pin).

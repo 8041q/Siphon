@@ -20,7 +20,7 @@ const COUNTRIES: { key: string; labelKey: string }[] = [
 const FUELS = ['gasoline95', 'diesel'] as const;
 
 function formatRatio(v: number): string {
-  return v === 0 ? '—' : v.toFixed(2);
+  return v === 0 ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
 }
 
 function formatTrend(v: number | null | undefined): string {
@@ -198,15 +198,29 @@ export default function MarketScreen() {
                   <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14, marginBottom: 4 }}>
                     {t('market.rocket_feather_label')}
                   </Text>
-                  {metrics && metrics.status === 'ok' ? (
-                    <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
-                      {t('market.rocket_feather_desc', {
-                        rocket: formatRatio(metrics.rocket),
-                        feather: formatRatio(metrics.feather),
-                        asymmetry: metrics.asymmetry.toFixed(2),
-                      })}
-                    </Text>
-                  ) : (
+                  {metrics && metrics.status === 'ok' ? (() => {
+                    const latestPrice = retailPoints[retailPoints.length - 1]?.value ?? 0;
+                    const toMonthlyPct = (delta: number) =>
+                      latestPrice > 0 ? (delta * 30 / latestPrice) * 100 : 0;
+                    const rPct = toMonthlyPct(metrics.rocket);
+                    const fPct = toMonthlyPct(metrics.feather);
+                    const asym = rPct !== 0 ? Math.abs(fPct / rPct) : 0;
+                    return (
+                      <>
+                        <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
+                          {t('market.rocket_feather_desc', {
+                            rocket: formatRatio(rPct),
+                            feather: formatRatio(fPct),
+                          })}
+                        </Text>
+                        <Text style={{ color: colors.chartLabel, fontSize: 12, marginTop: 4 }}>
+                          {t('market.asymmetry_desc', {
+                            asymmetry: asym !== 0 ? asym.toFixed(2) : '—',
+                          })}
+                        </Text>
+                      </>
+                    );
+                  })() : (
                     <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
                       {t('market.insufficient_data')}
                     </Text>
