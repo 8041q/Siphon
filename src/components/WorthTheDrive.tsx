@@ -74,7 +74,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
   if (!matching.length) return null;
 
   return (
-    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg gap-md">
+    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg gap-md">
       {cardGlass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
         {t('settings.drive_cost_title')}
@@ -122,7 +122,7 @@ const WorthTheDriveComponent = ({ station, distanceKm, fuelType }: WorthTheDrive
                     if (costToCheapest !== undefined) {
                       const worth = saving > costToCheapest;
                       return (
-                        <View className="flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs" style={[{ backgroundColor: worth ? colors.priceLowTint : colors.priceHighTint }, applyComponentRules(chipRules)]}>
+                        <View className="flex-row items-start gap-xs mt-xs rounded-sm px-sm py-xs" style={[{ backgroundColor: worth ? colors.priceLowTint : colors.priceHighTint }, applyComponentRules(chipRules, colors.label)]}>
                           <Text className="text-subheadline font-semibold" style={{ color: worth ? colors.priceLow : colors.priceHigh }}>
                             {worth ? '✓ ' : '✕ '}
                           </Text>

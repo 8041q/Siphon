@@ -48,7 +48,7 @@ const PriceForecastComponent = ({ data, unit }: PriceForecastProps) => {
     : FORECAST_HORIZONS.map((h) => forecast(data, h)).filter((r): r is NonNullable<typeof r> => r !== null);
 
   return (
-    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg gap-sm">
+    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg gap-sm">
       {cardGlass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
         {t('price_trends.forecast_title')}

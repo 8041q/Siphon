@@ -11,8 +11,7 @@ import { ICON_SET_ORDER, ICON_SETS } from '../theme/icons';
 import type { IconSetId } from '../theme/icons';
 import { STYLE_SET_ORDER } from '../theme/styles';
 import type { StyleSetId } from '../theme/styles';
-import { rewardForPalette, rewardForSvg, rewardForIcon, rewardForStyle } from '../hooks/useAdRewards';
-import { svgRewards, SVG_REWARD_NAMES, type SvgMarkerRewardId } from './userLocationMarkers/rewards';
+import { rewardForPalette, rewardForIcon, rewardForStyle } from '../hooks/useAdRewards';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { Button } from './ui/button';
 import { GlassBox } from './ui/GlassBox';
@@ -52,7 +51,6 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     rewardsLoaded,
     paletteId,
     setPaletteId,
-    setMarker,
     iconSetId,
     setIconSetId,
     styleSetId,
@@ -108,20 +106,6 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       bottomSheetRef.current?.dismiss();
     },
     [isUnlocked, setPaletteId, showLockedNotice],
-  );
-
-  const handleSelectSvg = useCallback(
-    (name: string) => {
-      const reward = rewardForSvg(name as SvgMarkerRewardId);
-      if (reward && !isUnlocked(reward.id)) {
-        showLockedNotice(name);
-        return;
-      }
-      Haptics.selectionAsync();
-      setMarker({ type: 'svg', value: name });
-      bottomSheetRef.current?.dismiss();
-    },
-    [isUnlocked, setMarker, showLockedNotice],
   );
 
   const handleSelectIcon = useCallback(
@@ -314,38 +298,6 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
                 </Text>
               </View>
               {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
-            </TouchableOpacity>
-          );
-        })}
-
-        <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
-
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
-          {t('settings.rewards_markers')}
-        </Text>
-        {SVG_REWARD_NAMES.map((name) => {
-          const SvgComponent = svgRewards[name];
-          const reward = rewardForSvg(name as SvgMarkerRewardId);
-          const unlocked = !reward || isUnlocked(reward.id);
-          const selected = false;
-          return (
-            <TouchableOpacity
-              key={name}
-              activeOpacity={0.7}
-              onPress={() => handleSelectSvg(name)}
-              className="flex-row items-center justify-between py-md px-sm"
-            >
-              <View className="flex-row items-center flex-1">
-                <View className="w-10 h-10 rounded-full items-center justify-center mr-sm"
-                  style={{ backgroundColor: colors.groupedBackground }}
-                >
-                  {SvgComponent && <SvgComponent size={20} color={colors.tint} />}
-                </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
-                  {t(`settings.reward_svg_${name}`)}
-                </Text>
-              </View>
-              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, name)}
             </TouchableOpacity>
           );
         })}

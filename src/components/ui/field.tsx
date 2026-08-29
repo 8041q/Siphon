@@ -27,7 +27,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
       <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
         {label}
       </Text>
-      <View style={glass ? applyComponentRules(rules) : undefined}>
+      <View style={glass ? applyComponentRules(rules, colors.label) : undefined}>
         {glass && <GlassBackdrop color={colors.fieldBackground} />}
         <TextInput
           value={value}
@@ -38,7 +38,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
           autoCapitalize={autoCapitalize}
           style={[
             { backgroundColor: glass ? 'transparent' : colors.fieldBackground, borderColor: colors.fieldBorder, color: colors.label },
-            glass ? undefined : applyComponentRules(rules),
+            glass ? undefined : applyComponentRules(rules, colors.label),
           ]}
           className="rounded-md px-3 py-2 text-body"
         />

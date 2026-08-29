@@ -13,11 +13,13 @@ import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
+import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
 import { getPalette } from '../../src/theme/palettes';
 import { tabBarClearance } from '../../src/theme/layout';
 import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
 import { LanguageSheet, LanguageSheetHandle } from '../../src/components/LanguageSheet';
+import { ThemeSheet, ThemeSheetHandle } from '../../src/components/ThemeSheet';
 import { LocationMarkerSheet, LocationMarkerSheetHandle } from '../../src/components/LocationMarkerSheet';
 import { VehicleSheet, VehicleSheetHandle } from '../../src/components/VehicleSheet';
 import { EvBreakevenSheet, EvBreakevenSheetHandle } from '../../src/components/EvBreakevenSheet';
@@ -40,17 +42,20 @@ export default function SettingsScreen() {
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
+  const themeSheetRef = useRef<ThemeSheetHandle>(null);
   const locationMarkerSheetRef = useRef<LocationMarkerSheetHandle>(null);
   const vehicleSheetRef = useRef<VehicleSheetHandle>(null);
   const evSheetRef = useRef<EvBreakevenSheetHandle>(null);
   const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
   const donationSheetRef = useRef<DonationSheetHandle>(null);
 
-  const { watchedCount, paletteId, iconSetId, styleSetId, marker: currentMarker } = useSupport();
+  const { watchedCount, paletteId, iconSetId, styleSetId, styleRules, marker: currentMarker } = useSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const evResult = evBreakeven(evConfig);
   const { colors } = useThemeTokens();
+  const cardRules = useStyleConfig(styleRules, 'card');
+  const cardStyle = applyComponentRules(cardRules, colors.label);
 
   const handleDownloadUpdate = () => {
     Linking.openURL(getUpdateUrl()).catch(() => {});
@@ -105,17 +110,12 @@ export default function SettingsScreen() {
   };
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
+  const themeLabel = t(`settings.theme_${themePref}`);
   const markerLabel = currentMarker.type === 'icon'
     ? currentMarker.value.replace('_', ' ')
     : currentMarker.type === 'svg'
       ? currentMarker.value
       : t('settings.marker_custom_image');
-
-  const themeOptions: { label: string; value: ThemePref }[] = [
-    { label: t('settings.theme_system'), value: 'system' },
-    { label: t('settings.theme_light'), value: 'light' },
-    { label: t('settings.theme_dark'), value: 'dark' },
-  ];
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: colors.background }}>
@@ -125,23 +125,13 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingBottom: tabBarClearance(insets.bottom) + 16 }}
       >
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.appearance')}
           </Text>
-          {themeOptions.map((option) => (
-            <View key={option.value}>
-              <ListItem
-                onPress={() => handleThemeChange(option.value)}
-                trailing={themePref === option.value ? '✓' : undefined}
-              >
-                {option.label}
-              </ListItem>
-              {option.value !== themeOptions[themeOptions.length - 1].value && (
-                <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
-              )}
-            </View>
-          ))}
+          <ListItem onPress={() => themeSheetRef.current?.present()} trailing={themeLabel}>
+            {t('settings.theme')}
+          </ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.palette_${paletteId}`)}>
             {t('settings.color_palette')}
@@ -156,7 +146,7 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.language')}
           </Text>
@@ -165,7 +155,7 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.location_marker')}
           </Text>
@@ -174,7 +164,7 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.my_vehicles')}
           </Text>
@@ -218,7 +208,23 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.price_history')}
+          </Text>
+          <View style={{ backgroundColor: colors.surface }} className="flex-row items-center justify-between px-lg py-md">
+            <Text style={{ color: colors.label }} className="text-callout flex-1 mr-2">
+              {t('settings.save_history')}
+            </Text>
+            <Switch value={historyEnabled} onValueChange={handleToggleHistory} />
+          </View>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
+            {t('settings.save_history_caption')}
+          </Text>
+        </View>
+
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.ev_vs_gas')}
           </Text>
@@ -237,23 +243,7 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
-            {t('settings.price_history')}
-          </Text>
-          <View style={{ backgroundColor: colors.surface }} className="flex-row items-center justify-between px-lg py-md">
-            <Text style={{ color: colors.label }} className="text-callout flex-1 mr-2">
-              {t('settings.save_history')}
-            </Text>
-            <Switch value={historyEnabled} onValueChange={handleToggleHistory} />
-          </View>
-          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
-            {t('settings.save_history_caption')}
-          </Text>
-        </View>
-
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.updates')}
           </Text>
@@ -280,7 +270,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.support')}
           </Text>
@@ -296,7 +286,7 @@ export default function SettingsScreen() {
           </ListItem>
         </View>
 
-        <View style={{ backgroundColor: colors.surface }} className="mx-lg rounded-md overflow-hidden">
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.about')}
           </Text>
@@ -312,6 +302,12 @@ export default function SettingsScreen() {
         ref={languageSheetRef}
         currentLang={currentLang}
         onSelectLanguage={persistLanguage}
+        onDismiss={() => {}}
+      />
+      <ThemeSheet
+        ref={themeSheetRef}
+        currentTheme={themePref}
+        onSelectTheme={handleThemeChange}
         onDismiss={() => {}}
       />
       <LocationMarkerSheet

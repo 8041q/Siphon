@@ -26,7 +26,7 @@ function PriceBadgeComponent({ fuel, price, source }: PriceBadgeProps) {
 
   return (
     <View
-      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
       className="rounded-sm px-3 py-2 gap-0.5 min-w-[110px]"
     >
       {glass && <GlassBackdrop color={colors.surface} />}

@@ -22,7 +22,7 @@ export function ListItem({ children, onPress, trailing }: ListItemProps) {
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
       className="flex-row items-center justify-between px-lg py-md"
     >
       {glass && <GlassBackdrop color={colors.surface} />}

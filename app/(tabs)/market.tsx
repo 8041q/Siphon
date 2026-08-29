@@ -7,6 +7,8 @@ import { useCommodities } from '../../src/hooks/useCommodities';
 import { CommodityChart } from '../../src/components/CommodityChart';
 import { fuelLabel } from '../../src/utils/fuelNames';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
+import { useSupport } from '../../src/hooks/useSupport';
+import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
 import { tabBarClearance } from '../../src/theme/layout';
 
 import type { CommodityMetrics } from '../../src/api/siphonClient';
@@ -39,6 +41,9 @@ export default function MarketScreen() {
   const { colors, scheme } = useThemeTokens();
   const insets = useSafeAreaInsets();
   const isDark = scheme === 'dark';
+  const { styleRules } = useSupport();
+  const cardRules = useStyleConfig(styleRules, 'card');
+  const cardStyle = applyComponentRules(cardRules, colors.label);
 
   const { dashboard, loading } = useCommodities();
 
@@ -143,12 +148,7 @@ export default function MarketScreen() {
 
             {/* Insufficient retail notice */}
             {retailPoints.length < 2 && (
-              <View style={{
-                backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                borderRadius: 12,
-                padding: 12,
-                marginTop: 12,
-              }}>
+              <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, marginTop: 12 }, cardStyle]}>
                 <Text style={{ color: colors.chartLabel, fontSize: 12, textAlign: 'center' }}>
                   {t('market.insufficient_hint')}
                 </Text>
@@ -158,14 +158,7 @@ export default function MarketScreen() {
             {/* Metric cards (only fully rendered when retail has meaningful data) */}
             {retailPoints.length >= 2 && (
               <View style={{ gap: 8, marginTop: 12 }}>
-                <View style={{
-                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                  borderRadius: 12,
-                  padding: 12,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
+                <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
                   <Text style={{ fontWeight: '600', color: colors.label }}>
                     {t('market.lag_label')}
                   </Text>
@@ -174,14 +167,7 @@ export default function MarketScreen() {
                   </Text>
                 </View>
 
-                <View style={{
-                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                  borderRadius: 12,
-                  padding: 12,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
+                <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
                   <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14 }}>
                     {t('market.correlation_label')}
                   </Text>
@@ -190,11 +176,7 @@ export default function MarketScreen() {
                   </Text>
                 </View>
 
-                <View style={{
-                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                  borderRadius: 12,
-                  padding: 12,
-                }}>
+                <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12 }, cardStyle]}>
                   <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14, marginBottom: 4 }}>
                     {t('market.rocket_feather_label')}
                   </Text>
@@ -232,13 +214,7 @@ export default function MarketScreen() {
             {/* Crude trend cards (always show when crude exists) */}
             {crudePoints.length >= 2 && (
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-                <View style={{
-                  flex: 1,
-                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                  borderRadius: 12,
-                  padding: 12,
-                  alignItems: 'center',
-                }}>
+                <View style={[{ flex: 1, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
                   <Text style={{ color: colors.label, fontSize: 13 }}>
                     {t('market.trend_7d')}
                   </Text>
@@ -246,13 +222,7 @@ export default function MarketScreen() {
                     {formatTrend(metrics?.crudeTrend7d)}
                   </Text>
                 </View>
-                <View style={{
-                  flex: 1,
-                  backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-                  borderRadius: 12,
-                  padding: 12,
-                  alignItems: 'center',
-                }}>
+                <View style={[{ flex: 1, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
                   <Text style={{ color: colors.label, fontSize: 13 }}>
                     {t('market.trend_30d')}
                   </Text>

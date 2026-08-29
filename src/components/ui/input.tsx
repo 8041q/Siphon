@@ -23,7 +23,7 @@ export function Input({ value, onChangeText, placeholder, className = '' }: Inpu
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={colors.placeholder}
-      style={[{ backgroundColor: glass ? 'transparent' : undefined }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: glass ? 'transparent' : undefined }, applyComponentRules(rules, colors.label)]}
       className={`flex-1 px-1 ${className}`}
     />
   );

@@ -52,6 +52,7 @@
   },
   "settings": {
     "appearance": "Darstellung",
+    "theme": "Design",
     "theme_system": "System",
     "theme_light": "Hell",
     "theme_dark": "Dunkel",

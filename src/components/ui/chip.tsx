@@ -33,7 +33,7 @@ export function Chip({ selected, onPress, children, className = '', disabled }: 
       disabled={disabled}
       style={[
         { backgroundColor: selected ? colors.tint : glassActive ? 'transparent' : colors.surface },
-        applyComponentRules(rules),
+        applyComponentRules(rules, colors.label),
       ]}
       className={className}
     >

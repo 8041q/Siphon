@@ -19,7 +19,7 @@ export function Badge({ label, value, color }: BadgeProps) {
 
   return (
     <View
-      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
       className="rounded-sm px-3 py-1.5 gap-1"
     >
       {glass && <GlassBackdrop color={colors.surface} />}

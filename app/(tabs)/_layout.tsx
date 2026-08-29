@@ -59,7 +59,7 @@ export default function TabLayout() {
   // Shape/border overrides from the active style set. `applyComponentRules`
   // forces `overflow: 'hidden'` for glass — that would clip the drop shadow,
   // so only the inner backdrop clips the blur instead.
-  const shapeStyle = applyComponentRules(rules);
+  const shapeStyle = applyComponentRules(rules, colors.label);
   if (glass) delete shapeStyle.overflow;
 
   return (

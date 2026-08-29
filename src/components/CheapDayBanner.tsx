@@ -29,7 +29,7 @@ const CheapDayBannerComponent = ({ data }: CheapDayBannerProps) => {
 
   return (
     <View
-      style={[{ backgroundColor: colors.priceLow, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: colors.priceLow, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 }, applyComponentRules(rules, colors.labelOnTint)]}
     >
       <Text style={{ color: colors.labelOnTint }} className="font-bold text-callout">{t('price_trends.banner_title')}</Text>
       <Text style={{ color: colors.labelOnTint }} className="text-footnote mt-0.5">{subtitle}</Text>

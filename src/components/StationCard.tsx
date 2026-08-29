@@ -55,7 +55,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
       onPress={() => {
         onPress?.(station);
       }}
-      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules, colors.label)]}
       className="p-md rounded-md"
     >
       {glass && <GlassBackdrop color={colors.groupedBackground} />}

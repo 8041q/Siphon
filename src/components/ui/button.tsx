@@ -31,7 +31,7 @@ export function Button({
       activeOpacity={0.7}
       onPress={onPress}
       disabled={disabled || loading}
-      style={[{ backgroundColor: variant === 'primary' ? colors.tint : 'transparent' }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: variant === 'primary' ? colors.tint : 'transparent' }, applyComponentRules(rules, colors.label)]}
       className={`rounded-md py-md px-lg items-center justify-center ${className} ${disabled ? 'opacity-50' : ''}`}
     >
       {loading ? (

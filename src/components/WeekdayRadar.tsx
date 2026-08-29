@@ -42,7 +42,7 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
 
   if (!cycle) {
     return (
-      <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg">
+      <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg">
         {cardGlass && <GlassBackdrop color={colors.surface} />}
         <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
           {t('price_trends.weekday_title')}
@@ -73,7 +73,7 @@ const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
     .join(' ');
 
   return (
-    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules)]} className="rounded-md p-lg items-center">
+    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg items-center">
       {cardGlass && <GlassBackdrop color={colors.surface} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-sm uppercase tracking-wide self-start">
         {t('price_trends.weekday_title')}

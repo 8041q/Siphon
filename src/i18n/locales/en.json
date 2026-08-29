@@ -52,6 +52,7 @@
   },
   "settings": {
     "appearance": "Appearance",
+    "theme": "Theme",
     "theme_system": "System",
     "theme_light": "Light",
     "theme_dark": "Dark",

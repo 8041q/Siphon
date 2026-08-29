@@ -19,7 +19,7 @@ export function Card({ children, className = '' }: CardProps) {
 
   return (
     <View
-      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules)]}
+      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules, colors.label)]}
       className={`rounded-md p-md ${className}`}
     >
       {glass && <GlassBackdrop color={colors.groupedBackground} />}

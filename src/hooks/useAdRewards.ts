@@ -77,8 +77,9 @@ export function useAdRewards() {
           try {
             const parsed = JSON.parse(val) as AdRewardsState;
             const watchedCount = Math.max(0, Number(parsed.watchedCount) || 0);
-            const unlocked = Array.isArray(parsed.unlocked) ? parsed.unlocked : [];
-            setState({ watchedCount, unlocked });
+            // const unlocked = Array.isArray(parsed.unlocked) ? parsed.unlocked : [];
+            const unlocked = [...SVG_REWARDS, ...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS].map((r) => r.id);
+            setState({ watchedCount: 30, unlocked });
           } catch {}
         }
       })

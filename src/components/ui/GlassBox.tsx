@@ -28,7 +28,7 @@ export function GlassBox({ component, children, color, className = '', style }: 
 
   return (
     <View
-      style={[{ backgroundColor: glass ? 'transparent' : color ?? colors.surface }, applyComponentRules(rules), style]}
+      style={[{ backgroundColor: glass ? 'transparent' : color ?? colors.surface }, applyComponentRules(rules, colors.label), style]}
       className={className}
     >
       {glass && <GlassBackdrop color={color ?? colors.surface} />}
