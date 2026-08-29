@@ -5,20 +5,22 @@ import { File, Directory, Paths } from 'expo-file-system';
 const STORAGE_KEY = 'siphon:userLocationMarker';
 
 export type UserLocationMarkerConfig =
-  | { type: 'icon'; value: string }
   | { type: 'svg'; value: string }
   | { type: 'image'; value: string };
 
 export const DEFAULT_MARKER: UserLocationMarkerConfig = {
-  type: 'icon',
-  value: 'my_location',
+  type: 'svg',
+  value: 'location',
 };
 
-export const AVAILABLE_ICONS = [
-  'my_location',
-  'navigate_circle',
-  'compass',
-  'location_pin',
+export const AVAILABLE_MARKERS = [
+  'location',
+  'crown',
+  'oil',
+  'park',
+  'fire',
+  'fuel',
+  'brake',
 ] as const;
 
 const MARKER_IMAGES_DIR = new Directory(Paths.document, 'siphon', 'markerImages');
@@ -62,7 +64,7 @@ export function useUserLocationMarker() {
       if (val) {
         try {
           const parsed = JSON.parse(val) as UserLocationMarkerConfig;
-          if (parsed.type === 'icon' || parsed.type === 'svg') {
+          if (parsed.type === 'svg') {
             setMarkerState(parsed);
           } else if (parsed.type === 'image' && isMarkerImageUri(parsed.value)) {
             const image = new File(parsed.value);
@@ -89,5 +91,5 @@ export function useUserLocationMarker() {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   }, [marker]);
 
-  return { marker, setMarker, loaded, availableIcons: AVAILABLE_ICONS };
+  return { marker, setMarker, loaded, availableMarkers: AVAILABLE_MARKERS };
 }

@@ -1,8 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useCallback, useContext, useMemo } from 'react';
 
 import { useAdConsent } from '../hooks/useAdConsent';
 
-import { useAdRewards, SVG_REWARDS, PALETTE_REWARDS, ICON_REWARDS, STYLE_REWARDS } from './useAdRewards';
+import { useAdRewards, PALETTE_REWARDS, ICON_REWARDS, STYLE_REWARDS } from './useAdRewards';
 import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
 import { useIconSet } from './useIconSet';
@@ -10,11 +10,11 @@ import { useStyleSet } from './useStyleSet';
 import type { IconSetId, IconSetDef } from '../theme/icons';
 
 import { useRewardedAd } from './useRewardedAd';
-import { useUserLocationMarker, DEFAULT_MARKER, type UserLocationMarkerConfig } from './useUserLocationMarker';
+import { useUserLocationMarker, type UserLocationMarkerConfig } from './useUserLocationMarker';
 import type { Palette, PaletteId } from '../theme/palettes';
 import type { StyleSetId, StyleRules } from '../theme/styles';
 
-export const ALL_REWARDS: RewardItem[] = [...SVG_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS, ...PALETTE_REWARDS];
+export const ALL_REWARDS: RewardItem[] = [...ICON_REWARDS, ...STYLE_REWARDS, ...PALETTE_REWARDS];
 
 type WatchResult =
   | { earned: true; unlockedItem: RewardItem | null }
@@ -47,7 +47,7 @@ interface SupportValue {
   marker: UserLocationMarkerConfig;
   setMarker: (config: UserLocationMarkerConfig) => void;
   markerLoaded: boolean;
-  availableIcons: readonly string[];
+  availableMarkers: readonly string[];
 }
 
 const SupportContext = createContext<SupportValue | null>(null);
@@ -60,16 +60,6 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   const rewarded = useRewardedAd();
   const consent = useAdConsent();
   const locationMarker = useUserLocationMarker();
-
-  useEffect(() => {
-    if (!rewards.loaded || !locationMarker.loaded) return;
-    const { marker } = locationMarker;
-    if (marker.type !== 'svg') return;
-    const reward = SVG_REWARDS.find((r) => r.id === marker.value);
-    if (reward && !rewards.isUnlocked(reward.id)) {
-      locationMarker.setMarker(DEFAULT_MARKER);
-    }
-  }, [rewards.loaded, rewards.isUnlocked, locationMarker.loaded, locationMarker.marker, locationMarker.setMarker]);
 
   const unlockedItemAfter = useCallback((count: number): RewardItem | null => {
     return ALL_REWARDS.find((r) => r.requiredWatches === count) ?? null;
@@ -122,7 +112,7 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
       marker: locationMarker.marker,
       setMarker: locationMarker.setMarker,
       markerLoaded: locationMarker.loaded,
-      availableIcons: locationMarker.availableIcons,
+      availableMarkers: locationMarker.availableMarkers,
     }),
     [rewards, palette, iconSet, styleSet, rewarded, watchAd, remainingFor, unlockedItemAfter, locationMarker],
   );

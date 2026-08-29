@@ -2,11 +2,10 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import { Image, View } from 'react-native';
 import { Map, Camera, Marker, GeoJSONSource, Layer, Images, type CameraRef} from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
-import { Icon } from '../../theme/Icon';
 
 import type { StationMapProps } from './types';
 import { useThemeTokens } from '../../hooks/useThemeTokens';
-import { useUserLocationMarker } from '../../hooks/useUserLocationMarker';
+import { useSupport } from '../../hooks/useSupport';
 import { svgMarkers } from '../userLocationMarkers';
 import { BRAND_ICONS, BRAND_LOGO_IMAGES, MARKER_SHAPE_ICON, buildLogoImageExpression } from './brandIcons';
 
@@ -19,7 +18,7 @@ export const STATION_MARKER_MIN_ZOOM = 13;
 function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, flyToCoords, userLocation }: StationMapProps) {
   const { colors } = useThemeTokens();
   const cameraRef = useRef<CameraRef>(null);
-  const { marker: markerConfig } = useUserLocationMarker();
+  const { marker: markerConfig } = useSupport();
   const onMapReadyFired = useRef(false);
   const isMounted = useRef(true);
   const pendingFlyToRef = useRef<[number, number] | null>(null);
@@ -171,9 +170,6 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
               shadowRadius: 4,
               elevation: 5,
             }}>
-              {markerConfig.type === 'icon' && (
-                <Icon name={markerConfig.value} size={50} color={colors.pin} />
-              )}
               {markerConfig.type === 'svg' && (() => {
                 const SvgComp = svgMarkers[markerConfig.value];
                 return SvgComp ? <SvgComp size={50} color={colors.pin} /> : null;

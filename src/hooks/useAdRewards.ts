@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { PaletteId } from '../theme/palettes';
-import type { SvgMarkerRewardId } from '../components/userLocationMarkers/rewards';
 
 const STORAGE_KEY = 'siphon:adRewards';
 
@@ -27,22 +26,12 @@ export const STYLE_REWARDS: RewardItem[] = [
   { id: 'retro', requiredWatches: 15 },
 ];
 
-export const SVG_REWARDS: RewardItem[] = [
-  { id: 'flame', requiredWatches: 3 },
-  { id: 'leaf', requiredWatches: 8 },
-  { id: 'crown', requiredWatches: 20 },
-];
-
 export function rewardForId(id: string): RewardItem | undefined {
-  return [...PALETTE_REWARDS, ...SVG_REWARDS].find((r) => r.id === id);
+  return [...PALETTE_REWARDS].find((r) => r.id === id);
 }
 
 export function rewardForPalette(id: PaletteId): RewardItem | undefined {
   return PALETTE_REWARDS.find((r) => r.id === id);
-}
-
-export function rewardForSvg(id: SvgMarkerRewardId): RewardItem | undefined {
-  return SVG_REWARDS.find((r) => r.id === id);
 }
 
 export function rewardForIcon(id: string): RewardItem | undefined {
@@ -61,7 +50,7 @@ type AdRewardsState = {
 const EMPTY: AdRewardsState = { watchedCount: 0, unlocked: [] };
 
 function nextReward(watchedCount: number): RewardItem | undefined {
-  return [...SVG_REWARDS, ...PALETTE_REWARDS]
+  return [...PALETTE_REWARDS]
     .filter((r) => r.requiredWatches > watchedCount)
     .sort((a, b) => a.requiredWatches - b.requiredWatches)[0];
 }
@@ -78,7 +67,7 @@ export function useAdRewards() {
             const parsed = JSON.parse(val) as AdRewardsState;
             const watchedCount = Math.max(0, Number(parsed.watchedCount) || 0);
             // const unlocked = Array.isArray(parsed.unlocked) ? parsed.unlocked : [];
-            const unlocked = [...SVG_REWARDS, ...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS].map((r) => r.id);
+            const unlocked = [...PALETTE_REWARDS, ...ICON_REWARDS, ...STYLE_REWARDS].map((r) => r.id);
             setState({ watchedCount: 30, unlocked });
           } catch {}
         }
@@ -100,7 +89,7 @@ export function useAdRewards() {
     setState((prev) => {
       const watchedCount = prev.watchedCount + 1;
       const unlocked = [...prev.unlocked];
-      for (const reward of [...SVG_REWARDS, ...PALETTE_REWARDS]) {
+      for (const reward of [...PALETTE_REWARDS]) {
         if (reward.requiredWatches <= watchedCount && !unlocked.includes(reward.id)) {
           unlocked.push(reward.id);
         }

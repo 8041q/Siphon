@@ -32,18 +32,12 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     const snapPoints = useMemo(() => ['50%'], []);
     const { colors } = useThemeTokens();
 
-    const { marker: currentMarker, setMarker, availableIcons, isUnlocked } = useSupport();
+    const { marker: currentMarker, setMarker, isUnlocked } = useSupport();
     const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
     }));
-
-    const handleSelectIcon = useCallback((name: string) => {
-      Haptics.selectionAsync();
-      setMarker({ type: 'icon', value: name });
-      bottomSheetRef.current?.dismiss();
-    }, [setMarker]);
 
     const handleSelectSvg = useCallback((name: string) => {
       Haptics.selectionAsync();
@@ -103,18 +97,20 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
             {t('settings.location_marker')}
           </Text>
 
-          {/* Icons section */}
+          {/* SVG Markers section */}
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
-            {t('settings.marker_icons')}
+            {t('settings.marker_svg')}
           </Text>
           <View className="flex-row flex-wrap gap-md mb-xl">
-            {availableIcons.map((name) => {
-              const selected = isSelected({ type: 'icon', value: name });
+            {SVG_MARKER_NAMES.map((name) => {
+              const SvgComponent = svgMarkers[name];
+              const selected = isSelected({ type: 'svg', value: name });
+              const unlocked = isUnlocked(name);
               return (
                 <TouchableOpacity
                   key={name}
                   activeOpacity={0.7}
-                  onPress={() => handleSelectIcon(name)}
+                  onPress={() => (unlocked ? handleSelectSvg(name) : handleLockedSvgTap(name))}
                   className="items-center gap-xs"
                   style={{ width: '22%' }}
                 >
@@ -122,7 +118,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     width: 54,
                     height: 54,
                     borderRadius: 27,
-                    backgroundColor: colors.sheet,
+                    backgroundColor: colors.surface,
                     alignItems: 'center',
                     justifyContent: 'center',
                     shadowColor: '#000',
@@ -132,84 +128,38 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                     elevation: 3,
                     borderWidth: selected ? 2.5 : 0,
                     borderColor: selected ? colors.tint : 'transparent',
+                    opacity: unlocked ? 1 : 0.4,
                   }}>
-                    <Icon name={name} size={26} color={colors.tint} />
+                    {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
+                    {!unlocked && (
+                      <View style={{
+                        position: 'absolute',
+                        right: 4,
+                        bottom: 4,
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        backgroundColor: colors.surface,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <Icon name="lock" size={11} color={colors.tint} />
+                      </View>
+                    )}
                   </View>
-                  <Text style={{ color: colors.secondaryLabel }} className="text-caption1 text-center">
-                    {name.replace('_', ' ')}
+                  <Text
+                    className="text-caption1 text-center"
+                    style={{
+                      color: lockedNoticeName === name ? colors.priceHigh : colors.secondaryLabel,
+                      fontWeight: lockedNoticeName === name ? '600' : undefined,
+                    }}
+                  >
+                    {lockedNoticeName === name ? t('settings.reward_locked_notice') : name}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-
-          {/* SVG section */}
-          {SVG_MARKER_NAMES.length > 0 && (
-            <>
-              <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
-                {t('settings.marker_svg')}
-              </Text>
-              <View className="flex-row flex-wrap gap-md mb-xl">
-                {SVG_MARKER_NAMES.map((name) => {
-                  const SvgComponent = svgMarkers[name];
-                  const selected = isSelected({ type: 'svg', value: name });
-                  const unlocked = isUnlocked(name);
-                  return (
-                    <TouchableOpacity
-                      key={name}
-                      activeOpacity={0.7}
-                      onPress={() => (unlocked ? handleSelectSvg(name) : handleLockedSvgTap(name))}
-                      className="items-center gap-xs"
-                      style={{ width: '22%' }}
-                    >
-                      <View style={{
-                        width: 54,
-                        height: 54,
-                        borderRadius: 27,
-                        backgroundColor: colors.sheet,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.15,
-                        shadowRadius: 3,
-                        elevation: 3,
-                        borderWidth: selected ? 2.5 : 0,
-                        borderColor: selected ? colors.tint : 'transparent',
-                        opacity: unlocked ? 1 : 0.4,
-                      }}>
-                        {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
-                        {!unlocked && (
-                          <View style={{
-                            position: 'absolute',
-                            right: 4,
-                            bottom: 4,
-                            width: 18,
-                            height: 18,
-                            borderRadius: 9,
-                            backgroundColor: colors.surface,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}>
-                            <Icon name="lock" size={11} color={colors.tint} />
-                          </View>
-                        )}
-                      </View>
-                      <Text
-                        className="text-caption1 text-center"
-                        style={{
-                          color: lockedNoticeName === name ? colors.priceHigh : colors.secondaryLabel,
-                          fontWeight: lockedNoticeName === name ? '600' : undefined,
-                        }}
-                      >
-                        {lockedNoticeName === name ? t('settings.reward_locked_notice') : name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
-          )}
 
           {/* Custom Image section */}
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">

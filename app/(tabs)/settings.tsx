@@ -111,11 +111,9 @@ export default function SettingsScreen() {
 
   const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
   const themeLabel = t(`settings.theme_${themePref}`);
-  const markerLabel = currentMarker.type === 'icon'
-    ? currentMarker.value.replace('_', ' ')
-    : currentMarker.type === 'svg'
-      ? currentMarker.value
-      : t('settings.marker_custom_image');
+  const markerLabel = currentMarker.type === 'svg'
+    ? currentMarker.value
+    : t('settings.marker_custom_image');
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: colors.background }}>
