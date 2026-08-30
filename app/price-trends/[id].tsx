@@ -10,7 +10,7 @@ import { PriceStats } from '../../src/components/PriceStats';
 import { CheapDayBanner } from '../../src/components/CheapDayBanner';
 import { PriceForecast } from '../../src/components/PriceForecast';
 import { WeekdayRadar } from '../../src/components/WeekdayRadar';
-import { WorthTheDrive } from '../../src/components/WorthTheDrive';
+
 import { fuelLabel, fuelUnit } from '../../src/utils/fuelNames';
 import { getLocationParts } from '../../src/utils/location';
 import { forecast, FORECAST_HORIZONS, FORECAST_MIN_DAYS, historyCoverageDays } from '../../src/utils/priceAnalysis';
@@ -130,7 +130,6 @@ export default function PriceTrendsScreen() {
             />
             <PriceForecast data={data} unit={unit} />
             <WeekdayRadar data={data} />
-            {station && <WorthTheDrive station={station} distanceKm={distanceKm} fuelType={selectedFuel ?? undefined} />}
           </View>
         )}
       </ScrollView>

@@ -14,14 +14,11 @@ const MAPPING: Record<string, IoniconsName> = {
   'star.fill': 'star',
   'star': 'star-outline',
   'star_border': 'star-outline',
-  'gearshape.fill': 'settings',
-  'settings': 'settings-outline',
+  'gearshape.fill': 'cog',
+  'settings': 'cog',
   'my_location': 'locate',
-  'filter_list': 'filter',
+  'filter_list': 'color-filter-outline',
   'directions': 'navigate',
-  'navigate_circle': 'navigate-circle-outline',
-  'compass': 'compass-outline',
-  'location_pin': 'location',
   'copy': 'copy-outline',
   'info.circle': 'information-circle-outline',
   'flag': 'flag-outline',
@@ -29,7 +26,7 @@ const MAPPING: Record<string, IoniconsName> = {
   'kofi': 'cafe',
   'lock': 'lock-closed',
   'gift': 'gift-outline',
-  'oilcan.fill': 'flame',
+  'oilcan.fill': 'bar-chart',
 };
 
 export const render: IconRenderer = ({ name, size, color }) => {

@@ -19,7 +19,6 @@ export const ICON_SET_ORDER: IconSetId[] = [
   'ionicons',
   'material',
   'fontawesome',
-  'custom-svg',
 ];
 
 export function getIconSet(id: IconSetId): IconSetDef {

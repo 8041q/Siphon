@@ -74,7 +74,7 @@ const StationCardComponent: FC<StationCardProps> = ({ station, onPress, favorite
           <View className="rounded-sm p-1.5">
             <Icon
               name={favorite ? 'star.fill' : 'star'}
-              size={18}
+              size={19}
               color={favorite ? colors.favorite : colors.tertiaryLabel}
             />
           </View>

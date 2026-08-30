@@ -63,7 +63,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
           <View className="rounded-sm p-1.5">
             <Icon
               name={favorite ? 'star.fill' : 'star'}
-              size={18}
+              size={19}
               color={favorite ? colors.favorite : colors.tertiaryLabel}
             />
           </View>
