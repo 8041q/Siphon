@@ -37,7 +37,7 @@ const THEME_STORAGE_KEY = 'siphon:theme';
 export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { historyEnabled, setHistoryEnabled } = useUI();
-  const { updateAvailable, latestVersion, installedVersion, checking, check } = useAppUpdate();
+  const { updateAvailable, latestVersion, installedVersion, checking, error, check } = useAppUpdate();
   const insets = useSafeAreaInsets();
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState(i18nInstance.language);
@@ -249,9 +249,13 @@ export default function SettingsScreen() {
             trailing={
               checking
                 ? t('settings.checking')
-                : updateAvailable
-                  ? t('settings.update_available_version', { version: latestVersion })
-                  : t('settings.up_to_date')
+                : error === 'no_releases'
+                  ? t('settings.no_releases')
+                  : error
+                    ? t('settings.update_check_failed')
+                    : updateAvailable
+                      ? t('settings.update_available_version', { version: latestVersion })
+                      : t('settings.up_to_date')
             }
           >
             {t('settings.update_status')}

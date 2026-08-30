@@ -8,11 +8,14 @@ const RELEASES_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const UPDATE_KEY = 'siphon:update:check';
 const UPDATE_TTL_MS = 30 * 60 * 1000;
 
+export type UpdateError = 'network' | 'rate_limit' | 'no_releases';
+
 export interface UpdateStatus {
   updateAvailable: boolean;
   latestVersion: string | null;
   installedVersion: string;
   checking: boolean;
+  error: UpdateError | null;
 }
 
 export function getInstalledVersion(): string {
@@ -45,13 +48,25 @@ function isNewer(latest: string, installed: string): boolean {
   return false;
 }
 
-async function fetchLatestTag(): Promise<string | null> {
-  const res = await fetch(RELEASES_URL, {
-    headers: { Accept: 'application/vnd.github+json' },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return typeof data.tag_name === 'string' ? data.tag_name.replace(/^v/i, '') : null;
+interface FetchResult {
+  tag: string | null;
+  error: UpdateError | null;
+}
+
+async function fetchLatestTag(): Promise<FetchResult> {
+  try {
+    const res = await fetch(RELEASES_URL, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (res.status === 404) return { tag: null, error: 'no_releases' };
+    if (res.status === 403) return { tag: null, error: 'rate_limit' };
+    if (!res.ok) return { tag: null, error: 'network' };
+    const data = await res.json();
+    const tag = typeof data.tag_name === 'string' ? data.tag_name.replace(/^v/i, '') : null;
+    return { tag, error: null };
+  } catch {
+    return { tag: null, error: 'network' };
+  }
 }
 
 export function useAppUpdate() {
@@ -60,6 +75,7 @@ export function useAppUpdate() {
     latestVersion: null,
     installedVersion: getInstalledVersion(),
     checking: false,
+    error: null,
   });
 
   const check = useCallback(async (force = false) => {
@@ -74,6 +90,7 @@ export function useAppUpdate() {
               latestVersion: cached.latestVersion ?? null,
               installedVersion: getInstalledVersion(),
               checking: false,
+              error: null,
             });
             return;
           }
@@ -81,18 +98,20 @@ export function useAppUpdate() {
       }
     }
 
-    setStatus((s) => ({ ...s, checking: true }));
+    setStatus((s) => ({ ...s, checking: true, error: null }));
     const installed = getInstalledVersion();
-    const latest = await fetchLatestTag();
-    if (latest) {
-      const updateAvailable = isNewer(latest, installed);
+    const { tag, error } = await fetchLatestTag();
+    if (error) {
+      setStatus({ updateAvailable: false, latestVersion: null, installedVersion: installed, checking: false, error });
+    } else if (tag) {
+      const updateAvailable = isNewer(tag, installed);
       await AsyncStorage.setItem(
         UPDATE_KEY,
-        JSON.stringify({ at: Date.now(), updateAvailable, latestVersion: latest })
+        JSON.stringify({ at: Date.now(), updateAvailable, latestVersion: tag })
       );
-      setStatus({ updateAvailable, latestVersion: latest, installedVersion: installed, checking: false });
+      setStatus({ updateAvailable, latestVersion: tag, installedVersion: installed, checking: false, error: null });
     } else {
-      setStatus((s) => ({ ...s, checking: false }));
+      setStatus((s) => ({ ...s, checking: false, error: null }));
     }
   }, []);
 

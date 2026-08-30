@@ -84,6 +84,8 @@
     "update_available_version": "v{{version}} disponible",
     "check_for_updates": "Rechercher des mises à jour",
     "download_update": "Télécharger la mise à jour",
+    "no_releases": "Aucune version disponible",
+    "update_check_failed": "Impossible de vérifier les mises à jour",
     "my_vehicles": "Mes Véhicules",
     "no_vehicles": "Aucun véhicule",
     "vehicles_caption": "Ajoutez vos voitures pour voir les coûts de conduite et le CO₂ à chaque station.",

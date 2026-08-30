@@ -84,6 +84,8 @@
     "update_available_version": "v{{version}} verfügbar",
     "check_for_updates": "Nach Updates suchen",
     "download_update": "Update herunterladen",
+    "no_releases": "Noch keine Versionen veröffentlicht",
+    "update_check_failed": "Updates konnten nicht überprüft werden",
     "my_vehicles": "Meine Fahrzeuge",
     "no_vehicles": "Noch keine Fahrzeuge",
     "vehicles_caption": "Fügen Sie Ihre Autos hinzu, um Fahrtkosten und CO₂ an jeder Tankstelle zu sehen.",
