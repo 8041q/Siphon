@@ -1,4 +1,3 @@
 export const SUPPORT = {
-  githubSponsorsUrl: 'https://github.com/sponsors/8041q',
-  kofiUrl: 'https://ko-fi.com/8041q',
+  githubRepoUrl: 'https://github.com/8041q/Siphon',
 } as const;

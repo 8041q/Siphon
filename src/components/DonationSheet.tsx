@@ -13,20 +13,12 @@ export type DonationSheetHandle = { present: () => void };
 
 const OPTIONS = [
   {
-    key: 'github',
-    titleKey: 'settings.donate_github',
-    captionKey: 'settings.donate_github_caption',
-    feeKey: 'settings.donate_github_fee',
+    key: 'github_repo',
+    titleKey: 'settings.github_repo',
+    captionKey: 'settings.github_repo_caption',
+    feeKey: 'settings.github_repo_fee',
     icon: 'github' as const,
-    url: SUPPORT.githubSponsorsUrl,
-  },
-  {
-    key: 'kofi',
-    titleKey: 'settings.donate_kofi',
-    captionKey: 'settings.donate_kofi_caption',
-    feeKey: 'settings.donate_kofi_fee',
-    icon: 'kofi' as const,
-    url: SUPPORT.kofiUrl,
+    url: SUPPORT.githubRepoUrl,
   },
 ];
 
