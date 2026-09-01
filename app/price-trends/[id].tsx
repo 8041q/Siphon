@@ -23,13 +23,13 @@ function formatDistance(d: number): string {
 export default function PriceTrendsScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { stations, stationDistances } = useApp();
+  const { allStations, stationDistances } = useApp();
 
   const { colors } = useThemeTokens();
 
   const station = useMemo(
-    () => stations.find((s) => s.properties.id === id),
-    [stations, id]
+    () => allStations.find((s) => s.properties.id === id),
+    [allStations, id]
   );
 
   const fuels = useMemo(() => {
