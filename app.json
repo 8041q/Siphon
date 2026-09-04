@@ -80,7 +80,8 @@
           "userTrackingUsageDescription": "Your data is used to keep Siphon free. Enabling tracking lets us show you relevant ads and supports development."
         }
       ],
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-iap"
     ],
     "scheme": "siphon",
     "experiments": {

@@ -1,18 +1,42 @@
-# Siphon
+## Publishing & updates
 
-Real-time fuel station prices for Spain and Portugal — built with Expo.
+Releases are built in the cloud by EAS and attached to both GitHub Releases and Google Play Store, so the app's "Check for updates" can point users at the appropriate source.
 
-## Overview
+### Releasing a new version
 
-Siphon is a React Native + Expo app for finding fuel station prices across Spain and Portugal. It uses MapLibre GL for maps, Expo Router for navigation, NativeWind for styling, and an offline cache (AsyncStorage + expo-file-system) so the app works without a live connection (unless to update data).
+The git tag is the single source of truth. Just create and push a `vX.Y.Z` tag (e.g. `v1.1.0`) — nothing else needs to change:
 
-**Stack:** Expo SDK 57 · React Native · React 19 · MapLibre GL · Expo Router · NativeWind · New Architecture enabled
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
 
-This is a shared React Native + Expo codebase — the TypeScript in `src/` and `app/` runs on both platforms as-is; you write it once and it renders native `UIView` (iOS) or `ViewGroup` (Android) under the hood. The only `Platform.OS` branching in the app is two small tweaks:
-- `src/utils/location.ts` - Apple Maps vs. MapLibre (OpenFreeMaps)
-- `app/(tabs)/_layout.tsx` - tab nav bar
+The GitHub Action (`.github/workflows/release.yml`) derives everything from the tag:
+- Patches `app.json` (setting `version`, `android.versionCode` = `major*10000 + minor*100 + patch`, and `ios.buildNumber`)
+- Builds an Android APK via EAS (for GitHub sideloading)
+- Builds an Android AAB via EAS (for Google Play Store)
+- Attaches the APK to the GitHub Release at `https://github.com/8041q/Siphon/releases`
+- Submits the AAB to Google Play Store (to the "Internal" test track by default)
 
-Everything else — features, UI, logic — lives in shared code. No double work.
+Tags that aren't `vX.Y.Z` fail fast. Requires the following repo secrets:
+- `EXPO_TOKEN`: Expo access token (Expo → Account Settings → Access Tokens)
+- `GOOGLE_SERVICE_ACCOUNT`: Google Service Account JSON key for Play Store submission
+
+### Privacy Policy
+
+A privacy policy is required for Google Play Store submission. We provide a basic template at `PRIVACY-POLICY.md` in the repository root. To use it:
+
+1. Enable GitHub Pages for this repository (Settings → Pages → Source: `main` branch, `/` root)
+2. The privacy policy will be available at: `https://8041q.github.io/Siphon/PRIVACY-POLICY.md`
+3. Update your Google Play Store listing with this URL under "Privacy Policy"
+
+### How the app checks for updates
+
+- On launch the app silently verifies whether a newer version exists (no download, result cached 30 min).
+- **Settings → Updates** shows the status, a manual "Check for updates", and — when one exists — a "Download update" button:
+  - **GitHub sideload builds**: checks GitHub releases and directs to `https://github.com/8041q/Siphon/releases/latest/download/siphon.apk`
+  - **Google Play Store builds**: automatic updates via Play Store (no GitHub check performed)
+  - **iOS**: opens the GitHub release page for now; modify `getUpdateUrl` in `src/hooks/useAppUpdate.ts` when a proper iOS distribution existsEverything else — features, UI, logic — lives in shared code. No double work.
 
 ## Features
 

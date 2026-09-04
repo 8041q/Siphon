@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Determine if this is a store build (Play Store, etc.) vs sideload/GitHub build
+const isStoreBuild = Constants.expoConfig?.extra?.distribution === 'playstore';
+
 const REPO = '8041q/Siphon';
 const RELEASES_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const UPDATE_KEY = 'siphon:update:check';
@@ -116,7 +119,11 @@ export function useAppUpdate() {
   }, []);
 
   useEffect(() => {
-    check();
+    // Only check for updates via GitHub for sideload builds
+    // Store builds (Play Store, etc.) get updates through the store
+    if (!isStoreBuild) {
+      check();
+    }
   }, [check]);
 
   return { ...status, check };

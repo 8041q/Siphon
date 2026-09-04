@@ -1,4 +1,4 @@
-name: Release APK
+name: Release APK and Submit to Play Store
 
 on:
   push:
@@ -6,10 +6,10 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # needed for GitHub Release
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +21,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Derive version from tag
+        id: version
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Tag must be vX.Y.Z"; exit 1; }
@@ -34,11 +35,29 @@ jobs:
             '.version=$v | .android.versionCode=$vc | .ios.buildNumber=$bn' \
             app.json > app.json.tmp && mv app.json.tmp app.json
 
-      - name: Build Android APK
+      - name: Build Android APK (for GitHub Release)
         run: eas build --platform android --profile preview --non-interactive --output "$RUNNER_TEMP/siphon.apk"
 
-      - name: Upload APK to Release
+      - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: ${{ runner.temp }}/siphon.apk
+
+      - name: Build Android AAB (for Play Store)
+        # Temporarily modify app.json to mark this as a store build
+        # This will gate the GitHub update check in useAppUpdate.ts
+        run: |
+          jq '.expo.extra.distribution = "playstore"' app.json > app.json.tmp && mv app.json.tmp app.json
+          eas build --platform android --profile production --non-interactive --output "$RUNNER_TEMP/siphon.aab"
+
+      - name: Submit to Play Store
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: |
+          eas submit --platform android --non-interactive
+
+      - name: Restore app.json (optional, for cleanliness)
+        run: |
+          jq '.expo.extra.distribution = "github"' app.json > app.json.tmp && mv app.json.tmp app.json
