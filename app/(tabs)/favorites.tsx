@@ -44,6 +44,7 @@ export default function FavoritesScreen() {
         <FlashList
           data={favoriteStations}
           keyExtractor={(item) => item.properties.id}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           renderItem={({ item }) => (
