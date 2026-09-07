@@ -202,14 +202,14 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
   }
 
   return (
-    <View className="flex-1 gap-1 pt-lg">
+    <View className="flex-1 gap-1 pt-lg" style={{ overflow: 'hidden' }}>
         <Text className="text-headline mb-sm px-4" style={{ color: colors.label }}>
         {t('search.results_header')} ({results.length})
       </Text>
       <FlashList
         data={results}
         keyExtractor={(item) => item.properties.id}
-        style={{ flex: 1 }}
+        style={{ flex: 1, overflow: 'hidden' }}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => (
