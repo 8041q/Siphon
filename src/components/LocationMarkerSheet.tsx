@@ -114,38 +114,50 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                   className="items-center gap-xs"
                   style={{ width: '22%' }}
                 >
-                  <View style={{
-                    width: 54,
-                    height: 54,
-                    borderRadius: 27,
-                        backgroundColor: colors.markerBackground,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 3,
-                    elevation: 3,
-                    borderWidth: selected ? 2.5 : 0,
-                    borderColor: selected ? colors.tint : 'transparent',
-                    opacity: unlocked ? 1 : 0.4,
-                  }}>
-                    {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
-                    {!unlocked && (
-                      <View style={{
+                  <View style={{ width: 54, height: 54 }}>
+                    {/* Fake shadow: a plain, non-elevated View with no children, so it can
+                        never share a render layer with the SvgXml canvas. Avoids the Android
+                        bug where `elevation` leaves a hole behind an SVG's own bounding box. */}
+                    <View
+                      pointerEvents="none"
+                      style={{
                         position: 'absolute',
-                        right: 4,
-                        bottom: 4,
-                        width: 18,
-                        height: 18,
-                        borderRadius: 9,
-                        backgroundColor: colors.markerBackground,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        <Icon name="lock" size={11} color={colors.tint} />
-                      </View>
-                    )}
+                        top: 1.5,
+                        left: 0,
+                        width: 54,
+                        height: 54,
+                        borderRadius: 27,
+                        backgroundColor: 'rgba(0,0,0,0.18)',
+                      }}
+                    />
+                    <View style={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: 27,
+                      backgroundColor: colors.markerBackground,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: selected ? 2.5 : 0,
+                      borderColor: selected ? colors.tint : 'transparent',
+                      opacity: unlocked ? 1 : 0.4,
+                    }}>
+                      {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
+                      {!unlocked && (
+                        <View style={{
+                          position: 'absolute',
+                          right: 4,
+                          bottom: 4,
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: colors.markerBackground,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Icon name="lock" size={11} color={colors.tint} />
+                        </View>
+                      )}
+                    </View>
                   </View>
                   <Text
                     className="text-caption1 text-center"
