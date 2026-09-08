@@ -21,13 +21,17 @@ import '../src/i18n';
 
 function ThemeInit() {
   useEffect(() => {
+    // Set a sane default immediately so Android's root view is never left
+    // uncolored on first launch, before AsyncStorage even resolves.
+    const systemScheme = Appearance.getColorScheme() ?? 'light';
+    setBackgroundColorAsync(getPalette('default')[systemScheme].background);
+
     AsyncStorage.getItem('siphon:theme').then(async (val) => {
-      if (val === 'light' || val === 'dark') {
-        colorScheme.set(val);
-        const paletteVal = await AsyncStorage.getItem('siphon:palette');
-        const palette = getPalette(paletteVal ?? 'default');
-        setBackgroundColorAsync(palette[val].background);
-      }
+      const scheme = (val === 'light' || val === 'dark') ? val : systemScheme;
+      if (val === 'light' || val === 'dark') colorScheme.set(val);
+      const paletteVal = await AsyncStorage.getItem('siphon:palette');
+      const palette = getPalette(paletteVal ?? 'default');
+      setBackgroundColorAsync(palette[scheme].background);
     });
   }, []);
   return null;

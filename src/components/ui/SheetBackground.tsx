@@ -32,7 +32,7 @@ export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
 
   const base: any[] = [
     StyleSheet.absoluteFill,
-    { borderRadius: 15 },
+    { borderTopLeftRadius: 15, borderTopRightRadius: 15 },
     glass
       ? { backgroundColor: 'transparent', overflow: 'hidden' }
       : { backgroundColor: colors.sheet },
