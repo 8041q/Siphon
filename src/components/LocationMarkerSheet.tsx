@@ -9,6 +9,7 @@ import { Icon } from '../theme/Icon';
 import { type UserLocationMarkerConfig, saveMarkerImage } from '../hooks/useUserLocationMarker';
 import { useSupport } from '../hooks/useSupport';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
 import { SheetBackground } from './ui/SheetBackground';
 
@@ -79,14 +80,11 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         enablePanDownToClose
         enableContentPanningGesture={false}
         enableDynamicSizing={false}
-        handleStyle={{ marginVertical: 4 }}
-        handleIndicatorStyle={{
-          backgroundColor: colors.handleIndicator,
-          width: 40,
-          height: 5,
-          borderRadius: 3,
-          alignSelf: 'center',
-        }}
+        handleStyle={SHEET_HANDLE_STYLE}
+        handleIndicatorStyle={[
+          SHEET_HANDLE_INDICATOR_STYLE,
+          { backgroundColor: colors.handleIndicator },
+        ]}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}

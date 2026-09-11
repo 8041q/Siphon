@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { FuelStationFeature } from '../api/siphonClient';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
@@ -13,6 +14,7 @@ import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from
 import { Icon } from '../theme/Icon';
 import { useUI, useStations } from '../hooks/useApp';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { WorthTheDrive } from './WorthTheDrive';
 import { SheetBackground } from './ui/SheetBackground';
 import { GlassBox } from './ui/GlassBox';
@@ -241,11 +243,12 @@ export function StationDetailSheet() {
     const rows = Math.ceil(entries / 2);
     const extraRows = Math.max(0, rows - 2);
     const firstSnap = Math.min(50 + extraRows * 7, 85);
-    return [`${firstSnap}%`, '90%'];
+    return [`${firstSnap}%`, '100%'];
   }, [selectedStation]);
 
   const { colors } = useThemeTokens();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const handleReport = useCallback(() => {
     Linking.openURL(REPORT_ISSUE_URL);
@@ -286,16 +289,14 @@ export function StationDetailSheet() {
       snapPoints={snapPoints}
       enablePanDownToClose
       enableContentPanningGesture={false}
-      enableDynamicSizing
-      maxDynamicContentSize={Math.round(Dimensions.get('window').height * 0.9)}
-      handleStyle={{ marginVertical: 4 }}
-      handleIndicatorStyle={{
-        backgroundColor: colors.handleIndicator,
-        width: 40,
-        height: 5,
-        borderRadius: 3,
-        alignSelf: 'center',
-      }}
+      enableDynamicSizing={false}
+      topInset={insets.top}
+      bottomInset={0}
+      handleStyle={SHEET_HANDLE_STYLE}
+        handleIndicatorStyle={[
+          SHEET_HANDLE_INDICATOR_STYLE,
+          { backgroundColor: colors.handleIndicator },
+        ]}
       onChange={handleChange}
       onDismiss={handleDismiss}
       backdropComponent={(props) => (

@@ -4,6 +4,7 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 
 import { Field } from './ui/field';
 import { GlassBox } from './ui/GlassBox';
@@ -134,14 +135,11 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
         snapPoints={snapPoints}
         enablePanDownToClose
         enableDynamicSizing={false}
-        handleStyle={{ marginVertical: 4 }}
-        handleIndicatorStyle={{
-          backgroundColor: colors.handleIndicator,
-          width: 40,
-          height: 5,
-          borderRadius: 3,
-          alignSelf: 'center',
-        }}
+        handleStyle={SHEET_HANDLE_STYLE}
+        handleIndicatorStyle={[
+          SHEET_HANDLE_INDICATOR_STYLE,
+          { backgroundColor: colors.handleIndicator },
+        ]}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}

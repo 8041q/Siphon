@@ -10,6 +10,7 @@ import { GlassBox } from './ui/GlassBox';
 import { SearchFilter } from '../hooks/useApp';
 import { FUEL_KEYS, fuelLabel } from '../utils/fuelNames';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
 import type { CountryCode } from '../api/siphonClient';
 
@@ -140,14 +141,11 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         enablePanDownToClose
         enableContentPanningGesture={false}
         enableDynamicSizing={false}
-        handleStyle={{ marginVertical: 4 }}
-        handleIndicatorStyle={{
-          backgroundColor: colors.handleIndicator,
-          width: 40,
-          height: 5,
-          borderRadius: 3,
-          alignSelf: 'center',
-        }}
+        handleStyle={SHEET_HANDLE_STYLE}
+        handleIndicatorStyle={[
+          SHEET_HANDLE_INDICATOR_STYLE,
+          { backgroundColor: colors.handleIndicator },
+        ]}
         onDismiss={handleDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />

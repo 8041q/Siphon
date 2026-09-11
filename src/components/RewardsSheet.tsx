@@ -13,6 +13,7 @@ import { STYLE_SET_ORDER, STYLE_SETS } from '../theme/styles';
 import type { StyleSetId } from '../theme/styles';
 import { rewardForPalette, rewardForIcon, rewardForStyle } from '../hooks/useAdRewards';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { Button } from './ui/button';
 import { GlassBox } from './ui/GlassBox';
 import { SheetBackground } from './ui/SheetBackground';
@@ -148,14 +149,11 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       enablePanDownToClose
       enableContentPanningGesture={false}
       enableDynamicSizing={false}
-      handleStyle={{ marginVertical: 4 }}
-      handleIndicatorStyle={{
-        backgroundColor: colors.handleIndicator,
-        width: 40,
-        height: 5,
-        borderRadius: 3,
-        alignSelf: 'center',
-      }}
+      handleStyle={SHEET_HANDLE_STYLE}
+        handleIndicatorStyle={[
+          SHEET_HANDLE_INDICATOR_STYLE,
+          { backgroundColor: colors.handleIndicator },
+        ]}
       backdropComponent={(props) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
       )}
