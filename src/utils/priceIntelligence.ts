@@ -1,3 +1,5 @@
+import { DAY_MS as DAY, forwardFillDaily, isoDayToMs, isoWeekday, shiftIsoDay } from './dailySeries';
+
 export type PricePoint = { date: string; price: number };
 export type Confidence = 'high' | 'medium' | 'low' | 'none';
 
@@ -11,7 +13,6 @@ export type PriceForecastResult = {
   sampleDays: number;
   direction: 'up' | 'down' | 'flat';
 };
-
 export type PriceIntelligence = {
   current: number;
   min30: number;
@@ -28,14 +29,14 @@ export type PriceIntelligence = {
   forecast7: PriceForecastResult | null;
 };
 
-const DAY = 86_400_000;
 export const PRICE_FORECAST_MIN_DAYS = 80;
 
 function clean(data: readonly PricePoint[]): PricePoint[] {
-  return data
-    .filter((p) => typeof p.date === 'string' && Number.isFinite(p.price) && p.price > 0)
+  const snapshots = data
+    .filter((p) => typeof p.date === 'string' && Number.isFinite(isoDayToMs(p.date)) && Number.isFinite(p.price) && p.price > 0)
     .map((p) => ({ date: p.date, price: p.price }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => isoDayToMs(a.date) - isoDayToMs(b.date));
+  return forwardFillDaily(snapshots, (point, date) => ({ ...point, date }));
 }
 
 function median(values: readonly number[]): number {
@@ -57,15 +58,14 @@ function stdev(values: readonly number[]): number {
 
 function coverageDays(points: readonly PricePoint[]): number {
   if (points.length < 2) return 0;
-  return Math.floor((new Date(points[points.length - 1].date).getTime() - new Date(points[0].date).getTime()) / DAY) + 1;
+  return Math.floor((isoDayToMs(points[points.length - 1].date) - isoDayToMs(points[0].date)) / DAY) + 1;
 }
 
 function priceAtOrBefore(points: readonly PricePoint[], daysAgo: number): number | null {
   if (!points.length) return null;
-  const latest = new Date(points[points.length - 1].date).getTime();
-  const target = latest - daysAgo * DAY;
+  const target = shiftIsoDay(points[points.length - 1].date, -daysAgo);
   for (let i = points.length - 1; i >= 0; i -= 1) {
-    if (new Date(points[i].date).getTime() <= target) return points[i].price;
+    if (points[i].date <= target) return points[i].price;
   }
   return null;
 }
@@ -77,10 +77,9 @@ function pctChange(current: number, prior: number | null): number | null {
 
 function robustSlope(points: readonly PricePoint[], lookbackDays = 28): number {
   if (points.length < 3) return 0;
-  const latestMs = new Date(points[points.length - 1].date).getTime();
-  const sample = points.filter((p) => new Date(p.date).getTime() >= latestMs - lookbackDays * DAY);
+  const sample = points.slice(-(lookbackDays + 1));
   if (sample.length < 3) return 0;
-  const xs = sample.map((p) => (new Date(p.date).getTime() - new Date(sample[0].date).getTime()) / DAY);
+  const xs = sample.map((_, i) => i);
   const ys = sample.map((p) => p.price);
   const xMean = mean(xs);
   const yMean = mean(ys);
@@ -99,17 +98,15 @@ function robustSlope(points: readonly PricePoint[], lookbackDays = 28): number {
 
 function weekdayAdjustment(points: readonly PricePoint[], horizonDays: number): number {
   if (points.length < 28) return 0;
+  const recent = points.slice(-70);
   const byDay = Array.from({ length: 7 }, () => [] as number[]);
-  for (const point of points.slice(-70)) {
-    const day = new Date(`${point.date}T12:00:00`).getDay();
-    byDay[day].push(point.price);
+  for (const point of recent) {
+    byDay[isoWeekday(point.date)].push(point.price);
   }
-  const all = points.slice(-70).map((p) => p.price);
-  const baseline = mean(all);
+  const baseline = mean(recent.map((p) => p.price));
   if (!Number.isFinite(baseline)) return 0;
-  const target = new Date(`${points[points.length - 1].date}T12:00:00`);
-  target.setDate(target.getDate() + horizonDays);
-  const values = byDay[target.getDay()];
+  const targetDay = isoWeekday(shiftIsoDay(points[points.length - 1].date, horizonDays));
+  const values = byDay[targetDay];
   if (values.length < 3) return 0;
   return mean(values) - baseline;
 }
@@ -130,11 +127,10 @@ function backtestMae(points: readonly PricePoint[], horizonDays: number): number
   for (let i = 0; i < points.length; i += 1) {
     const train = points.slice(0, i + 1);
     if (coverageDays(train) < minTrainDays || train.length < 35) continue;
-    const targetDate = new Date(points[i].date).getTime() + horizonDays * DAY;
-    const target = points.find((p, idx) => idx > i && new Date(p.date).getTime() >= targetDate);
-    if (!target) continue;
+    const targetIndex = i + horizonDays;
+    if (targetIndex >= points.length) continue;
     const predicted = simplePredict(train, horizonDays);
-    maes.push(Math.abs(predicted - target.price));
+    maes.push(Math.abs(predicted - points[targetIndex].price));
     if (maes.length >= 18) break;
   }
   return maes.length >= 5 ? mean(maes) : null;
@@ -146,7 +142,8 @@ export function forecastPrice(data: readonly PricePoint[], horizonDays: number):
   if (sampleDays < PRICE_FORECAST_MIN_DAYS || points.length < 35) return null;
   const predicted = simplePredict(points, horizonDays);
   const mae = backtestMae(points, horizonDays);
-  const dailyMoves = points.slice(-30).slice(1).map((p, i) => p.price - points.slice(-30)[i].price);
+  const last30 = points.slice(-30);
+  const dailyMoves = last30.slice(1).map((p, i) => p.price - last30[i].price);
   const noise = Math.max(stdev(dailyMoves), 0.003);
   const error = Math.max(mae ?? noise * Math.sqrt(horizonDays), noise * 1.5);
   const latest = points[points.length - 1].price;
@@ -179,8 +176,7 @@ export function analyzePriceHistory(data: readonly PricePoint[]): PriceIntellige
   const points = clean(data);
   if (!points.length) return null;
   const current = points[points.length - 1].price;
-  const latestMs = new Date(points[points.length - 1].date).getTime();
-  const last30 = points.filter((p) => new Date(p.date).getTime() >= latestMs - 29 * DAY);
+  const last30 = points.slice(-30);
   const prices30 = last30.map((p) => p.price);
   const min30 = Math.min(...prices30);
   const max30 = Math.max(...prices30);
@@ -200,7 +196,7 @@ export function analyzePriceHistory(data: readonly PricePoint[]): PriceIntellige
   let daysSinceChange: number | null = null;
   for (let i = points.length - 2; i >= 0; i -= 1) {
     if (Math.abs(points[i].price - current) > 0.0005) {
-      daysSinceChange = Math.max(0, Math.round((latestMs - new Date(points[i + 1].date).getTime()) / DAY));
+      daysSinceChange = points.length - 1 - (i + 1);
       break;
     }
   }

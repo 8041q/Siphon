@@ -7,10 +7,6 @@ import { analyzeMarket } from '../utils/marketAnalysis';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { GlassBox } from './ui/GlassBox';
 
-function signed(value: number): string {
-  return value === 0 ? '0.00%' : `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-
 export function MarketDetailsCard({
   crude,
   wti = [],
@@ -28,16 +24,7 @@ export function MarketDetailsCard({
     () => analyzeMarket(crude, retail, metrics, wti),
     [crude, retail, metrics, wti],
   );
-
-  const latestRetail = retail.length ? retail[retail.length - 1].value : 0;
-  const rocketMonthly = metrics?.status === 'ok' && latestRetail > 0
-    ? (metrics.rocket * 30 / latestRetail) * 100
-    : null;
-  const featherMonthly = metrics?.status === 'ok' && latestRetail > 0
-    ? (metrics.feather * 30 / latestRetail) * 100
-    : null;
   const correlation = metrics?.status === 'ok' ? metrics.correlation : null;
-
   const sections: Array<{ title: string; body: string }> = [
     {
       title: t('market.details_pressure_title'),
@@ -50,7 +37,6 @@ export function MarketDetailsCard({
       }),
     },
   ];
-
   if (correlation !== null && insight.expectedWindowDays !== null) {
     sections.push({
       title: t('market.details_lag_title'),
@@ -62,16 +48,10 @@ export function MarketDetailsCard({
     });
   }
 
-  if (rocketMonthly !== null && featherMonthly !== null) {
-    sections.push({
-      title: t('market.details_rocket_title'),
-      body: t('market.details_rocket_body', {
-        rocket: signed(rocketMonthly),
-        feather: signed(featherMonthly),
-      }),
-    });
-  }
-
+  // Do not present the backend rocket/feather deltas as a monthly percentage.
+  // The source history is sparse, so multiplying a per-observation delta by 30
+  // does not produce a valid monthly rate. Keep the metric out of the UI until
+  // the API publishes an explicitly time-normalized definition.
   if (insight.crudeVolatility30 !== null || insight.retailVolatility30 !== null) {
     sections.push({
       title: t('market.details_volatility_title'),
@@ -81,7 +61,6 @@ export function MarketDetailsCard({
       }),
     });
   }
-
   if (insight.brentWtiSpreadPct !== null) {
     sections.push({
       title: t('market.details_spread_title'),
@@ -90,7 +69,6 @@ export function MarketDetailsCard({
       }),
     });
   }
-
   return (
     <GlassBox component="card" className="rounded-md p-md gap-md">
       <Text style={{ color: colors.label }} className="text-headline font-semibold">

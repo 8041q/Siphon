@@ -1,7 +1,7 @@
 import type { CommodityDataPoint, CommodityMetrics } from '../api/siphonClient';
+import { DAY_MS as DAY, forwardFillDaily, isoDayToMs } from './dailySeries';
 
 export type MarketPressure = 'up' | 'down' | 'neutral';
-
 export type MarketInsight = {
   crude7: number | null;
   crude30: number | null;
@@ -17,20 +17,25 @@ export type MarketInsight = {
   correlationStrength: 'strong' | 'moderate' | 'weak' | 'none';
 };
 
-const DAY = 86_400_000;
-
 function clean(points: readonly CommodityDataPoint[]): CommodityDataPoint[] {
-  return points.filter((p) => Number.isFinite(p.value)).slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return points
+    .filter((p) => typeof p.date === 'string' && Number.isFinite(isoDayToMs(p.date)) && Number.isFinite(p.value))
+    .slice()
+    .sort((a, b) => isoDayToMs(a.date) - isoDayToMs(b.date));
+}
+
+function daily(points: readonly CommodityDataPoint[]): CommodityDataPoint[] {
+  return forwardFillDaily(clean(points), (point, date) => ({ ...point, date }));
 }
 
 function pct(points: readonly CommodityDataPoint[], days: number): number | null {
   const p = clean(points);
   if (p.length < 2) return null;
   const latest = p[p.length - 1];
-  const target = new Date(latest.date).getTime() - days * DAY;
+  const target = isoDayToMs(latest.date) - days * DAY;
   let prior: CommodityDataPoint | null = null;
   for (let i = p.length - 1; i >= 0; i -= 1) {
-    if (new Date(p[i].date).getTime() <= target) {
+    if (isoDayToMs(p[i].date) <= target) {
       prior = p[i];
       break;
     }
@@ -40,7 +45,7 @@ function pct(points: readonly CommodityDataPoint[], days: number): number | null
 }
 
 function dailyReturns(points: readonly CommodityDataPoint[], days = 30): number[] {
-  const p = clean(points).slice(-(days + 1));
+  const p = daily(points).slice(-(days + 1));
   const out: number[] = [];
   for (let i = 1; i < p.length; i += 1) {
     if (p[i - 1].value > 0) out.push(((p[i].value - p[i - 1].value) / p[i - 1].value) * 100);
@@ -55,13 +60,14 @@ function stdev(values: readonly number[]): number | null {
 }
 
 function percentile(points: readonly CommodityDataPoint[], days = 90): number | null {
-  const p = clean(points);
-  if (!p.length) return null;
-  const latestMs = new Date(p[p.length - 1].date).getTime();
-  const values = p.filter((x) => new Date(x.date).getTime() >= latestMs - (days - 1) * DAY).map((x) => x.value);
-  if (values.length < 2) return null;
+  const p = daily(points).slice(-days);
+  if (p.length < 2) return null;
+  const values = p.map((x) => x.value);
   const current = values[values.length - 1];
-  return Math.max(0, Math.min(100, ((values.filter((v) => v <= current).length - 1) / (values.length - 1)) * 100));
+  const epsilon = Math.max(1e-9, Math.abs(current) * 1e-9);
+  const less = values.filter((v) => v < current - epsilon).length;
+  const equal = values.filter((v) => Math.abs(v - current) <= epsilon).length;
+  return Math.max(0, Math.min(100, ((less + Math.max(0, equal - 1) / 2) / (values.length - 1)) * 100));
 }
 
 export function analyzeMarket(
@@ -83,20 +89,17 @@ export function analyzeMarket(
     : null;
   const corr = metrics?.status === 'ok' ? Math.abs(metrics.correlation) : 0;
   const correlationStrength = corr >= 0.65 ? 'strong' : corr >= 0.4 ? 'moderate' : corr >= 0.2 ? 'weak' : 'none';
-
   const crudeSignal = (crude7 ?? 0) * 0.65 + (crude30 ?? 0) * 0.35;
   const retailSignal = (retail7 ?? 0) * 0.65 + (retail30 ?? 0) * 0.35;
   const weightedCrude = crudeSignal * Math.max(0.15, corr);
   const combined = weightedCrude * 0.58 + retailSignal * 0.42;
   const pressure: MarketPressure = Math.abs(combined) < 0.6 ? 'neutral' : combined > 0 ? 'up' : 'down';
-
   let passThrough: MarketInsight['passThrough'] = 'unclear';
   if (crude7 !== null && retail7 !== null && corr >= 0.2) {
     if (Math.sign(crude7) !== 0 && Math.sign(crude7) === Math.sign(retail7) && Math.abs(retail7) >= Math.abs(crude7) * 0.45) passThrough = 'caught_up';
     else if (Math.sign(crude7) !== 0 && Math.sign(crude7) === Math.sign(retail7)) passThrough = 'catching_up';
     else if (Math.abs(crude7) >= 1.2 && Math.abs(retail7) < 0.5) passThrough = 'ahead';
   }
-
   return {
     crude7,
     crude30,
