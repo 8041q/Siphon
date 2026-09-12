@@ -308,6 +308,14 @@ export function StationDetailSheet() {
     return () => cancelAnimationFrame(frame);
   }, [selectedStation]);
 
+  // External navigation (for example tapping the alternative station in the
+  // worth-the-trip card) clears the selection before switching tabs. Dismiss
+  // the modal as well so the map is fully visible when it receives the focus.
+  useEffect(() => {
+    if (selectedStation || !isPresentedRef.current) return;
+    bottomSheetRef.current?.dismiss();
+  }, [selectedStation]);
+
   const handleDismiss = useCallback(() => {
     handleBackSheetDismiss();
     isPresentedRef.current = false;
@@ -362,7 +370,10 @@ export function StationDetailSheet() {
           )}
         </BottomSheetScrollView>
         {selectedStation && snapIndex >= 1 && (
-          <View style={{ borderColor: colors.separator }} className="px-lg pt-sm pb-lg">
+          <View
+            style={{ borderColor: colors.separator, paddingBottom: 16 + insets.bottom }}
+            className="px-lg pt-sm"
+          >
             <GlassBox component="card" className="rounded-md overflow-hidden">
               <TouchableOpacity
                 activeOpacity={0.7}

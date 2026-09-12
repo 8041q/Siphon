@@ -6,19 +6,17 @@ import { useTranslation } from 'react-i18next';
 
 import { useStationCatalog, useStationDistances, useStationSync } from '../../src/hooks/useApp';
 import { usePriceHistory } from '../../src/hooks/usePriceHistory';
+import { useCommodities } from '../../src/hooks/useCommodities';
 import { PriceChart } from '../../src/components/PriceChart';
 import { PriceStats } from '../../src/components/PriceStats';
 import { CheapDayBanner } from '../../src/components/CheapDayBanner';
-import { PriceForecast } from '../../src/components/PriceForecast';
+import { PriceIntelligenceCard } from '../../src/components/PriceIntelligenceCard';
+import { PriceHistoryExplainer } from '../../src/components/PriceHistoryExplainer';
 import { WeekdayRadar } from '../../src/components/WeekdayRadar';
 import { fuelLabel, fuelUnit } from '../../src/utils/fuelNames';
 import { getLocationParts } from '../../src/utils/location';
-import {
-  forecast,
-  FORECAST_HORIZONS,
-  FORECAST_MIN_DAYS,
-  historyCoverageDays,
-} from '../../src/utils/priceAnalysis';
+import { forecastPrice } from '../../src/utils/priceIntelligence';
+import { analyzeMarket } from '../../src/utils/marketAnalysis';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import type { FuelKey } from '../../src/api/siphonClient';
 
@@ -39,6 +37,7 @@ export default function PriceTrendsScreen() {
     reload,
   } = useStationSync();
   const { colors } = useThemeTokens();
+  const { dashboard: marketDashboard } = useCommodities({ refresh: false });
   const insets = useSafeAreaInsets();
 
   const station = useMemo(
@@ -79,11 +78,22 @@ export default function PriceTrendsScreen() {
     return parts;
   }, [city, distanceKm, t]);
 
-  const coverageDays = useMemo(() => historyCoverageDays(data), [data]);
-  const chartForecast = useMemo(() => {
-    if (coverageDays < FORECAST_MIN_DAYS) return undefined;
-    return forecast(data, FORECAST_HORIZONS[1])?.predicted;
-  }, [data, coverageDays]);
+  const chartForecast = useMemo(
+    () => forecastPrice(data, 7)?.predicted,
+    [data],
+  );
+
+  const marketInsight = useMemo(() => {
+    if (!station || !selectedFuel || !marketDashboard) return null;
+    if (selectedFuel !== 'gasoline95' && selectedFuel !== 'diesel') return null;
+    const key = `${selectedFuel}_${station.properties.source.toLowerCase()}`;
+    const retail = marketDashboard.retail?.[key] ?? [];
+    const crude = marketDashboard.crude?.brent ?? [];
+    const wti = marketDashboard.crude?.wti ?? [];
+    const metrics = marketDashboard.metrics?.[key];
+    if (crude.length < 2 && retail.length < 2) return null;
+    return analyzeMarket(crude, retail, metrics, wti);
+  }, [marketDashboard, selectedFuel, station]);
 
   const content = (() => {
     if (stationsLoading && !station) {
@@ -158,6 +168,7 @@ export default function PriceTrendsScreen() {
     return (
       <View className="gap-lg">
         <CheapDayBanner data={data} />
+        <PriceIntelligenceCard data={data} unit={unit} marketInsight={marketInsight} />
         <PriceStats data={data} unit={unit} />
         <PriceChart
           data={data}
@@ -166,8 +177,8 @@ export default function PriceTrendsScreen() {
           source={station.properties.source}
           forecast={chartForecast}
         />
-        <PriceForecast data={data} unit={unit} />
         <WeekdayRadar data={data} />
+        <PriceHistoryExplainer />
       </View>
     );
   })();

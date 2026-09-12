@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Icon } from '../theme/Icon';
@@ -34,6 +35,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['50%'], []);
     const { colors } = useThemeTokens();
+    const insets = useSafeAreaInsets();
 
     const { marker: currentMarker, setMarker, isUnlocked } = useSupport();
     const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
@@ -110,7 +112,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         )}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
             {t('settings.location_marker')}
           </Text>

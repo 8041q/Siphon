@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
@@ -52,6 +53,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
     const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['80%'], []);
     const { colors } = useThemeTokens();
+    const insets = useSafeAreaInsets();
 
     const [editing, setEditing] = useState<Vehicle | null>(null);
     const [name, setName] = useState('');
@@ -124,7 +126,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
 
     const toggleFuel = useCallback(
       (key: string) => {
-        Haptics.selectionAsync();
+        void Haptics.selectionAsync().catch(() => undefined);
         setFuels((prev) => {
           const exists = prev.some((f) => f.fuelType === key);
           if (exists) {
@@ -221,7 +223,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         )}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
             {isEdit ? t('settings.vehicle_edit_title') : t('settings.vehicle_new_title')}
           </Text>

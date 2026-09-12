@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { isFuelKey, type FuelKey, type FuelStationFeature } from '../api/siphonClient';
-import { useStationCatalog, useStationDistances } from '../hooks/useApp';
+import { useStationCatalog, useStationDistances, useUI } from '../hooks/useApp';
 import { useVehicles } from '../hooks/useVehicles';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
@@ -48,6 +49,7 @@ type Comparison = {
   roundTripKm: number;
   targetTripCost: number;
   targetReachable: boolean;
+  referenceStation: FuelStationFeature | null;
   referenceStationName: string | null;
   referencePrice: number | null;
   referenceDistanceKm: number | null;
@@ -71,10 +73,30 @@ export function WorthTheDrive({
   distanceRouted?: boolean;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const { colors } = useThemeTokens();
+  const { requestMapFocus } = useUI();
   const { vehicles } = useVehicles();
   const { allStations } = useStationCatalog();
   const { stationDistances, routedStationIds } = useStationDistances();
+
+  const nearbyCandidates = useMemo(() => {
+    const candidates: FuelStationFeature[] = [];
+    for (const candidate of allStations) {
+      if (candidate.properties.id === station.properties.id) continue;
+      const candidateDistance = stationDistances.get(candidate.properties.id);
+      if (
+        candidateDistance == null ||
+        !Number.isFinite(candidateDistance) ||
+        candidateDistance < 0 ||
+        candidateDistance > COMPARISON_RADIUS_KM
+      ) {
+        continue;
+      }
+      candidates.push(candidate);
+    }
+    return candidates;
+  }, [allStations, station.properties.id, stationDistances]);
 
   const comparisons = useMemo<Comparison[]>(() => {
     if (!Number.isFinite(distanceKm) || distanceKm < 0 || vehicles.length === 0) return [];
@@ -114,17 +136,9 @@ export function WorthTheDrive({
           | null = null;
 
         if (!unitMismatch) {
-          for (const candidate of allStations) {
-            if (candidate.properties.id === station.properties.id) continue;
+          for (const candidate of nearbyCandidates) {
             const candidateDistance = stationDistances.get(candidate.properties.id);
-            if (
-              candidateDistance == null ||
-              !Number.isFinite(candidateDistance) ||
-              candidateDistance < 0 ||
-              candidateDistance > COMPARISON_RADIUS_KM
-            ) {
-              continue;
-            }
+            if (candidateDistance == null) continue;
 
             const candidatePrice = candidate.properties.fuels[fuel];
             if (typeof candidatePrice !== 'number' || !Number.isFinite(candidatePrice) || candidatePrice <= 0) continue;
@@ -174,6 +188,7 @@ export function WorthTheDrive({
           roundTripKm,
           targetTripCost,
           targetReachable,
+          referenceStation: bestReference?.station ?? null,
           referenceStationName: bestReference ? displayStationName(bestReference.station) : null,
           referencePrice,
           referenceDistanceKm: bestReference?.distanceKm ?? null,
@@ -190,7 +205,15 @@ export function WorthTheDrive({
     }
 
     return result;
-  }, [allStations, distanceKm, distanceRouted, routedStationIds, station, stationDistances, vehicles]);
+  }, [distanceKm, distanceRouted, nearbyCandidates, routedStationIds, station, stationDistances, vehicles]);
+
+  const handleReferencePress = useCallback(
+    (referenceStation: FuelStationFeature) => {
+      requestMapFocus(referenceStation);
+      router.navigate('/');
+    },
+    [requestMapFocus, router],
+  );
 
   if (comparisons.length === 0) return null;
 
@@ -246,13 +269,36 @@ export function WorthTheDrive({
               </Text>
             ) : (
               <>
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-sm">
-                  {t('settings.worth_reference', {
-                    station: comparison.referenceStationName,
+                {(() => {
+                  const stationToken = '__SIPHON_REFERENCE_STATION__';
+                  const referenceText = t('settings.worth_reference', {
+                    station: stationToken,
                     price: comparison.referencePrice?.toFixed(3),
-                    distance: comparison.referenceDistanceKm == null ? '—' : formatDistance(comparison.referenceDistanceKm),
-                  })}
-                </Text>
+                    distance: comparison.referenceDistanceKm == null ? '-' : formatDistance(comparison.referenceDistanceKm),
+                  });
+                  const tokenIndex = referenceText.indexOf(stationToken);
+                  const before = tokenIndex >= 0 ? referenceText.slice(0, tokenIndex) : '';
+                  const after = tokenIndex >= 0
+                    ? referenceText.slice(tokenIndex + stationToken.length)
+                    : referenceText;
+                  const referenceStation = comparison.referenceStation;
+
+                  return (
+                    <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-sm">
+                      {before}
+                      {referenceStation && (
+                        <Text
+                          onPress={() => handleReferencePress(referenceStation)}
+                          accessibilityRole="link"
+                          style={{ color: colors.tint, textDecorationLine: 'underline' }}
+                        >
+                          {comparison.referenceStationName}
+                        </Text>
+                      )}
+                      {after}
+                    </Text>
+                  );
+                })()}
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-xs">
                   {comparison.grossFuelSaving >= 0
                     ? t('settings.worth_full_tank_saving', { saving: comparison.grossFuelSaving.toFixed(2) })

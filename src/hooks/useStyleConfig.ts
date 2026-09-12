@@ -12,7 +12,7 @@ export function isGlass(rules: ComponentRules): boolean {
 
 /**
  * Shape/border overrides to merge into a surface's inline style.
- * `opacity` is intentionally excluded when `glass` is active — glass surfaces
+ * `opacity` is intentionally excluded when `glass` is active - glass surfaces
  * handle transparency via a blur backdrop, not a whole-view opacity fade that
  * would also fade the text/children.
  */

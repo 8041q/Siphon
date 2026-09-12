@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
@@ -38,13 +39,14 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
     const snapPoints = useMemo(() => ['40%'], []);
 
     const { colors } = useThemeTokens();
+    const insets = useSafeAreaInsets();
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
     }));
 
     const handleSelect = useCallback((code: string) => {
-      Haptics.selectionAsync();
+      void Haptics.selectionAsync().catch(() => undefined);
       onSelectLanguage(code);
       bottomSheetRef.current?.dismiss();
     }, [onSelectLanguage]);
@@ -73,7 +75,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
         )}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
           {LANGUAGES.map((lang) => {
             const selected = currentLang === lang.code;
             return (

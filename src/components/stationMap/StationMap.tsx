@@ -1,14 +1,17 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { Image, View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { Map as MapComponent, Camera, Marker, GeoJSONSource, Layer, Images, type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
 
-import type { StationMapProps } from './types';
+import type { MapCameraRequest, StationMapProps } from './types';
 import { useThemeTokens } from '../../hooks/useThemeTokens';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useAppearanceSupport } from '../../hooks/useSupport';
 import { svgMarkers } from '../userLocationMarkers';
 import { BRAND_ICONS, BRAND_LOGO_IMAGES, MARKER_SHAPE_ICON, buildLogoImageExpression } from './brandIcons';
+import { measureSync } from '../../utils/perf';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const STATION_IMAGES = { ...BRAND_ICONS, ...BRAND_LOGO_IMAGES };
@@ -65,17 +68,23 @@ const LOGO_PAINT = {
 // country is never rendered as individual markers.
 export const STATION_MARKER_MIN_ZOOM = 13;
 
-function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, flyToCoords, userLocation }: StationMapProps) {
+function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, cameraRequest, onCameraRequestConsumed, userLocation }: StationMapProps) {
   const { colors } = useThemeTokens();
+  const reducedMotion = useReducedMotion();
   const cameraRef = useRef<CameraRef>(null);
   const { marker: markerConfig } = useAppearanceSupport();
   const onMapReadyFired = useRef(false);
   const isMounted = useRef(false);
-  const pendingFlyToRef = useRef<[number, number] | null>(null);
+  const pendingCameraRequestRef = useRef<MapCameraRequest | null>(null);
+  const layoutReadyRef = useRef(false);
+  const cameraMountedRef = useRef(false);
+  const cameraMoveFrameRef = useRef<number | null>(null);
+  const lastAppliedCameraRequestIdRef = useRef<number | null>(null);
+  const [cameraMounted, setCameraMounted] = useState(false);
 
-  // Stable camera center — written once on first render so the native map never
+  // Stable camera center - written once on first render so the native map never
   // receives a mid-init reposition via the Camera prop. All subsequent moves
-  // go through cameraRef.flyTo(), which is already deferred until map ready.
+  // go through the guarded imperative camera path after layout/map readiness.
   const stableCameraCenter = useRef<[number, number]>([initialRegion.longitude, initialRegion.latitude]);
   if (!Number.isFinite(stableCameraCenter.current[0]) || !Number.isFinite(stableCameraCenter.current[1])) {
     stableCameraCenter.current = [initialRegion.longitude, initialRegion.latitude];
@@ -87,73 +96,147 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     isMounted.current = true;
     return () => {
       isMounted.current = false;
+      if (cameraMoveFrameRef.current !== null) {
+        cancelAnimationFrame(cameraMoveFrameRef.current);
+        cameraMoveFrameRef.current = null;
+      }
     };
   }, []);
 
-  useEffect(() => {
-    if (!flyToCoords || !isMounted.current) return;
-
-    if (onMapReadyFired.current) {
-      cameraRef.current?.flyTo({ center: flyToCoords, duration: 500 });
-    } else {
-      pendingFlyToRef.current = flyToCoords;
+  const flushPendingCameraMove = useCallback(() => {
+    if (
+      !isMounted.current ||
+      !layoutReadyRef.current ||
+      !cameraMountedRef.current ||
+      !onMapReadyFired.current ||
+      !pendingCameraRequestRef.current ||
+      !cameraRef.current
+    ) {
+      return;
     }
-  }, [flyToCoords]);
 
-  const handleMapFullyRendered = useCallback(() => {
-    if (onMapReadyFired.current) return;
-    onMapReadyFired.current = true;
-    onMapReady?.();
-
-    const pending = pendingFlyToRef.current;
-    if (pending) {
-      pendingFlyToRef.current = null;
-      cameraRef.current?.flyTo({ center: pending, duration: 500 });
+    if (cameraMoveFrameRef.current !== null) {
+      cancelAnimationFrame(cameraMoveFrameRef.current);
     }
-  }, [onMapReady]);
 
-  const { stationsById, stationsSourceData } = useMemo(() => {
-    const index = new Map<string, (typeof stations)[number]>();
-    const features: GeoJSON.Feature[] = [];
-
-    for (const station of stations) {
-      const [lng, lat] = station.geometry.coordinates;
-      const validCoords =
-        Number.isFinite(lat) &&
-        Number.isFinite(lng) &&
-        Math.abs(lat) <= 90 &&
-        Math.abs(lng) <= 180;
-
-      if (!validCoords) {
-        if (__DEV__) {
-          console.warn('[StationMap] BAD COORDS', station.properties.id, station.geometry.coordinates);
-        }
-        continue;
+    // Run on the frame after layout. This avoids MapLibre's iOS CameraUpdateItem
+    // path seeing a transient zero-sized map during tab/sheet transitions.
+    cameraMoveFrameRef.current = requestAnimationFrame(() => {
+      cameraMoveFrameRef.current = null;
+      if (
+        !isMounted.current ||
+        !layoutReadyRef.current ||
+        !onMapReadyFired.current ||
+        !cameraRef.current
+      ) {
+        return;
       }
 
-      const id = station.properties.id;
-      if (id) index.set(String(id), station);
+      const request = pendingCameraRequestRef.current;
+      if (!request) return;
+      if (lastAppliedCameraRequestIdRef.current === request.requestId) {
+        pendingCameraRequestRef.current = null;
+        onCameraRequestConsumed?.(request.requestId);
+        return;
+      }
 
-      const { _price95, _priceDiesel } = station.properties;
-      const price95 = _price95 != null ? _price95 : '-';
-      const priceDiesel = _priceDiesel != null ? _priceDiesel : '-';
-      const _priceLabel = `95 ${price95}\nD ${priceDiesel}`;
+      pendingCameraRequestRef.current = null;
+      lastAppliedCameraRequestIdRef.current = request.requestId;
 
-      features.push({
-        ...station,
-        properties: {
-          ...station.properties,
-          _priceLabel,
-          _sortLat: lat,
-        },
+      // Repeated flyTo() calls have a known iOS/New-Architecture issue in
+      // MapLibre RN. Keep all programmatic movement on the guarded easeTo path.
+      // Station focus gets the intentional cinematic zoom; locate-me restores
+      // the map's normal default zoom. Startup GPS never creates a request.
+      cameraRef.current.easeTo({
+        center: request.coordinates,
+        zoom: request.mode === 'station' ? 15.2 : 13.3,
+        duration: reducedMotion ? 0 : request.mode === 'station' ? 550 : 350,
+        easing: 'ease',
       });
+      onCameraRequestConsumed?.(request.requestId);
+    });
+  }, [onCameraRequestConsumed, reducedMotion]);
+
+  useEffect(() => {
+    if (!cameraRequest || !isMounted.current) return;
+    const [longitude, latitude] = cameraRequest.coordinates;
+    if (
+      !Number.isFinite(longitude) ||
+      !Number.isFinite(latitude) ||
+      Math.abs(longitude) > 180 ||
+      Math.abs(latitude) > 90
+    ) {
+      onCameraRequestConsumed?.(cameraRequest.requestId);
+      return;
     }
 
-    return {
-      stationsById: index,
-      stationsSourceData: { type: 'FeatureCollection', features } as GeoJSON.FeatureCollection,
-    };
-  }, [stations]);
+    pendingCameraRequestRef.current = cameraRequest;
+    flushPendingCameraMove();
+  }, [cameraRequest, flushPendingCameraMove, onCameraRequestConsumed]);
+
+  const handleMapLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    layoutReadyRef.current = Number.isFinite(width) && Number.isFinite(height) && width > 1 && height > 1;
+
+    if (!layoutReadyRef.current) return;
+
+    if (!cameraMountedRef.current) {
+      cameraMountedRef.current = true;
+      setCameraMounted(true);
+      return;
+    }
+
+    flushPendingCameraMove();
+  }, [flushPendingCameraMove]);
+
+  useEffect(() => {
+    if (cameraMounted) flushPendingCameraMove();
+  }, [cameraMounted, flushPendingCameraMove]);
+
+  const handleMapFullyRendered = useCallback(() => {
+    if (!onMapReadyFired.current) {
+      onMapReadyFired.current = true;
+      onMapReady?.();
+    }
+    flushPendingCameraMove();
+  }, [flushPendingCameraMove, onMapReady]);
+
+  const { stationsById, stationsSourceData } = useMemo(
+    () => measureSync('siphon.map.build_source', () => {
+      const index = new Map<string, (typeof stations)[number]>();
+      const features: GeoJSON.Feature[] = [];
+
+      for (const station of stations) {
+        const [lng, lat] = station.geometry.coordinates;
+        const validCoords =
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 &&
+          Math.abs(lng) <= 180;
+
+        if (!validCoords) {
+          if (__DEV__) {
+            console.warn('[StationMap] BAD COORDS', station.properties.id, station.geometry.coordinates);
+          }
+          continue;
+        }
+
+        const id = station.properties.id;
+        if (id) index.set(String(id), station);
+
+        // Marker enrichment already produced the MapLibre-only properties. Push
+        // the feature directly instead of cloning every station + properties
+        // again on each region/source update.
+        features.push(station);
+      }
+
+      return {
+        stationsById: index,
+        stationsSourceData: { type: 'FeatureCollection', features } as GeoJSON.FeatureCollection,
+      };
+    }, 2),
+    [stations],
+  );
 
   const dotPaint = useMemo(
     () => ({
@@ -231,21 +314,24 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   );
 
   return (
-    <MapComponent
-      style={{ flex: 1 }}
-      mapStyle={OPENFREEMAP_STYLE}
-      compass
-      logo={false}
-      touchZoom
-      doubleTapZoom
-      onRegionDidChange={handleRegionDidChange}
-      onDidFinishRenderingMapFully={handleMapFullyRendered}
-    >
-      <Camera
-        ref={cameraRef}
-        center={stableCameraCenter.current}
-        zoom={13.3}
-      />
+    <View style={{ flex: 1 }} onLayout={handleMapLayout}>
+      <MapComponent
+        style={{ flex: 1 }}
+        mapStyle={OPENFREEMAP_STYLE}
+        compass
+        logo={false}
+        touchZoom
+        doubleTapZoom
+        onRegionDidChange={handleRegionDidChange}
+        onDidFinishRenderingMapFully={handleMapFullyRendered}
+      >
+        {cameraMounted && (
+          <Camera
+            ref={cameraRef}
+            center={stableCameraCenter.current}
+            zoom={13.3}
+          />
+        )}
 
       {validUserLocation && userLocation && (
         <Marker
@@ -335,8 +421,9 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           layout={LOGO_MARKER_LAYOUT}
           paint={LOGO_PAINT}
         />
-      </GeoJSONSource>
-    </MapComponent>
+        </GeoJSONSource>
+      </MapComponent>
+    </View>
   );
 }
 

@@ -10,9 +10,65 @@ import { enrichStations } from '../utils/markerEnrichment';
 import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
 import i18n from '../i18n';
+import { beginPerf, endPerf, measureAsync } from '../utils/perf';
 
-const OSRM_ENRICH_LIMIT = 100;
-const OSRM_TABLE_BATCH_SIZE = 20;
+const ROUTING_ENRICH_LIMIT = 100;
+const ROUTING_TABLE_BATCH_SIZE = 20;
+
+type RoutingCandidate = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  estimate: number;
+};
+
+/** Select the nearest N stations without allocating/sorting the full catalog. */
+function selectNearestRoutingCandidates(
+  stations: readonly FuelStationFeature[],
+  estimates: ReadonlyMap<string, number>,
+  limit: number,
+): RoutingCandidate[] {
+  if (limit <= 0) return [];
+  const heap: RoutingCandidate[] = [];
+
+  const siftUp = (index: number) => {
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (heap[parent].estimate >= heap[index].estimate) break;
+      [heap[parent], heap[index]] = [heap[index], heap[parent]];
+      index = parent;
+    }
+  };
+
+  const siftDown = (index: number) => {
+    while (true) {
+      const left = index * 2 + 1;
+      const right = left + 1;
+      let largest = index;
+      if (left < heap.length && heap[left].estimate > heap[largest].estimate) largest = left;
+      if (right < heap.length && heap[right].estimate > heap[largest].estimate) largest = right;
+      if (largest === index) break;
+      [heap[index], heap[largest]] = [heap[largest], heap[index]];
+      index = largest;
+    }
+  };
+
+  for (const station of stations) {
+    const estimate = estimates.get(station.properties.id);
+    if (estimate == null || !Number.isFinite(estimate)) continue;
+    const [longitude, latitude] = station.geometry.coordinates;
+
+    if (heap.length < limit) {
+      heap.push({ id: station.properties.id, latitude, longitude, estimate });
+      siftUp(heap.length - 1);
+    } else if (estimate < heap[0].estimate) {
+      heap[0] = { id: station.properties.id, latitude, longitude, estimate };
+      siftDown(0);
+    }
+  }
+
+  return heap.sort((a, b) => a.estimate - b.estimate);
+}
 
 interface StationCatalogState {
   allStations: FuelStationFeature[];
@@ -63,10 +119,19 @@ export type SearchFilter = {
   sortByFuel?: FuelKey;
 };
 
+type MapFocusRequest = {
+  requestId: number;
+  stationId: string;
+  coordinates: [number, number];
+};
+
 interface UIState {
   selectedStation: FuelStationFeature | null;
+  mapFocusRequest: MapFocusRequest | null;
   searchFilter: SearchFilter;
   setSelectedStation: (s: FuelStationFeature | null) => void;
+  requestMapFocus: (station: FuelStationFeature) => void;
+  clearMapFocusRequest: (requestId: number) => void;
   setSearchFilter: (f: SearchFilter) => void;
   favorites: Set<string>;
   toggleFavorite: (station: FuelStationFeature) => void;
@@ -119,6 +184,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [allStationsById],
   );
   const [stationDistances, setStationDistances] = useState<Map<string, number>>(new Map());
+  const stationDistancesRef = useRef<Map<string, number>>(stationDistances);
+  stationDistancesRef.current = stationDistances;
   const [routedStationIds, setRoutedStationIds] = useState<Set<string>>(new Set());
   const routedStationIdsRef = useRef<Set<string>>(routedStationIds);
   routedStationIdsRef.current = routedStationIds;
@@ -130,11 +197,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rateLimited, setRateLimited] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
+  const [mapFocusRequest, setMapFocusRequest] = useState<MapFocusRequest | null>(null);
+  const mapFocusRequestSeqRef = useRef(0);
   const [searchFilter, setSearchFilter] = useState<SearchFilter>(defaultSearchFilter());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const favoritesRef = useRef<Set<string>>(favorites);
   favoritesRef.current = favorites;
   const [historyEnabled, setHistoryEnabledState] = useState(true);
+  const searchFilterMutationRef = useRef(0);
+  const favoritesMutationRef = useRef(0);
+  const historyMutationRef = useRef(0);
   const bootLoadStartedRef = useRef(false);
   const hydrationSeqRef = useRef(0);
   const changedCountriesRef = useRef<CountryCode[]>([]);
@@ -148,12 +220,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const distanceLocationKeyRef = useRef<string | null>(null);
   const unmountedRef = useRef(false);
 
+  const requestMapFocus = useCallback((station: FuelStationFeature) => {
+    const [longitude, latitude] = station.geometry.coordinates;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+    // Close any currently-open station sheet. The map screen consumes the
+    // request after navigation and pans without adding another UI control.
+    setSelectedStation(null);
+    setMapFocusRequest({
+      requestId: ++mapFocusRequestSeqRef.current,
+      stationId: station.properties.id,
+      coordinates: [longitude, latitude],
+    });
+  }, []);
+
+  const clearMapFocusRequest = useCallback((requestId: number) => {
+    setMapFocusRequest((current) =>
+      current?.requestId === requestId ? null : current,
+    );
+  }, []);
+
   const handleSetSearchFilter = useCallback((f: SearchFilter) => {
+    searchFilterMutationRef.current += 1;
     setSearchFilter(f);
     void AsyncStorage.setItem(SEARCH_FILTER_KEY, JSON.stringify(f)).catch(() => undefined);
   }, []);
 
   const toggleFavorite = useCallback((station: FuelStationFeature) => {
+    favoritesMutationRef.current += 1;
     const id = station.properties.id;
     const next = new Set(favoritesRef.current);
     const adding = !next.has(id);
@@ -169,6 +263,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setHistoryEnabled = useCallback((enabled: boolean) => {
+    historyMutationRef.current += 1;
     setHistoryEnabledState(enabled);
     void AsyncStorage.setItem(HISTORY_ENABLED_KEY, String(enabled)).catch(() => undefined);
   }, []);
@@ -185,6 +280,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const run = ++hydrationSeqRef.current;
+    const searchMutation = searchFilterMutationRef.current;
+    const favoritesMutation = favoritesMutationRef.current;
+    const historyMutation = historyMutationRef.current;
     void refreshLocation();
 
     void (async () => {
@@ -195,7 +293,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (unmountedRef.current || hydrationSeqRef.current !== run) return;
 
-      if (historyRaw === 'false') setHistoryEnabledState(false);
+      if (historyMutationRef.current === historyMutation && historyRaw === 'false') {
+        setHistoryEnabledState(false);
+      }
 
       if (searchRaw) {
         try {
@@ -223,9 +323,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             sortBy: raw.sortBy === 'price' || raw.sortBy === 'distance' ? raw.sortBy : undefined,
             sortByFuel: typeof raw.sortByFuel === 'string' && isFuelKey(raw.sortByFuel) ? raw.sortByFuel : undefined,
           };
-          setSearchFilter(parsed);
+          if (searchFilterMutationRef.current === searchMutation) setSearchFilter(parsed);
         } catch {
-          // Ignore corrupt persisted filters.
+          // Remove corrupt JSON so every future launch does not repeat the same parse.
+          void AsyncStorage.removeItem(SEARCH_FILTER_KEY).catch(() => undefined);
         }
       }
 
@@ -234,11 +335,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(favoritesRaw) as unknown;
           if (Array.isArray(parsed)) {
             const nextFavorites = new Set(parsed.filter((value): value is string => typeof value === 'string'));
-            favoritesRef.current = nextFavorites;
-            setFavorites(nextFavorites);
+            if (favoritesMutationRef.current === favoritesMutation) {
+              favoritesRef.current = nextFavorites;
+              setFavorites(nextFavorites);
+            }
           }
         } catch {
-          // Ignore corrupt persisted favorites.
+          void AsyncStorage.removeItem(FAVORITES_KEY).catch(() => undefined);
         }
       }
     })();
@@ -249,6 +352,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [refreshLocation]);
 
   const rebuildAllStationsData = useCallback(async (): Promise<FuelStationFeature[]> => {
+    const perf = beginPerf('siphon.catalog.rebuild_from_tiles');
     try {
       const all = await client.getAllCachedStations();
       if (unmountedRef.current) return [];
@@ -256,12 +360,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await client.saveAllStationsCache(all).catch(() => undefined);
       return all;
     } catch (error) {
-      if (!unmountedRef.current) console.warn('[rebuildAllStationsData] failed:', error);
+      if (__DEV__ && !unmountedRef.current) console.warn('[rebuildAllStationsData] failed:', error);
       return [];
+    } finally {
+      endPerf(perf, 4);
     }
   }, []);
 
-  const loadAllStationsData = useCallback(async (): Promise<FuelStationFeature[]> => {
+  const loadAllStationsData = useCallback(async (rebuildIfMissing = true): Promise<FuelStationFeature[]> => {
+    const perf = beginPerf('siphon.catalog.load_aggregate');
     try {
       const cached = await client.loadAllStationsCache();
       if (unmountedRef.current) return [];
@@ -269,14 +376,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllStations(cached);
         return cached;
       }
-      return rebuildAllStationsData();
+      return rebuildIfMissing ? rebuildAllStationsData() : [];
     } catch (error) {
-      if (!unmountedRef.current) console.warn('[loadAllStationsData] failed:', error);
+      if (__DEV__ && !unmountedRef.current) console.warn('[loadAllStationsData] failed:', error);
       return [];
+    } finally {
+      endPerf(perf, 4);
     }
   }, [rebuildAllStationsData]);
 
   const load = useCallback(async () => {
+    const perf = beginPerf('siphon.startup.sync_cycle');
     const run = ++loadSeqRef.current;
     const isActive = () => !unmountedRef.current && loadSeqRef.current === run;
 
@@ -288,82 +398,107 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSyncProgress(null);
     }
 
+    // Read the trusted aggregate in parallel with the rate-limit gate/network
+    // decision. Search/Favorites can use it immediately while a sync continues.
+    const trustedCatalogPromise = loadAllStationsData(false);
+
     try {
-      // Hard guard: if we're inside a GitHub backoff window or the hourly
-      // budget is gone, run entirely from cache. Cooldown is intentionally silent.
       const gate = await client.rateLimiter.shouldRunSync();
+      if (!isActive()) return;
+
+      const trustedCatalog = await trustedCatalogPromise;
       if (!isActive()) return;
 
       if (gate === 'blocked') {
         setRateLimited(true);
-        const cached = await loadAllStationsData();
+        const cached = trustedCatalog.length > 0 ? trustedCatalog : await loadAllStationsData(true);
         if (isActive() && cached.length === 0) {
           setError(i18n.t('common.something_went_wrong'));
         }
         return;
       }
       if (gate === 'cooldown') {
-        await loadAllStationsData();
+        if (trustedCatalog.length === 0) await loadAllStationsData(true);
         return;
       }
 
       setSyncProgress(i18n.t('sync.checking_updates'));
-      const result = await client.checkForUpdates();
+      const result = await measureAsync(
+        'siphon.startup.check_updates',
+        () => client.checkForUpdates(),
+        2,
+      );
       if (!isActive()) return;
 
       setOffline(result.offline);
 
-      // A failed root-manifest request already tells us the network is not
-      // usable. Do not immediately follow it with manifest/tile/history calls.
       if (result.offline) {
         changedCountriesRef.current = [];
-        const cached = await loadAllStationsData();
+        const cached = trustedCatalog.length > 0 ? trustedCatalog : await loadAllStationsData(true);
         if (isActive() && cached.length === 0) setError(i18n.t('sync.no_connection'));
         return;
       }
 
       changedCountriesRef.current = result.changedCountries;
-      setSyncProgress(i18n.t('sync.syncing_data'));
-
-      await client.syncAll(result.changedCountries, (loaded, total) => {
-        if (!isActive()) return;
-        if (total > 0 && result.changedCountries.length > 0) {
-          setSyncProgress(i18n.t('sync.syncing_progress', { loaded, total }));
-        }
-      });
+      const cacheNeedsVerification = await client.stationCacheNeedsVerification();
       if (!isActive()) return;
+
+      // A committed root + verified aggregate means unchanged station countries
+      // need no per-tile disk walk at all. Missing/old caches still take the full
+      // sync/verification path so repair behavior is preserved.
+      const needsStationSync =
+        result.changedCountries.length > 0 ||
+        trustedCatalog.length === 0 ||
+        cacheNeedsVerification;
+
+      if (needsStationSync) {
+        setSyncProgress(i18n.t('sync.syncing_data'));
+        await measureAsync(
+          'siphon.startup.station_sync',
+          () => client.syncAll(result.changedCountries, (loaded, total) => {
+            if (!isActive()) return;
+            if (total > 0 && result.changedCountries.length > 0) {
+              setSyncProgress(i18n.t('sync.syncing_progress', { loaded, total }));
+            }
+          }),
+          4,
+        );
+        if (!isActive()) return;
+      }
 
       if (result.root) {
         await client.commitRootManifest(result.root, result.etag);
         if (!isActive()) return;
       }
 
-      // Country hashes are now reflected in local manifests/tiles. Keeping this
-      // list around would make every later map pan re-fetch those manifests.
       changedCountriesRef.current = [];
 
       if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY).catch(() => null)) !== 'false') {
-        await client.checkHistoryUpdates();
+        await measureAsync(
+          'siphon.startup.history_sync',
+          () => client.checkHistoryUpdates(),
+          4,
+        );
       }
       if (!isActive()) return;
 
-      await client.refreshCommodityDashboard().catch(() => undefined);
-      if (result.changedCountries.length > 0) {
+      await measureAsync(
+        'siphon.startup.commodity_sync',
+        () => client.refreshCommodityDashboard().then(() => undefined).catch(() => undefined),
+        2,
+      );
+
+      if (result.changedCountries.length > 0 || trustedCatalog.length === 0) {
         await rebuildAllStationsData();
-      } else {
-        await loadAllStationsData();
       }
       if (!isActive()) return;
 
-      // Cooldown means the previous sync actually completed successfully.
       await client.rateLimiter.recordSyncCompleted().catch(() => undefined);
     } catch (error: unknown) {
       changedCountriesRef.current = [];
       if (!isActive()) return;
 
-      // Network/rate-limit failures should still leave the app usable when
-      // local station data exists.
-      const cached = await loadAllStationsData();
+      const cached = await loadAllStationsData(true);
       if (!isActive()) return;
 
       if (error instanceof RateLimitedError) {
@@ -376,6 +511,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setError(message);
       }
     } finally {
+      endPerf(perf, 4);
       if (isActive()) {
         setLoading(false);
         setSyncProgress(null);
@@ -403,7 +539,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Instant road-shaped estimates for every station. These render immediately;
-  // precise OSRM routes replace the nearest values in the background once GPS
+  // precise routed distances replace the nearest values in the background once GPS
   // (not merely the approximate cached location) is available.
   useEffect(() => {
     if (!allStations.length) return;
@@ -418,6 +554,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const userLng = location.longitude;
     distanceLocationKeyRef.current = locationRouteKey(userLat, userLng);
 
+    const estimatePerf = beginPerf('siphon.routing.build_estimates');
     const map = new Map<string, number>();
     for (const station of allStations) {
       const [stationLng, stationLat] = station.geometry.coordinates;
@@ -425,13 +562,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const estimate = roadEstimateKm(userLat, userLng, stationLat, stationLng);
       if (Number.isFinite(estimate)) map.set(station.properties.id, estimate);
     }
+    endPerf(estimatePerf, 4);
+    stationDistancesRef.current = map;
     setStationDistances(map);
     const emptyRouted = new Set<string>();
     routedStationIdsRef.current = emptyRouted;
     setRoutedStationIds(emptyRouted);
   }, [allStations, location.latitude, location.longitude, locationRouteKey]);
 
-  // Route the nearest stations automatically in small OSRM Table batches. This
+  // Route the nearest stations automatically in small provider batches. This
   // replaces the old "improve calculation" button while keeping request volume
   // bounded and preserving instant estimates if OSRM is unavailable.
   const refineNearbyDistances = useCallback(async () => {
@@ -449,30 +588,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setDistanceLoading(true);
     }
 
+    const routingPerf = beginPerf('siphon.routing.refine_nearby');
     try {
       const userId = `user:${routeKey}`;
-      const ranked = allStations
-        .map((station) => {
-          const [longitude, latitude] = station.geometry.coordinates;
-          const estimate = roadEstimateKm(lat, lng, latitude, longitude);
-          if (!Number.isFinite(estimate)) return null;
-          return { id: station.properties.id, latitude, longitude, estimate };
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null)
-        .sort((a, b) => a.estimate - b.estimate)
-        .slice(0, OSRM_ENRICH_LIMIT);
+      const estimates = stationDistancesRef.current;
+      const ranked = selectNearestRoutingCandidates(allStations, estimates, ROUTING_ENRICH_LIMIT);
 
-      // Build from fresh estimates instead of the state ref so a location change
-      // can never seed this run with distances from the previous position.
-      const map = new Map<string, number>();
-      for (const station of allStations) {
-        const [stationLng, stationLat] = station.geometry.coordinates;
-        const estimate = roadEstimateKm(lat, lng, stationLat, stationLng);
-        if (Number.isFinite(estimate)) map.set(station.properties.id, estimate);
-      }
-      for (let i = 0; i < ranked.length; i += OSRM_TABLE_BATCH_SIZE) {
+      // The estimate effect already built the complete map for this exact
+      // location bucket. Copy it instead of recalculating ~14k haversine values.
+      const map = new Map<string, number>(estimates);
+      for (let i = 0; i < ranked.length; i += ROUTING_TABLE_BATCH_SIZE) {
         if (unmountedRef.current || enrichSeqRef.current !== run || distanceLocationKeyRef.current !== routeKey) return;
-        const batch = ranked.slice(i, i + OSRM_TABLE_BATCH_SIZE);
+        const batch = ranked.slice(i, i + ROUTING_TABLE_BATCH_SIZE);
         const batchResults = await roadDistancesKm(lat, lng, batch, userId);
         if (unmountedRef.current || enrichSeqRef.current !== run || distanceLocationKeyRef.current !== routeKey) return;
 
@@ -489,7 +616,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // A selected station can be routed independently while table batches run,
         // so union IDs instead of replacing the routed set.
         if (newlyRouted.length > 0) {
-          setStationDistances(new Map(map));
+          const nextDistances = new Map(map);
+          stationDistancesRef.current = nextDistances;
+          setStationDistances(nextDistances);
           setRoutedStationIds((current) => {
             const next = new Set(current);
             for (const id of newlyRouted) next.add(id);
@@ -499,6 +628,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } finally {
+      endPerf(routingPerf, 4);
       if (!unmountedRef.current && enrichSeqRef.current === run) {
         setDistanceLoading(false);
         enrichingRef.current = false;
@@ -524,7 +654,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // A station opened from search/favorites can be outside the nearest automatic
   // batch. Refine that one station immediately so trip economics use a real
-  // route whenever OSRM is reachable.
+  // route whenever the active provider is reachable.
   const ensureRoutedDistance = useCallback(async (station: FuelStationFeature) => {
     if (location.approximate || routedStationIdsRef.current.has(station.properties.id)) return;
     const lat = location.latitude;
@@ -548,6 +678,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setStationDistances((current) => {
         const next = new Map(current);
         next.set(station.properties.id, result.value);
+        stationDistancesRef.current = next;
         return next;
       });
     }
@@ -596,6 +727,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         regionTimerRef.current = setTimeout(async () => {
           regionTimerRef.current = null;
+          const regionPerf = beginPerf('siphon.map.load_region');
           try {
             const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
             if (unmountedRef.current || regionRequestSeqRef.current !== seq) {
@@ -606,11 +738,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setStations(enrichStations(nearby));
             resolve(nearby);
           } catch (error) {
-            if (!unmountedRef.current && regionRequestSeqRef.current === seq) {
+            if (__DEV__ && !unmountedRef.current && regionRequestSeqRef.current === seq) {
               console.warn('[loadStationsForRegion] failed:', error);
             }
             resolve([]);
           } finally {
+            endPerf(regionPerf, 2);
             if (regionWaiterRef.current?.seq === seq) {
               regionWaiterRef.current = null;
             }
@@ -771,15 +904,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const uiValue = useMemo<UIState>(
     () => ({
       selectedStation,
+      mapFocusRequest,
       searchFilter,
       setSelectedStation,
+      requestMapFocus,
+      clearMapFocusRequest,
       setSearchFilter: handleSetSearchFilter,
       favorites,
       toggleFavorite,
       historyEnabled,
       setHistoryEnabled,
     }),
-    [selectedStation, searchFilter, favorites, toggleFavorite, handleSetSearchFilter, historyEnabled, setHistoryEnabled]
+    [selectedStation, mapFocusRequest, searchFilter, favorites, toggleFavorite, handleSetSearchFilter, historyEnabled, setHistoryEnabled, requestMapFocus, clearMapFocusRequest]
   );
 
   const actionsValue = useMemo<Actions>(

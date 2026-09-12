@@ -105,7 +105,7 @@ function statusFromPortugalHoursValue(value: string | null, minutes: number): St
   if (normalized === 'aberto 24 horas') return 'open';
   if (normalized === 'fechado') return 'closed';
 
-  const matches = [...value.matchAll(/(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/g)];
+  const matches = [...value.matchAll(/(\d{1,2}:\d{2})\s*[-–-]\s*(\d{1,2}:\d{2})/g)];
   let sawValidWindow = false;
 
   for (const match of matches) {
@@ -191,6 +191,7 @@ export function enrichStation(station: FuelStationFeature, now = new Date()): Fu
       _icon: icon,
       _price95: price95,
       _priceDiesel: priceDiesel,
+      _priceLabel: `95 ${price95 ?? '-'}\nD ${priceDiesel ?? '-'}`,
       _sortLat: sortLat,
     },
   };

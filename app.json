@@ -18,7 +18,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Siphon uses your location to show nearby fuel stations.",
-        "NSUserTrackingUsageDescription": "Your data is used to keep Siphon free. Enabling tracking lets us show you relevant ads and supports development."
+        "NSUserTrackingUsageDescription": "Siphon uses the advertising identifier, with your permission, to personalize rewarded ads and support the app."
       }
     },
     "android": {
@@ -55,7 +55,8 @@
         {
           "android": {
             "cmakeVersion": "4.1.2",
-            "kotlinVersion": "2.3.0"
+            "kotlinVersion": "2.3.0",
+            "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
           }
         }
       ],
@@ -77,7 +78,7 @@
           "androidAppId": "ca-app-pub-9869503535733811~5440722415",
           "iosAppId": "ca-app-pub-9869503535733811~6073428605",
           "delayAppMeasurementInit": true,
-          "userTrackingUsageDescription": "Your data is used to keep Siphon free. Enabling tracking lets us show you relevant ads and supports development."
+          "userTrackingUsageDescription": "Siphon uses the advertising identifier, with your permission, to personalize rewarded ads and support the app."
         }
       ],
       "expo-tracking-transparency",
@@ -86,6 +87,12 @@
     "scheme": "siphon",
     "experiments": {
       "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6dc8678e-8eb9-4113-a0c5-c1d8bf7a0146"
     }
   }
 }

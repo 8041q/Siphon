@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
@@ -39,13 +40,14 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
     const pendingTheme = useRef<ThemePref | null>(null);
 
     const { colors } = useThemeTokens();
+    const insets = useSafeAreaInsets();
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
     }));
 
     const handleSelect = useCallback((pref: ThemePref) => {
-      Haptics.selectionAsync();
+      void Haptics.selectionAsync().catch(() => undefined);
       pendingTheme.current = pref;
       bottomSheetRef.current?.dismiss();
     }, []);
@@ -78,7 +80,7 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
         )}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
           {THEMES.map((theme) => {
             const selected = currentTheme === theme.value;
             return (

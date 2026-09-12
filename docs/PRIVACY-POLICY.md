@@ -3,18 +3,17 @@
 Last updated: September 4, 2026
 
 ## Introduction
-Siphon ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how our mobile application ("App") collects, uses, discloses, and safeguards your information when you install and use the App.
+Siphon is committed to protecting your privacy. This Privacy Policy explains how our mobile application ("App") collects, uses, discloses, and safeguards your information when you install and use the App.
 
 ## Information We Collect
 We do not collect any personally identifiable information from our users.
 
 ### Usage Data
 When you access and use the App, we may automatically collect certain information, including:
-- Device information (such as model, operating system version)
-- Location data (only when you actively request nearby fuel stations)
-- Aggregated usage statistics (such as features accessed)
+- Ads (only if accepted, and it's by Google, not us)
+- Location data (when you actively request nearby fuel stations)
 
-This data is used solely to improve the App and provide core functionality. No personal identifiers are associated with this data.
+This data is used solely to use inside the app core functionality. No information is ever collected or stored outside of your own local instalation. Google ads is an exception that we do not control.
 
 ### Location Data
 The App requests access to your device's location only when you:
@@ -39,18 +38,18 @@ We use Google Mobile Ads SDK to serve advertisements. Google may collect certain
 ## Data Sharing and Disclosure
 We do not sell, rent, or otherwise disclose any personal information to third parties.
 
-We may share aggregated, anonymized data with third parties for analytics or improvement purposes. This data cannot be used to identify individual users.
+This data cannot be used to identify individual users.
 
 ## Data Security
 We implement reasonable security measures to protect against unauthorized access, alteration, disclosure, or destruction of data. However, no method of transmission over the internet or electronic storage is 100% secure.
 
 ## Children's Privacy
-Our App is not directed to children under the age of 13. We do not knowingly collect personal information from children under 13.
+Our App is not directed to children under the age of 13.
 
 ## Changes to This Privacy Policy
-We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.
+We may update our Privacy Policy from time to time.
 
 ## Contact Us
-If you have any questions about this Privacy Policy, please contact us through the App's support feature or visit our website.
+If you have any questions about this Privacy Policy, please contact us through the App's support feature.
 
 By using Siphon, you acknowledge that you have read and understood this Privacy Policy.

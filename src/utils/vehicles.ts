@@ -42,7 +42,7 @@ export function co2PerLiter(fuelType: string): number {
   return CO2_KG_PER_LITER[fuelType] ?? DEFAULT_CO2;
 }
 
-// Fuels a car can run on — used by the vehicle picker.
+// Fuels a car can run on - used by the vehicle picker.
 export const VEHICLE_FUEL_KEYS = ['gasoline95', 'gasoline98', 'diesel', 'dieselPremium', 'lpg', 'electric'] as const;
 
 export function isElectricFuel(fuelType: string): boolean {

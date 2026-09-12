@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 
 import { Icon } from '../../src/components/ui/icon';
 import { StationCard } from '../../src/components/StationCard';
@@ -12,15 +13,17 @@ import { useStationCatalog, useStationDistances, useStationSync, useLocationStat
 import { tabBarClearance } from '../../src/theme/layout';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 import { roadEstimateKm } from '../../src/utils/routeDistance';
+import { measureSync } from '../../src/utils/perf';
 
 const ItemSeparator = () => <View style={{ height: 12 }} />;
 
 export default function SearchScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { allStations } = useStationCatalog();
   const { stationDistances, routedStationIds, distanceLoading } = useStationDistances();
   const { loading, error, offline, reload } = useStationSync();
-  const { setSelectedStation, favorites, toggleFavorite, searchFilter, setSearchFilter } = useUI();
+  const { setSelectedStation, requestMapFocus, favorites, toggleFavorite, searchFilter, setSearchFilter } = useUI();
   const { location } = useLocationState();
   const { colors } = useThemeTokens();
   const filterSheetRef = useRef<{ present: () => void }>(null);
@@ -30,6 +33,22 @@ export default function SearchScreen() {
 
   const needsDistanceData = Boolean(searchFilter.maxDistance || searchFilter.sortBy === 'distance');
   const relevantDistances = needsDistanceData ? stationDistances : null;
+
+  const searchIndex = useMemo(() => measureSync('siphon.search.build_index', () => {
+    const index = new Map<string, { brandName: string; location: string }>();
+    for (const station of allStations) {
+      const properties = station.properties;
+      const administrativeArea = properties.source === 'PT' ? properties.district : properties.province;
+      index.set(properties.id, {
+        brandName: `${properties.brand ?? ''}
+${properties.name ?? ''}`.toLocaleLowerCase(),
+        location: `${properties.municipality}
+${administrativeArea}
+${properties.address}`.toLocaleLowerCase(),
+      });
+    }
+    return index;
+  }, 4), [allStations]);
 
   const filterCount = useMemo(() => {
     let count = 0;
@@ -49,7 +68,15 @@ export default function SearchScreen() {
     [setSelectedStation],
   );
 
-  const results = useMemo(() => {
+  const handleShowOnMap = useCallback(
+    (station: FuelStationFeature) => {
+      requestMapFocus(station);
+      router.navigate('/');
+    },
+    [requestMapFocus, router],
+  );
+
+  const results = useMemo(() => measureSync('siphon.search.filter_sort', () => {
     const brandNeedle = deferredBrandQuery.trim().toLocaleLowerCase();
     const cityNeedle = searchFilter.city?.trim().toLocaleLowerCase() ?? '';
     const countries = searchFilter.countries;
@@ -63,11 +90,7 @@ export default function SearchScreen() {
     let result = allStations.filter((station) => {
       const properties = station.properties;
 
-      if (brandNeedle) {
-        const brand = (properties.brand ?? '').toLocaleLowerCase();
-        const name = (properties.name ?? '').toLocaleLowerCase();
-        if (!brand.includes(brandNeedle) && !name.includes(brandNeedle)) return false;
-      }
+      if (brandNeedle && !searchIndex.get(properties.id)?.brandName.includes(brandNeedle)) return false;
 
       if (countries?.length && !countries.includes(properties.source)) return false;
 
@@ -83,19 +106,7 @@ export default function SearchScreen() {
         }
       }
 
-      if (cityNeedle) {
-        const municipality = properties.municipality.toLocaleLowerCase();
-        const administrativeArea =
-          (properties.source === 'PT' ? properties.district : properties.province).toLocaleLowerCase();
-        const address = properties.address.toLocaleLowerCase();
-        if (
-          !municipality.includes(cityNeedle) &&
-          !administrativeArea.includes(cityNeedle) &&
-          !address.includes(cityNeedle)
-        ) {
-          return false;
-        }
-      }
+      if (cityNeedle && !searchIndex.get(properties.id)?.location.includes(cityNeedle)) return false;
 
       if (distanceById && location) {
         const [stationLng, stationLat] = station.geometry.coordinates;
@@ -127,7 +138,7 @@ export default function SearchScreen() {
     }
 
     return result;
-  }, [allStations, deferredBrandQuery, location, relevantDistances, searchFilter]);
+  }, 4), [allStations, deferredBrandQuery, location, relevantDistances, searchFilter, searchIndex]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
@@ -189,6 +200,7 @@ export default function SearchScreen() {
         <StationList
           results={results}
           handleStationPress={handleStationPress}
+          handleShowOnMap={handleShowOnMap}
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
           stationDistances={stationDistances}
@@ -254,6 +266,7 @@ function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: SearchBarProps
 type StationListProps = {
   results: FuelStationFeature[];
   handleStationPress: (station: FuelStationFeature) => void;
+  handleShowOnMap: (station: FuelStationFeature) => void;
   favorites?: Set<string>;
   onToggleFavorite?: (station: FuelStationFeature) => void;
   stationDistances: ReadonlyMap<string, number>;
@@ -267,6 +280,7 @@ type StationListProps = {
 const StationList = memo(function StationList({
   results,
   handleStationPress,
+  handleShowOnMap,
   favorites,
   onToggleFavorite,
   stationDistances,
@@ -292,6 +306,7 @@ const StationList = memo(function StationList({
         onPress={handleStationPress}
         favorite={favorites?.has(item.properties.id) ?? false}
         onToggleFavorite={onToggleFavorite}
+        onShowOnMap={handleShowOnMap}
         distanceKm={stationDistances.get(item.properties.id)}
         distanceLoading={distanceLoading}
         distanceRouted={routedStationIds.has(item.properties.id)}
@@ -300,6 +315,7 @@ const StationList = memo(function StationList({
     [
       favorites,
       handleStationPress,
+      handleShowOnMap,
       onToggleFavorite,
       stationDistances,
       routedStationIds,

@@ -1,4 +1,4 @@
-# Siphon Client — Public API Reference
+# Siphon Client - Public API Reference
 
 All calls go through the `FuelDataClient` class exported from `src/api/siphonClient.ts` (the app's singleton `client` instance is exported from `src/hooks/useApp.tsx`):
 
@@ -18,9 +18,9 @@ These run automatically on launch in this order:
 | Call | Purpose | Notes |
 |---|---|---|
 | `client.checkForUpdates()` | Conditional GET on root manifest (sends `If-None-Match`). Returns `{ changedCountries, root, offline }`. | 304 = zero tile downloads are needed. On failure returns `offline: true` so the app falls back to cache. |
-| `client.syncAll(changedCountries, onProgress)` | Downloads/refreshes every single tile for both countries. | On first launch it's a full download (~113 files). On subsequent 304 it's instant (all hash matches, zero network). `onProgress(loaded, total)` fires per tile. |
-| `client.checkHistoryUpdates()` | Compares the root manifest's history hash against the last-seen one; only when it differs, downloads the index + missing day files and prunes day files older than 90 days. | Gated by the "Save price history on device" setting — when disabled the app never checks the hash nor pulls. Runs exactly once per launch; there is no manual refresh. |
-| `client.getStationsNear(lat, lng, changedCountries)` | Returns nearby stations from both Spain and Portugal, deduplicated. | After `syncAll()` this is pure cache when nothing changed — zero network. On a day a country changed it re-fetches that country's manifest + changed tiles. Near-border users get stations from both sides. |
+| `client.syncAll(changedCountries, onProgress)` | Downloads/refreshes station tiles when station countries changed or local verification/repair is required. | A trusted aggregate catalog is loaded in parallel at startup. If country hashes are unchanged and the verified aggregate exists, AppProvider skips the full per-tile walk entirely. First launch, changed countries, missing aggregate data, or a cache-version migration still run the full verification/sync path. `onProgress(loaded, total)` fires per tile when that path runs. |
+| `client.checkHistoryUpdates()` | Compares the root manifest's history hash against the last-seen one; only when it differs, downloads the index + missing day files and prunes day files older than 90 days. | Gated by the "Save price history on device" setting - when disabled the app never checks the hash nor pulls. Runs exactly once per launch; there is no manual refresh. |
+| `client.getStationsNear(lat, lng, changedCountries)` | Returns nearby stations from both Spain and Portugal, deduplicated. | After `syncAll()` this is pure cache when nothing changed - zero network. On a day a country changed it re-fetches that country's manifest + changed tiles. Near-border users get stations from both sides. |
 
 ---
 
@@ -31,7 +31,7 @@ Every GitHub request goes through `client.fetchRateLimited()`. A persistent guar
 | Layer | Default | Effect |
 |---|---|---|
 | Hourly request budget | 300 requests/hr | Refuses new requests once the rolling 1-hour window is full (a cold sync is ~200; a no-change launch is 1). |
-| Min interval between syncs | 10 min | Skips the whole sync cycle if one just ran — blocks rapid relaunch/cache-clear loops. |
+| Min interval between syncs | 10 min | Skips the whole sync cycle if one just ran - blocks rapid relaunch/cache-clear loops. |
 | Server backoff | 5 min (or `Retry-After`/`X-RateLimit-Reset`) | On 429/403, persists a "blocked until" timestamp and refuses requests until it passes. |
 
 When a limit is hit, the sync degrades to cache-only and the map shows a short `sync.rate_limited` notice instead of hammering GitHub. The cooldown layer is silent (data is already fresh); the budget/backoff layers surface the notice.
@@ -48,7 +48,7 @@ data/history/2027/2027-01-05.json
 data/history/index.json             # { lastUpdated, days: [{ date, path, hash }...] }
 ```
 
-Ffiles use the same schema:
+Files use the same schema:
 
 ```json
 [
@@ -127,53 +127,77 @@ The API applies them as a final pass when building tiles, so the app receives th
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 ```
 
-A `FuelStationFeature` looks like:
+A `FuelStationFeature` is a discriminated union on `properties.source`.
 
-```ts
-{
-  type: 'Feature',
-  geometry: { type: 'Point', coordinates: [lng, lat] },
-  properties: {
-    id: string,          // "es-XXXXX" or "pt-XXXXX"
-    source: string,      // "ES" | "PT"
-    name: string,        // station display name (PT)
-    brand: string | null,// brand name (ES always has it, PT fallback to name)
-    address: string,
-    fuels: Record<string, number>,
-    // … plus municipality, postalCode, schedule, etc.
-  }
-}
-```
+Shared published fields are `id`, `source`, `brand`, `address`, `municipality`, `postalCode`, `fuels`, and `extra`. `brand` and `address` are always strings. Every station has at least one fuel price.
+
+Portugal (`source: 'PT'`) additionally publishes:
+
+- `id: \`pt-${number}\``
+- `name: string`
+- `district: string`
+- `lastUpdated: string` (`YYYY-MM-DD HH:MM`)
+- `postalCode: string | null`
+- `hours: { weekdays; saturday; sunday; holiday } | null`, where each value is `string | null`
+- `services: string[]`
+- `paymentMethods: string[]`
+- `otherServices: string | null`
+- `observations: string | null`
+- `extra.stationType?: 'Outro' | 'Auto-estrada' | 'Área comercial (Hipermercados)'`
+
+Spain (`source: 'ES'`) additionally publishes:
+
+- `id: \`es-${number}\``
+- `province: string`
+- `postalCode: string`
+- `schedule: string`
+- `extra.saleType?: 'P'`
+- `extra.margin?: 'D' | 'N' | 'I'`
+- `extra.reportingType?: 'dm' | 'OM'`
+- `extra.ideess`, `idMunicipio`, `idProvincia`, `idCCAA` as optional strings
+
+Spain does not publish the PT-only `name`, `district`, `lastUpdated`, `hours`, `services`, `paymentMethods`, `otherServices`, or `observations` fields.
+
+The app may add marker-enrichment fields (`_status`, `_icon`, `_price95`, `_priceDiesel`, `_sortLat`, `_priceLabel`) in memory; they are not part of the raw government tile payload.
 
 ### `fuels` keys you'll encounter
 
-The full set of fuel keys (in `src/utils/fuelNames.ts`), used both in station data and as filter chips:
+The exact published fuel-key union is:
 
-| Key | Display (en) |
-|---|---|
-| `gasoline95` | Gasoline 95 |
-| `gasoline95Plus` | Gasoline 95+ |
-| `gasoline95Premium` | Gasoline 95 Premium |
-| `gasoline98` | Gasoline 98 |
-| `gasoline98Plus` | Gasoline 98+ |
-| `diesel` | Diesel |
-| `dieselPremium` | Diesel Premium |
-| `dieselAgri` | Diesel Agricultural |
-| `dieselB` | Discounted Diesel |
-| `dieselRenewable` | Renewable Diesel |
-| `dieselHeating` | Heating Diesel |
-| `bioDiesel` | Biodiesel |
-| `bioCng` | Bio-CNG |
-| `bioLng` | Bio-LNG |
-| `cng` | CNG |
-| `cngkg` | CNG (kg) |
-| `cngm3` | CNG (m³) |
-| `lng` | LNG |
-| `lpg` | LPG |
-| `gasolineMix` | Mixed Gasoline |
-| `adblue` | AdBlue |
+```ts
+type FuelKey =
+  | 'adblue'
+  | 'bioCng'
+  | 'bioLng'
+  | 'biodiesel'
+  | 'bioethanol'
+  | 'cng'
+  | 'cngkg'
+  | 'cngm3'
+  | 'diesel'
+  | 'dieselAgri'
+  | 'dieselB'
+  | 'dieselHeating'
+  | 'dieselPremium'
+  | 'dieselRenewable'
+  | 'gasoline95'
+  | 'gasoline95E10'
+  | 'gasoline95E25'
+  | 'gasoline95E85'
+  | 'gasoline95Plus'
+  | 'gasoline95Premium'
+  | 'gasoline98'
+  | 'gasoline98E10'
+  | 'gasoline98Plus'
+  | 'gasolineMix'
+  | 'gasolineRenewable'
+  | 'hydrogen'
+  | 'lng'
+  | 'lpg'
+  | 'bioDiesel';
+```
 
-Display names are localized via i18n (`fuel.*` keys); the column above shows the English strings. Not every station carries every fuel.
+`bioDiesel` (camel-case D) occurs on PT and is distinct from `biodiesel`. `src/utils/fuelNames.ts` sources its filter list from this API union so the two cannot drift.
 
 ---
 

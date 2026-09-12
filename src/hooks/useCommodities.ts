@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { client } from './useApp';
 import type { CommodityDashboard } from '../api/siphonClient';
 
-export function useCommodities() {
+export function useCommodities({ refresh = true }: { refresh?: boolean } = {}) {
   const [dashboard, setDashboard] = useState<CommodityDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -35,16 +35,18 @@ export function useCommodities() {
       if (!isActive()) return;
       if (cached) setDashboard(cached);
 
-      const updated = await client.refreshCommodityDashboard();
-      if (!isActive()) return;
-      if (updated) setDashboard(updated);
+      if (refresh) {
+        const updated = await client.refreshCommodityDashboard();
+        if (!isActive()) return;
+        if (updated) setDashboard(updated);
+      }
     } catch {
       if (!isActive()) return;
       setError(true);
     } finally {
       if (isActive()) setLoading(false);
     }
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     void load();

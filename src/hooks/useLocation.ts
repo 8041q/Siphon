@@ -82,7 +82,7 @@ export function useLocation() {
               setLoc({ latitude: parsed.latitude, longitude: parsed.longitude, approximate: true });
             }
           } catch {
-            // Ignore corrupt cached coordinates.
+            void AsyncStorage.removeItem(LOCATION_KEY).catch(() => undefined);
           }
         }
       } finally {

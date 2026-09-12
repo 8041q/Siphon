@@ -7,6 +7,32 @@ const DATA_DIR = new Directory(Paths.document, 'siphon');
 const TILES_DIR = new Directory(DATA_DIR, 'tiles');
 const HISTORY_DIR = new Directory(DATA_DIR, 'history');
 const RATE_DIR = new Directory(DATA_DIR, 'rate');
+const ROUTE_DIR = new Directory(DATA_DIR, 'routes');
+let fileStorePrepared = false;
+
+function prepareFileStore(): void {
+  if (fileStorePrepared) return;
+  fileStorePrepared = true;
+  ensureDir(DATA_DIR);
+
+  // Atomic writes use root-level .tmp-* files. If the process is terminated
+  // between create/write and move, that temp file is intentionally not a valid
+  // cache entry. Remove leftovers once at startup before any new write can
+  // create an active temp file.
+  try {
+    for (const item of DATA_DIR.list()) {
+      if (item instanceof File && item.name.startsWith('.tmp-')) {
+        try {
+          item.delete();
+        } catch {
+          // Best-effort orphan cleanup; cache access can continue.
+        }
+      }
+    }
+  } catch {
+    // The normal per-operation error handling below remains authoritative.
+  }
+}
 
 function ensureDir(dir: Directory): void {
   dir.create({ intermediates: true, idempotent: true });
@@ -35,14 +61,26 @@ function rateFilePath(key: string): File {
   return new File(RATE_DIR, ratePath);
 }
 
+function routeFilePath(key: string): File {
+  const routePath = key.slice('siphon:route:'.length);
+  assertSafeRelative(routePath);
+  return new File(ROUTE_DIR, routePath);
+}
+
 function isFileKey(key: string): boolean {
-  return key.startsWith('siphon:data:') || key.startsWith('siphon:history:') || key.startsWith('siphon:rate:');
+  return (
+    key.startsWith('siphon:data:') ||
+    key.startsWith('siphon:history:') ||
+    key.startsWith('siphon:rate:') ||
+    key.startsWith('siphon:route:')
+  );
 }
 
 function filePathForKey(key: string): File {
   if (key.startsWith('siphon:data:')) return tileFilePath(key);
   if (key.startsWith('siphon:history:')) return historyFilePath(key);
   if (key.startsWith('siphon:rate:')) return rateFilePath(key);
+  if (key.startsWith('siphon:route:')) return routeFilePath(key);
   throw new Error(`Unsupported key: ${key}`);
 }
 
@@ -61,6 +99,9 @@ function ensureParentForKey(key: string): void {
     ensureNestedDir(HISTORY_DIR, key.slice('siphon:history:'.length));
   } else if (key.startsWith('siphon:rate:')) {
     ensureDir(RATE_DIR);
+  } else if (key.startsWith('siphon:route:')) {
+    ensureDir(ROUTE_DIR);
+    ensureNestedDir(ROUTE_DIR, key.slice('siphon:route:'.length));
   }
 }
 
@@ -103,6 +144,7 @@ async function writeFileAtomically(destination: File, value: string): Promise<vo
 export const hybridStore: KeyValueStore = {
   async getItem(key: string): Promise<string | null> {
     if (!isFileKey(key)) return AsyncStorage.getItem(key);
+    prepareFileStore();
     try {
       return await filePathForKey(key).text();
     } catch {
@@ -115,11 +157,13 @@ export const hybridStore: KeyValueStore = {
       await AsyncStorage.setItem(key, value);
       return;
     }
+    prepareFileStore();
     ensureParentForKey(key);
     await writeFileAtomically(filePathForKey(key), value);
   },
 
   async listKeys(prefix: string): Promise<string[]> {
+    prepareFileStore();
     if (prefix === 'siphon:data:') {
       try {
         return listFilesRecursive(TILES_DIR, 'siphon:data:');
@@ -134,6 +178,13 @@ export const hybridStore: KeyValueStore = {
         return [];
       }
     }
+    if (prefix === 'siphon:route:') {
+      try {
+        return listFilesRecursive(ROUTE_DIR, 'siphon:route:');
+      } catch {
+        return [];
+      }
+    }
     return [];
   },
 
@@ -142,6 +193,7 @@ export const hybridStore: KeyValueStore = {
       await AsyncStorage.removeItem(key);
       return;
     }
+    prepareFileStore();
     try {
       const file = filePathForKey(key);
       if (file.exists) file.delete();

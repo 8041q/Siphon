@@ -1,6 +1,6 @@
 // ─── UI Tokens ─────────────────────────────────────────────────────────────────
 // App chrome: backgrounds, text, buttons, inputs, sheets, separators, tabs.
-// Independent from station/pricing — changing these never affects station visuals.
+// Independent from station/pricing - changing these never affects station visuals.
 
 export const ui = {
   light: {
@@ -103,7 +103,7 @@ export const ui = {
 // ============================================================================
 // Station / Price Tokens
 // ============================================================================
-// Independent from UI tokens — changing these never affects app chrome.
+// Independent from UI tokens - changing these never affects app chrome.
 
 export const station = {
   light: {

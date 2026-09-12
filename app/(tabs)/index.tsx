@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { useIsFocused } from 'expo-router';
+import { AccessibilityInfo, ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
+import type { MapCameraRequest } from '../../src/components/stationMap/types';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
 import { FilterSheet } from '../../src/components/FilterSheet';
 import { Icon } from '../../src/components/ui/icon';
@@ -11,14 +13,27 @@ import { GlassSurface } from '../../src/components/ui/glass';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStationMapData, useStationSync, useUI, useLocationState, useActions } from '../../src/hooks/useApp';
 
+
+async function accessibleTimeout(defaultMs: number): Promise<number> {
+  if (Platform.OS !== 'android') return defaultMs;
+  return AccessibilityInfo.getRecommendedTimeoutMillis(defaultMs).catch(() => defaultMs);
+}
+
 export default function MapScreen() {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const isFocused = useIsFocused();
 
   const { stations, filteredStations } = useStationMapData();
   const { loading, syncProgress, error, offline, rateLimited, reload } = useStationSync();
   const { location, requestingLocation, locateWithGps } = useLocationState();
-  const { setSelectedStation, searchFilter, setSearchFilter } = useUI();
+  const {
+    setSelectedStation,
+    searchFilter,
+    setSearchFilter,
+    mapFocusRequest,
+    clearMapFocusRequest,
+  } = useUI();
   const { loadStationsForRegion } = useActions();
 
   const filterSheetRef = useRef<{ present: () => void }>(null);
@@ -32,7 +47,8 @@ export default function MapScreen() {
     return count;
   }, [searchFilter]);
 
-  const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
+  const [cameraRequest, setCameraRequest] = useState<MapCameraRequest | null>(null);
+  const cameraRequestSeqRef = useRef(0);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [showRateLimitedBanner, setShowRateLimitedBanner] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
@@ -49,23 +65,39 @@ export default function MapScreen() {
   );
 
   useEffect(() => {
-    if (offline) {
-      setShowOfflineBanner(true);
-      const timer = setTimeout(() => setShowOfflineBanner(false), 5000);
-      return () => clearTimeout(timer);
-    } else {
+    if (!offline) {
       setShowOfflineBanner(false);
+      return;
     }
+
+    setShowOfflineBanner(true);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    void accessibleTimeout(5000).then((timeout) => {
+      if (!cancelled) timer = setTimeout(() => setShowOfflineBanner(false), timeout);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [offline]);
 
   useEffect(() => {
-    if (rateLimited) {
-      setShowRateLimitedBanner(true);
-      const timer = setTimeout(() => setShowRateLimitedBanner(false), 8000);
-      return () => clearTimeout(timer);
-    } else {
+    if (!rateLimited) {
       setShowRateLimitedBanner(false);
+      return;
     }
+
+    setShowRateLimitedBanner(true);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    void accessibleTimeout(8000).then((timeout) => {
+      if (!cancelled) timer = setTimeout(() => setShowRateLimitedBanner(false), timeout);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [rateLimited]);
 
   const insets = useSafeAreaInsets();
@@ -74,11 +106,48 @@ export default function MapScreen() {
   const firstBoundsRef = useRef(false);
   const previousLoadingRef = useRef(loading);
 
+  const mapFocusFrameRef = useRef<number | null>(null);
+
+  // A clickable alternative in the "worth the trip" card can request a map
+  // focus from any tab. Keep the request queued while this tab is unfocused.
+  // On iOS/New Architecture MapLibre can abort natively if an imperative camera
+  // update lands while a tab transition has temporarily laid the map out at 0x0.
+  useEffect(() => {
+    if (!mapFocusRequest || !isFocused) return;
+
+    const request = mapFocusRequest;
+    if (mapFocusFrameRef.current !== null) {
+      cancelAnimationFrame(mapFocusFrameRef.current);
+    }
+
+    // Give the focused tab one layout frame before handing the target to the
+    // map. StationMap has its own layout guard as a second line of defence.
+    mapFocusFrameRef.current = requestAnimationFrame(() => {
+      mapFocusFrameRef.current = null;
+      const [longitude, latitude] = request.coordinates;
+      mapCenterRef.current = { lat: latitude, lng: longitude, bounds: undefined };
+      setCameraRequest({
+        requestId: ++cameraRequestSeqRef.current,
+        coordinates: [longitude, latitude],
+        mode: 'station',
+      });
+      void loadStationsForRegion(latitude, longitude);
+      clearMapFocusRequest(request.requestId);
+    });
+
+    return () => {
+      if (mapFocusFrameRef.current !== null) {
+        cancelAnimationFrame(mapFocusFrameRef.current);
+        mapFocusFrameRef.current = null;
+      }
+    };
+  }, [clearMapFocusRequest, isFocused, loadStationsForRegion, mapFocusRequest]);
+
   const handleRegionChange = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
     mapCenterRef.current = { lat, lng, bounds };
     if (!bounds) return;
     const [west, south, east, north] = bounds;
-    // Ignore the initial pre-camera world view (centered 0,0 with global bounds) —
+    // Ignore the initial pre-camera world view (centered 0,0 with global bounds) -
     // it's not a real map region and would load bogus grid_0_0 stations.
     if (east - west >= 180 || north - south >= 160) return;
     if (!firstBoundsRef.current) {
@@ -109,10 +178,12 @@ export default function MapScreen() {
           : t('map.stations_found', { count: result.length }),
       );
       if (searchFeedbackTimeoutRef.current) clearTimeout(searchFeedbackTimeoutRef.current);
+      const timeout = await accessibleTimeout(3000);
+      if (searchVersionRef.current !== thisVersion) return;
       searchFeedbackTimeoutRef.current = setTimeout(() => {
         searchFeedbackTimeoutRef.current = null;
         setSearchFeedback(null);
-      }, 3000);
+      }, timeout);
     }
   }, [loadStationsForRegion, t]);
 
@@ -137,8 +208,17 @@ export default function MapScreen() {
 
   const handleLocate = useCallback(async () => {
     const gps = await locateWithGps();
-    if (gps) setFlyToCoords([gps.longitude, gps.latitude]);
+    if (!gps) return;
+    setCameraRequest({
+      requestId: ++cameraRequestSeqRef.current,
+      coordinates: [gps.longitude, gps.latitude],
+      mode: 'location',
+    });
   }, [locateWithGps]);
+
+  const handleCameraRequestConsumed = useCallback((requestId: number) => {
+    setCameraRequest((current) => current?.requestId === requestId ? null : current);
+  }, []);
 
   const gpsOnceRef = useRef(false);
   useEffect(() => {
@@ -147,8 +227,11 @@ export default function MapScreen() {
     let cancelled = false;
 
     void (async () => {
-      const gps = await locateWithGps();
-      if (!cancelled && gps) setFlyToCoords([gps.longitude, gps.latitude]);
+      // Refresh the precise GPS fix for distance/routing state, but do not
+      // move the camera on launch. Camera movement is reserved for explicit
+      // locate-me taps and station-focus requests.
+      await locateWithGps();
+      if (cancelled) return;
     })();
 
     return () => {
@@ -198,7 +281,8 @@ export default function MapScreen() {
         onMarkerPress={onMarkerPress}
         onRegionChange={handleRegionChange}
         onMapReady={handleMapReady}
-        flyToCoords={flyToCoords}
+        cameraRequest={cameraRequest}
+        onCameraRequestConsumed={handleCameraRequestConsumed}
         userLocation={location}
       />
 
@@ -206,7 +290,7 @@ export default function MapScreen() {
       {showOfflineBanner && (
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
           <GlassSurface color={colors.surface}>
-            <View className="py-1.5 px-lg" pointerEvents="box-none">
+            <View className="py-1.5 px-lg" pointerEvents="box-none" accessibilityLiveRegion="polite">
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
                 {t('map.offline_banner')}
               </Text>
@@ -215,11 +299,11 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Rate-limit notice — sync was paused to avoid hitting GitHub limits */}
-      {showRateLimitedBanner && (
+      {/* Rate-limit notice - sync was paused to avoid hitting GitHub limits */}
+      {showRateLimitedBanner && !showOfflineBanner && (
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
           <GlassSurface color={colors.surface}>
-            <View className="py-1.5 px-lg" pointerEvents="box-none">
+            <View className="py-1.5 px-lg" pointerEvents="box-none" accessibilityLiveRegion="polite">
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
                 {t('sync.rate_limited')}
               </Text>
@@ -306,7 +390,7 @@ export default function MapScreen() {
       </View>
 
       {/* Locate me button */}
-      <View style={{ position: 'absolute', top: 140, start: 16, zIndex: 10 }}>
+      <View style={{ position: 'absolute', top: 128, start: 16, zIndex: 10 }}>
         <GlassSurface color={colors.surface} style={{ borderRadius: 22 }}>
           <TouchableOpacity
             activeOpacity={0.7}

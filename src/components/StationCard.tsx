@@ -18,6 +18,7 @@ interface StationCardProps {
   onPress?: (station: FuelStationFeature) => void;
   favorite?: boolean;
   onToggleFavorite?: (station: FuelStationFeature) => void;
+  onShowOnMap?: (station: FuelStationFeature) => void;
   distanceKm?: number;
   distanceLoading?: boolean;
   distanceRouted?: boolean;
@@ -28,6 +29,7 @@ const StationCardComponent: FC<StationCardProps> = ({
   onPress,
   favorite = false,
   onToggleFavorite,
+  onShowOnMap,
   distanceKm,
   distanceLoading = false,
   distanceRouted = false,
@@ -56,6 +58,26 @@ const StationCardComponent: FC<StationCardProps> = ({
     void Linking.openURL(url).catch(() => undefined);
   }, [station]);
 
+  const handleShowOnMap = useCallback(
+    (event: GestureResponderEvent) => {
+      event.stopPropagation();
+      onShowOnMap?.(station);
+    },
+    [onShowOnMap, station],
+  );
+
+  const accessibilityActions = useMemo(
+    () => [
+      {
+        name: 'toggleFavorite',
+        label: favorite ? t('station.remove_favorite') : t('station.add_favorite'),
+      },
+      { name: 'openMaps', label: t('station.open_in_maps') },
+      ...(onShowOnMap ? [{ name: 'showOnMap', label: t('station.show_on_map') }] : []),
+    ],
+    [favorite, onShowOnMap, t],
+  );
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -67,6 +89,22 @@ const StationCardComponent: FC<StationCardProps> = ({
       className="p-md rounded-md"
       accessibilityRole="button"
       accessibilityLabel={displayName}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={(event) => {
+        switch (event.nativeEvent.actionName) {
+          case 'toggleFavorite':
+            onToggleFavorite?.(station);
+            break;
+          case 'openMaps':
+            handleOpenInMaps();
+            break;
+          case 'showOnMap':
+            onShowOnMap?.(station);
+            break;
+          default:
+            break;
+        }
+      }}
     >
       {glass && <GlassBackdrop color={colors.groupedBackground} />}
 
@@ -128,9 +166,12 @@ const StationCardComponent: FC<StationCardProps> = ({
           )}
         </View>
 
-        <View className="flex-row items-center gap-1">
+        <View className="items-center gap-1">
           <Pressable
-            onPress={handleOpenInMaps}
+            onPress={(event) => {
+              event.stopPropagation();
+              handleOpenInMaps();
+            }}
             style={{ padding: 4 }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
@@ -140,6 +181,19 @@ const StationCardComponent: FC<StationCardProps> = ({
               <Icon name="directions" size={19} color={colors.secondaryLabel} />
             </View>
           </Pressable>
+          {onShowOnMap && (
+            <Pressable
+              onPress={handleShowOnMap}
+              style={{ padding: 4 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('station.show_on_map')}: ${displayName}`}
+            >
+              <View className="rounded-sm p-1.5">
+                <Icon name="map.fill" size={19} color={colors.secondaryLabel} />
+              </View>
+            </Pressable>
+          )}
         </View>
       </View>
 

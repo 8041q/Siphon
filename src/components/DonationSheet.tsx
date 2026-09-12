@@ -14,6 +14,7 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDonations } from '../hooks/useDonations';
 import { SUPPORT, DONATION_TIERS, type DonationTierId } from '../config/support';
@@ -34,6 +35,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
     const snapPoints = useMemo(() => ['52%'], []);
 
     const { colors } = useThemeTokens();
+    const insets = useSafeAreaInsets();
     const {
       purchasing,
       lastResult,
@@ -107,7 +109,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
         )}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
             {t('settings.donate_title')}
           </Text>

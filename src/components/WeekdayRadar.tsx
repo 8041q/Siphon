@@ -1,144 +1,112 @@
-import { memo } from 'react';
+import { useMemo } from 'react';
 import { Text, View } from 'react-native';
-import { Circle, G, Line, Polygon, Svg, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
-import type { PriceHistoryPoint } from '../api/siphonClient';
-import { weekdayCycle, WEEKDAY_ORDER, weekdayI18nKey } from '../utils/priceAnalysis';
 import { useThemeTokens } from '../hooks/useThemeTokens';
-import { useSupport } from '../hooks/useSupport';
-import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
-import { GlassBackdrop } from './ui/glass';
+import type { PricePoint } from '../utils/priceIntelligence';
+import { GlassBox } from './ui/GlassBox';
 
-interface WeekdayRadarProps {
-  data: PriceHistoryPoint[];
-}
+const DAY = 86_400_000;
 
-const WIDTH = 300;
-const HEIGHT = 300;
-const CENTER_X = WIDTH / 2;
-const CENTER_Y = HEIGHT / 2 - 6;
-const RADIUS = 96;
-
-function polar(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function weekdayAngle(i: number): number {
-  return -80 + (i * 360) / 7;
-}
-
-const WEEKDAY_COUNT = WEEKDAY_ORDER.length;
-
-const WeekdayRadarComponent = ({ data }: WeekdayRadarProps) => {
+export function WeekdayRadar({ data }: { data: readonly PricePoint[] }) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
-  const { styleRules } = useSupport();
-  const cardRules = useStyleConfig(styleRules, 'card');
-  const cardGlass = isGlass(cardRules);
 
-  const cycle = weekdayCycle(data);
+  const analysis = useMemo(() => {
+    const points = data
+      .filter((point) => typeof point.date === 'string' && Number.isFinite(point.price) && point.price > 0)
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    if (points.length < 2) return null;
+    const coverage = Math.floor((new Date(points[points.length - 1].date).getTime() - new Date(points[0].date).getTime()) / DAY) + 1;
+    if (coverage < 14) return null;
 
-  if (!cycle) {
-    return (
-      <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg">
-        {cardGlass && <GlassBackdrop color={colors.surface} />}
-        <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
-          {t('price_trends.weekday_title')}
-        </Text>
-        <Text style={{ color: colors.secondaryLabel }} className="text-callout">
-          {t('price_trends.weekday_insufficient')}
-        </Text>
-      </View>
-    );
-  }
+    const buckets = Array.from({ length: 7 }, () => ({ total: 0, count: 0 }));
+    for (const point of points) {
+      const day = new Date(`${point.date}T12:00:00`).getDay();
+      buckets[day].total += point.price;
+      buckets[day].count += 1;
+    }
+    const averages = buckets.map((bucket) => bucket.count ? bucket.total / bucket.count : null);
+    const available = averages.filter((value): value is number => value !== null);
+    if (available.length < 4) return null;
+    const min = Math.min(...available);
+    const max = Math.max(...available);
+    let bestDay = 0;
+    let bestValue = Number.POSITIVE_INFINITY;
+    averages.forEach((value, index) => {
+      if (value !== null && value < bestValue) {
+        bestValue = value;
+        bestDay = index;
+      }
+    });
+    return { averages, min, max, bestDay };
+  }, [data]);
 
-  const { averages, bestDay } = cycle;
-  const orderVals = WEEKDAY_ORDER.map((d) => averages[d]);
-  const present = orderVals.filter((v): v is number => v !== null);
-  const min = Math.min(...present);
-  const max = Math.max(...present);
-  const range = max - min || 1;
-
-  const points = WEEKDAY_ORDER.map((day, i) => {
-    const v = averages[day];
-    const radius = v === null ? 0 : RADIUS * (0.2 + 0.8 * ((v - min) / range));
-    return { x: polar(CENTER_X, CENTER_Y, radius, weekdayAngle(i)).x, y: polar(CENTER_X, CENTER_Y, radius, weekdayAngle(i)).y, day, nullVal: v === null };
-  });
-
-  const polygon = points
-    .filter((p) => !p.nullVal)
-    .map((p) => `${p.x},${p.y}`)
-    .join(' ');
+  const dayKeys = [
+    'station.day_d',
+    'station.day_l',
+    'station.day_m',
+    'station.day_x',
+    'station.day_j',
+    'station.day_v',
+    'station.day_s',
+  ] as const;
 
   return (
-    <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg items-center">
-      {cardGlass && <GlassBackdrop color={colors.surface} />}
-      <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-sm uppercase tracking-wide self-start">
-        {t('price_trends.weekday_title')}
-      </Text>
-      <Svg width={WIDTH} height={HEIGHT}>
-        <G>
-          {[0.25, 0.5, 0.75, 1].map((f) => (
-            <Circle
-              key={`ring-${f}`}
-              cx={CENTER_X}
-              cy={CENTER_Y}
-              r={RADIUS * f}
-              stroke={colors.radarGrid}
-              strokeWidth={1}
-              fill="none"
-            />
-          ))}
-          {WEEKDAY_ORDER.map((_, i) => {
-            const angle = weekdayAngle(i);
-            const outer = polar(CENTER_X, CENTER_Y, RADIUS + 18, angle);
-            const inner = polar(CENTER_X, CENTER_Y, RADIUS * 0.25, angle);
-            return (
-              <Line key={`axis-${i}`} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={colors.radarGrid} strokeWidth={1} />
-            );
-          })}
-          <Polygon points={polygon} fill={colors.radarLine} fillOpacity={0.18} stroke={colors.radarLine} strokeWidth={2} />
-          {points.map((p, i) => {
-            if (p.nullVal) return null;
-            const isBest = p.day === bestDay;
-            return (
-              <Circle
-                key={`point-${i}`}
-                cx={p.x}
-                cy={p.y}
-                r={isBest ? 5 : 3.5}
-                fill={isBest ? colors.radarBest : colors.radarDot}
-              />
-            );
-          })}
-          {WEEKDAY_ORDER.map((day, i) => {
-            const angle = weekdayAngle(i);
-            const label = polar(CENTER_X, CENTER_Y, RADIUS + 30, angle);
-            const isBest = day === bestDay;
-            return (
-              <SvgText
-                key={`label-${i}`}
-                x={label.x}
-                y={label.y}
-                fill={isBest ? colors.radarBest : colors.radarLabel}
-                fontSize={11}
-                fontWeight={isBest ? '700' : '400'}
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {t(`station.${weekdayI18nKey(day)}`)}
-              </SvgText>
-            );
-          })}
-        </G>
-      </Svg>
-      <Text style={{ color: colors.label }} className="text-callout font-semibold mt-sm">
-        {t('price_trends.weekday_best_day', { day: t(`station.${weekdayI18nKey(bestDay)}`) })}
-      </Text>
-    </View>
-  );
-};
+    <GlassBox component="card" className="rounded-md p-md gap-sm">
+      <View className="flex-row items-center justify-between gap-sm">
+        <Text style={{ color: colors.label }} className="text-headline font-semibold">
+          {t('price_trends.weekday_title')}
+        </Text>
+        {analysis && (
+          <Text style={{ color: colors.tint }} className="text-caption-1 font-semibold">
+            {t('price_trends.weekday_best_short', { day: t(dayKeys[analysis.bestDay]) })}
+          </Text>
+        )}
+      </View>
 
-export const WeekdayRadar = memo(WeekdayRadarComponent);
+      {!analysis ? (
+        <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+          {t('price_trends.weekday_insufficient')}
+        </Text>
+      ) : (
+        <View className="flex-row items-end justify-between gap-xs" style={{ height: 84 }}>
+          {analysis.averages.map((average, index) => {
+            const span = Math.max(0.001, analysis.max - analysis.min);
+            const normalized = average === null ? 0 : (average - analysis.min) / span;
+            const height = average === null ? 8 : 28 + normalized * 30;
+            const best = index === analysis.bestDay;
+            return (
+              <View key={dayKeys[index]} className="flex-1 items-center justify-end gap-xs">
+                {average !== null && (
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    style={{ color: best ? colors.tint : colors.tertiaryLabel, fontSize: 9 }}
+                  >
+                    {average.toFixed(3)}
+                  </Text>
+                )}
+                <View
+                  style={{
+                    width: '62%',
+                    minWidth: 12,
+                    maxWidth: 24,
+                    height,
+                    borderRadius: 6,
+                    backgroundColor: best ? colors.tint : colors.chartLine,
+                    opacity: average === null ? 0.18 : best ? 1 : 0.48,
+                  }}
+                />
+                <Text style={{ color: best ? colors.tint : colors.secondaryLabel }} className="text-caption-2 font-semibold">
+                  {t(dayKeys[index])}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </GlassBox>
+  );
+}

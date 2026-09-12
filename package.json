@@ -6,7 +6,10 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "release": "node scripts/release.js"
+    "build:preview": "eas build --profile preview --platform all",
+    "build:production": "eas build --profile production --platform all",
+    "update:preview": "eas update --channel preview",
+    "update:production": "eas update --channel production"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.14",
@@ -44,7 +47,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "expo-updates": "~57.0.21"
   },
   "devDependencies": {
     "@types/react": "~19.2.4",

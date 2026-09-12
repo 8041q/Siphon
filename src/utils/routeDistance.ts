@@ -1,95 +1,72 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { hybridStore } from '../store/hybridStore';
+import { routingProvider, type RoutingDestination } from '../routing';
+
 const CROW_FLIES_TO_ROAD_RATIO = 1.38;
-const OSRM_ROUTE_URL = 'https://router.project-osrm.org/route/v1/driving';
-const OSRM_TABLE_URL = 'https://router.project-osrm.org/table/v1/driving';
-const REQUEST_TIMEOUT_MS = 7000;
-const CACHE_PREFIX = 'siphon:route:v2';
-const LEGACY_CACHE_PREFIX = 'siphon:route:';
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const MAX_CACHE_ENTRIES = 1200;
+const CACHE_PREFIX = 'siphon:route:v3';
+const LEGACY_CACHE_PREFIX = 'siphon:route:v2';
+const CACHE_SCHEMA_VERSION = 1;
 
 export type DistanceSource = 'estimate' | 'route';
 export type DistanceResult = { value: number; source: DistanceSource };
-export type RoadDistancePoint = {
-  id: string;
-  latitude: number;
-  longitude: number;
+export type RoadDistancePoint = RoutingDestination;
+
+type StoredRouteDistance = {
+  schemaVersion: number;
+  provider: string;
+  value: number;
+  savedAt: number;
 };
 
-type CachedDistanceResult = { value: number; cachedAt: number };
+type LegacyCachedDistance = {
+  value: number;
+  cachedAt?: number;
+};
 
 const pendingRequests = new Map<string, Promise<DistanceResult>>();
-let cacheMaintenancePromise: Promise<void> | null = null;
 
 function hasValidCoordinates(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 }
 
-function cacheKey(fromId: string, toId: string, toLat: number, toLng: number): string {
-  // Station coordinates are part of the key so a corrected/moved station does
-  // not reuse a route computed for its previous coordinates.
-  return `${CACHE_PREFIX}:${fromId}:${toId}:${toLat.toFixed(5)}:${toLng.toFixed(5)}`;
+function safeSegment(value: string): string {
+  return encodeURIComponent(value).replace(/\*/g, '%2A');
 }
 
-function isCachedDistance(value: unknown): value is CachedDistanceResult {
+/**
+ * Durable route key. Origin is intentionally the caller's ~100 m location
+ * bucket rather than exact GPS coordinates so tiny GPS jitter reuses the same
+ * route. Destination coordinates invalidate a route automatically if a station
+ * is moved/corrected in a future data update.
+ */
+function cacheKey(fromId: string, point: RoadDistancePoint): string {
+  const coordinateKey = `${point.latitude.toFixed(5)}_${point.longitude.toFixed(5)}`;
+  return `${CACHE_PREFIX}/${safeSegment(routingProvider.cacheNamespace)}/${safeSegment(fromId)}/${safeSegment(point.id)}_${coordinateKey}.json`;
+}
+
+function legacyCacheKey(fromId: string, point: RoadDistancePoint): string {
+  return `${LEGACY_CACHE_PREFIX}:${fromId}:${point.id}:${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`;
+}
+
+function isStoredRoute(value: unknown): value is StoredRouteDistance {
   if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as { value?: unknown; cachedAt?: unknown };
+  const candidate = value as Partial<StoredRouteDistance>;
   return (
+    candidate.schemaVersion === CACHE_SCHEMA_VERSION &&
+    candidate.provider === routingProvider.cacheNamespace &&
     typeof candidate.value === 'number' &&
     Number.isFinite(candidate.value) &&
     candidate.value > 0 &&
-    typeof candidate.cachedAt === 'number' &&
-    Number.isFinite(candidate.cachedAt)
+    typeof candidate.savedAt === 'number' &&
+    Number.isFinite(candidate.savedAt)
   );
 }
 
-async function maintainRouteCache(): Promise<void> {
-  const now = Date.now();
-  const keys = await AsyncStorage.getAllKeys();
-  const routeKeys = keys.filter((key) => key.startsWith(LEGACY_CACHE_PREFIX));
-  if (routeKeys.length === 0) return;
-
-  const legacyKeys = routeKeys.filter((key) => !key.startsWith(`${CACHE_PREFIX}:`));
-  const currentKeys = routeKeys.filter((key) => key.startsWith(`${CACHE_PREFIX}:`));
-  const remove = new Set<string>(legacyKeys);
-  const valid: Array<{ key: string; cachedAt: number }> = [];
-
-  if (currentKeys.length > 0) {
-    const entries = await AsyncStorage.multiGet(currentKeys);
-    for (const [key, raw] of entries) {
-      if (!raw) {
-        remove.add(key);
-        continue;
-      }
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        if (!isCachedDistance(parsed) || now - parsed.cachedAt > CACHE_TTL_MS || parsed.cachedAt > now + 60_000) {
-          remove.add(key);
-          continue;
-        }
-        valid.push({ key, cachedAt: parsed.cachedAt });
-      } catch {
-        remove.add(key);
-      }
-    }
-  }
-
-  if (valid.length > MAX_CACHE_ENTRIES) {
-    valid.sort((a, b) => b.cachedAt - a.cachedAt);
-    for (const entry of valid.slice(MAX_CACHE_ENTRIES)) remove.add(entry.key);
-  }
-
-  if (remove.size > 0) {
-    await AsyncStorage.multiRemove([...remove]);
-  }
-}
-
-function ensureRouteCacheMaintenance(): Promise<void> {
-  if (!cacheMaintenancePromise) {
-    cacheMaintenancePromise = maintainRouteCache().catch(() => undefined);
-  }
-  return cacheMaintenancePromise;
+function isLegacyRoute(value: unknown): value is LegacyCachedDistance {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<LegacyCachedDistance>;
+  return typeof candidate.value === 'number' && Number.isFinite(candidate.value) && candidate.value > 0;
 }
 
 export function roadEstimateKm(fromLat: number, fromLng: number, toLat: number, toLng: number): number {
@@ -105,52 +82,70 @@ export function roadEstimateKm(fromLat: number, fromLng: number, toLat: number, 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * CROW_FLIES_TO_ROAD_RATIO;
 }
 
-async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Siphon/1.0 (+https://github.com/8041q/SiphonAPI)',
-      },
-    });
-  } finally {
-    clearTimeout(id);
-  }
+async function persistRoute(fromId: string, point: RoadDistancePoint, value: number): Promise<void> {
+  if (!Number.isFinite(value) || value <= 0) return;
+  const stored: StoredRouteDistance = {
+    schemaVersion: CACHE_SCHEMA_VERSION,
+    provider: routingProvider.cacheNamespace,
+    value,
+    savedAt: Date.now(),
+  };
+  // hybridStore writes route entries atomically into the app document directory.
+  await hybridStore.setItem(cacheKey(fromId, point), JSON.stringify(stored));
 }
 
-async function readCachedRoute(
-  fromId: string,
-  point: RoadDistancePoint,
-): Promise<DistanceResult | null> {
-  const key = cacheKey(fromId, point.id, point.latitude, point.longitude);
-  const cachedRaw = await AsyncStorage.getItem(key).catch(() => null);
-  if (!cachedRaw) return null;
-
-  try {
-    const parsed = JSON.parse(cachedRaw) as unknown;
-    if (isCachedDistance(parsed) && Date.now() - parsed.cachedAt <= CACHE_TTL_MS) {
-      return { value: parsed.value, source: 'route' };
+async function readCachedRoute(fromId: string, point: RoadDistancePoint): Promise<DistanceResult | null> {
+  const key = cacheKey(fromId, point);
+  const raw = await hybridStore.getItem(key).catch(() => null);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (isStoredRoute(parsed)) return { value: parsed.value, source: 'route' };
+    } catch {
+      // Removed below.
     }
-  } catch {
-    // Removed below.
+    if (hybridStore.removeItem) {
+      await hybridStore.removeItem(key).catch(() => undefined);
+    }
   }
 
-  void AsyncStorage.removeItem(key).catch(() => undefined);
+  // Pass-8 stored successful OSRM routes in AsyncStorage under v2 keys. Migrate
+  // each one lazily the first time it is needed so existing users keep the work
+  // already performed instead of re-querying OSRM after updating the app.
+  if (routingProvider.id === 'osrm') {
+    const oldKey = legacyCacheKey(fromId, point);
+    const legacyRaw = await AsyncStorage.getItem(oldKey).catch(() => null);
+    if (legacyRaw) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(legacyRaw) as unknown;
+      } catch {
+        await AsyncStorage.removeItem(oldKey).catch(() => undefined);
+        return null;
+      }
+
+      if (isLegacyRoute(parsed)) {
+        try {
+          await persistRoute(fromId, point, parsed.value);
+          await AsyncStorage.removeItem(oldKey).catch(() => undefined);
+        } catch {
+          // Keep the legacy copy if the durable migration write fails. The
+          // route is still valid for this session and can be migrated later.
+        }
+        return { value: parsed.value, source: 'route' };
+      }
+
+      await AsyncStorage.removeItem(oldKey).catch(() => undefined);
+    }
+  }
+
   return null;
 }
 
-function persistRoute(fromId: string, point: RoadDistancePoint, value: number): void {
-  const key = cacheKey(fromId, point.id, point.latitude, point.longitude);
-  const cached: CachedDistanceResult = { value, cachedAt: Date.now() };
-  void AsyncStorage.setItem(key, JSON.stringify(cached)).catch(() => undefined);
-}
-
 /**
- * Refine one station using OSRM's route service. A network failure returns the
- * instantaneous estimate and deliberately does not cache that estimate.
+ * Refine one station through the active routing provider. Successful routed
+ * distances are persisted without a TTL. Network/provider failures return the
+ * instantaneous estimate and are never cached as if they were real routes.
  */
 export async function roadDistanceKm(
   fromLat: number,
@@ -164,32 +159,23 @@ export async function roadDistanceKm(
     throw new Error('Invalid route coordinates');
   }
 
-  await ensureRouteCacheMaintenance();
-
   const point: RoadDistancePoint = { id: toId, latitude: toLat, longitude: toLng };
   const cached = await readCachedRoute(fromId, point);
   if (cached) return cached;
 
-  const key = cacheKey(fromId, toId, toLat, toLng);
+  const key = cacheKey(fromId, point);
   const existing = pendingRequests.get(key);
   if (existing) return existing;
 
   const promise = (async (): Promise<DistanceResult> => {
-    try {
-      const url = `${OSRM_ROUTE_URL}/${fromLng},${fromLat};${toLng},${toLat}?overview=false`;
-      const res = await fetchWithTimeout(url, REQUEST_TIMEOUT_MS);
-      if (res.ok) {
-        const json = (await res.json()) as { routes?: Array<{ distance?: number }> };
-        const distance = json.routes?.[0]?.distance;
-        if (typeof distance === 'number' && Number.isFinite(distance) && distance > 0) {
-          const value = distance / 1000;
-          persistRoute(fromId, point, value);
-          return { value, source: 'route' };
-        }
-      }
-    } catch {
-      // Network error/timeout: keep the estimate, but do not persist it. A
-      // temporary OSRM outage must not suppress a later real route lookup.
+    const value = await routingProvider.routeDistanceKm(
+      { latitude: fromLat, longitude: fromLng },
+      point,
+    );
+
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      await persistRoute(fromId, point, value).catch(() => undefined);
+      return { value, source: 'route' };
     }
 
     return { value: roadEstimateKm(fromLat, fromLng, toLat, toLng), source: 'estimate' };
@@ -203,13 +189,37 @@ export async function roadDistanceKm(
   }
 }
 
+async function routeIndividuallyWithBoundedConcurrency(
+  fromLat: number,
+  fromLng: number,
+  points: readonly RoadDistancePoint[],
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  const concurrency = 4;
+  let cursor = 0;
+
+  const worker = async () => {
+    while (cursor < points.length) {
+      const index = cursor++;
+      const point = points[index];
+      const value = await routingProvider.routeDistanceKm(
+        { latitude: fromLat, longitude: fromLng },
+        point,
+      );
+      if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        result.set(point.id, value);
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, points.length) }, () => worker()));
+  return result;
+}
+
 /**
- * Refine several stations with one OSRM Table request (one user source, many
- * station destinations). Cached stations are returned without network traffic.
- * Failed/unroutable cells keep their local estimate and are not cached.
- *
- * Keep batches modest (the caller currently uses 20 destinations) because the
- * public router.project-osrm.org endpoint is a demo service, not a bulk API.
+ * Refine several stations from one origin. Cached entries are loaded from the
+ * durable file store first; only missing routes reach the provider. OSRM uses a
+ * single Table request for the unresolved destinations in each caller batch.
  */
 export async function roadDistancesKm(
   fromLat: number,
@@ -221,13 +231,8 @@ export async function roadDistancesKm(
     throw new Error('Invalid route coordinates');
   }
 
-  await ensureRouteCacheMaintenance();
-
   const results = new Map<string, DistanceResult>();
-  const validPoints = points.filter(
-    (point) => hasValidCoordinates(point.latitude, point.longitude),
-  );
-
+  const validPoints = points.filter((point) => hasValidCoordinates(point.latitude, point.longitude));
   if (validPoints.length === 0) return results;
 
   const cachedEntries = await Promise.all(
@@ -240,40 +245,27 @@ export async function roadDistancesKm(
     else unresolved.push(point);
   }
 
-  if (unresolved.length === 0) return results;
+  if (unresolved.length > 0) {
+    const routed = routingProvider.tableDistancesKm
+      ? await routingProvider.tableDistancesKm(
+          { latitude: fromLat, longitude: fromLng },
+          unresolved,
+        )
+      : await routeIndividuallyWithBoundedConcurrency(fromLat, fromLng, unresolved);
 
-  try {
-    const coordinates = [
-      `${fromLng},${fromLat}`,
-      ...unresolved.map((point) => `${point.longitude},${point.latitude}`),
-    ].join(';');
-    const destinations = unresolved.map((_, index) => index + 1).join(';');
-    const url = `${OSRM_TABLE_URL}/${coordinates}?sources=0&destinations=${destinations}&annotations=distance&skip_waypoints=true`;
-    const res = await fetchWithTimeout(url, REQUEST_TIMEOUT_MS);
-
-    if (res.ok) {
-      const json = (await res.json()) as {
-        code?: string;
-        distances?: Array<Array<number | null>>;
-      };
-      const row = json.code === 'Ok' ? json.distances?.[0] : undefined;
-      if (row) {
-        unresolved.forEach((point, index) => {
-          const meters = row[index];
-          if (typeof meters === 'number' && Number.isFinite(meters) && meters > 0) {
-            const value = meters / 1000;
-            results.set(point.id, { value, source: 'route' });
-            persistRoute(fromId, point, value);
-          }
-        });
-      }
+    const writes: Promise<void>[] = [];
+    for (const point of unresolved) {
+      const value = routed.get(point.id);
+      if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) continue;
+      results.set(point.id, { value, source: 'route' });
+      writes.push(persistRoute(fromId, point, value));
     }
-  } catch {
-    // Keep local estimates below. Do not fan out into one route request per
-    // station when the table service is unavailable.
+    // Wait for all atomic file writes before returning. A storage failure is
+    // non-fatal for the current session, but successful writes survive restarts.
+    if (writes.length > 0) await Promise.allSettled(writes);
   }
 
-  for (const point of unresolved) {
+  for (const point of validPoints) {
     if (!results.has(point.id)) {
       results.set(point.id, {
         value: roadEstimateKm(fromLat, fromLng, point.latitude, point.longitude),
@@ -283,4 +275,22 @@ export async function roadDistancesKm(
   }
 
   return results;
+}
+
+/** Deletes all permanently cached routed distances. Estimates are unaffected. */
+export async function clearRouteDistanceCache(): Promise<number> {
+  const keys = await hybridStore.listKeys?.('siphon:route:') ?? [];
+  if (hybridStore.removeItem) {
+    await Promise.allSettled(keys.map((key) => hybridStore.removeItem!(key)));
+  }
+
+  // Also remove the phase-8 AsyncStorage cache. Otherwise a cleared legacy
+  // route could be lazily migrated back into the permanent cache later.
+  const legacyKeys = (await AsyncStorage.getAllKeys().catch(() => []))
+    .filter((key) => key.startsWith(`${LEGACY_CACHE_PREFIX}:`));
+  if (legacyKeys.length > 0) {
+    await AsyncStorage.multiRemove(legacyKeys).catch(() => undefined);
+  }
+
+  return keys.length + legacyKeys.length;
 }

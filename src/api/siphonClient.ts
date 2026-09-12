@@ -538,14 +538,14 @@ export class FuelDataClient {
     }
   }
 
-  // Step 3: fetch + cache a single country's manifest — but only over the
+  // Step 3: fetch + cache a single country's manifest - but only over the
   // network if `changed` is true (i.e. checkForUpdates() flagged this
   // country's hash as different from what we last saw). Otherwise use the
   // manifest we cached last time. This is what makes "unchanged countries:
   // skip entirely" (API.md step 2) actually happen.
   //
   // If the network fetch fails and we have a stale cache, we return it
-  // rather than crashing — the map isn't useless just because the user
+  // rather than crashing - the map isn't useless just because the user
   // briefly lost connectivity.
   private async getCountryManifest<T>(
     code: CountryCode,
@@ -592,7 +592,7 @@ export class FuelDataClient {
   // Step 4: fetch a tile/district .geojson ONLY if its hash differs from what's already cached. Works for both ES tiles and PT districts since
   // they share the same {path, hash} shape.
   // If the network fetch fails and we have stale cached data, we return it
-  // rather than throwing — so users can still see stations they previously
+  // rather than throwing - so users can still see stations they previously
   // downloaded even when offline.
   async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection | null> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
@@ -662,7 +662,10 @@ export class FuelDataClient {
     const CONCURRENCY = 6;
     for (let i = 0; i < entries.length; i += CONCURRENCY) {
       const batch = entries.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map((entry) => this.fetchIfChanged(entry)));
+      const batchData = await Promise.all(batch.map((entry) => this.fetchIfChanged(entry)));
+      if (batchData.some((value) => value === null)) {
+        throw new Error('Station tile sync incomplete; keeping previous root manifest.');
+      }
 
       // A stale cached tile is useful for the map, but it is not enough to mark
       // a new root manifest as fully synchronized. Verify each expected hash.
@@ -718,7 +721,7 @@ export class FuelDataClient {
       }
 
       await this.pruneOldHistoryDays();
-      this.historyMemo.clear();
+      this.historyStationMemo.clear();
 
       if (incomplete) {
         // Keep the previous index hash so the next launch retries missing days.
@@ -788,44 +791,75 @@ export class FuelDataClient {
     }
   }
 
-  // Reads a station's price series for one fuel from the cached day files.
-  // Results are memoized in memory for the session (bounded; cleared whenever
-  // history updates or the cache is cleared), so repeated opens of the same
-  // chart are instant.
-  private historyMemo = new Map<string, PriceHistoryPoint[]>();
+  // Reads a station's price series from the cached day files. The first fuel
+  // requested for a station builds every available fuel series in one pass, so
+  // switching fuel tabs does not re-read/re-parse all ~90 history files.
+  private historyStationMemo = new Map<string, Map<string, PriceHistoryPoint[]>>();
 
-  private memoizeHistory(key: string, points: PriceHistoryPoint[]): void {
-    if (this.historyMemo.size > 50) this.historyMemo.clear();
-    this.historyMemo.set(key, points);
+  private memoizeStationHistory(stationId: string, series: Map<string, PriceHistoryPoint[]>): void {
+    if (this.historyStationMemo.size >= 30) {
+      const oldest = this.historyStationMemo.keys().next().value as string | undefined;
+      if (oldest) this.historyStationMemo.delete(oldest);
+    }
+    this.historyStationMemo.set(stationId, series);
+  }
+
+  private async invalidateCorruptHistoryDay(key: string): Promise<void> {
+    const relative = key.startsWith('siphon:history:') ? key.slice('siphon:history:'.length) : null;
+    await this.store.removeItem?.(key).catch(() => undefined);
+    if (relative) {
+      await this.store.removeItem?.(KEYS.tileHash(`data/history/${relative}`)).catch(() => undefined);
+    }
+    // Force the next history update check to revisit the index and restore the
+    // missing day even if the server-side index hash itself has not changed.
+    await Promise.allSettled([
+      this.store.removeItem?.(KEYS.historyIndexHash) ?? Promise.resolve(),
+      this.store.removeItem?.(KEYS.historyCacheVersion) ?? Promise.resolve(),
+    ]);
   }
 
   async getPriceHistory(stationId: string, fuelType: string): Promise<PriceHistoryPoint[]> {
-    const memoKey = `${stationId}:${fuelType}`;
-    const memoized = this.historyMemo.get(memoKey);
-    if (memoized) return memoized;
+    const memoized = this.historyStationMemo.get(stationId);
+    if (memoized) return memoized.get(fuelType) ?? [];
 
-    const keys = (await this.store.listKeys?.('siphon:history:')) ?? [];
-    const points: PriceHistoryPoint[] = [];
+    const keys = ((await this.store.listKeys?.('siphon:history:')) ?? []).sort();
+    const series = new Map<string, PriceHistoryPoint[]>();
 
     for (const key of keys) {
       const date = this.dateFromHistoryKey(key);
       if (!date) continue;
       const raw = await this.store.getItem(key);
       if (!raw) continue;
+
+      let parsed: unknown;
       try {
-        const entries: Array<{ id: string; fuels: Record<string, number> }> = JSON.parse(raw);
-        const entry = entries.find((e) => e.id === stationId);
-        if (entry && fuelType in entry.fuels) {
-          points.push({ date, price: entry.fuels[fuelType] });
-        }
+        parsed = JSON.parse(raw) as unknown;
       } catch {
-        // skip corrupt day files
+        await this.invalidateCorruptHistoryDay(key);
+        continue;
+      }
+
+      if (!Array.isArray(parsed)) {
+        await this.invalidateCorruptHistoryDay(key);
+        continue;
+      }
+
+      const entry = parsed.find(
+        (item): item is { id: string; fuels: Record<string, unknown> } =>
+          isRecord(item) && item.id === stationId && isRecord(item.fuels),
+      );
+      if (!entry) continue;
+
+      for (const [fuel, price] of Object.entries(entry.fuels)) {
+        if (typeof price !== 'number' || !Number.isFinite(price)) continue;
+        const points = series.get(fuel) ?? [];
+        points.push({ date, price });
+        series.set(fuel, points);
       }
     }
 
-    points.sort((a, b) => a.date.localeCompare(b.date));
-    this.memoizeHistory(memoKey, points);
-    return points;
+    this.memoizeStationHistory(stationId, series);
+    return series.get(fuelType) ?? [];
   }
 
   // Deletes every cached history day file and the index hash. Called when the
@@ -841,7 +875,7 @@ export class FuelDataClient {
     }
     await this.store.removeItem?.(KEYS.historyIndexHash);
     await this.store.removeItem?.(KEYS.historyCacheVersion);
-    this.historyMemo.clear();
+    this.historyStationMemo.clear();
     return { deleted };
   }
 
@@ -849,7 +883,7 @@ export class FuelDataClient {
 
   // Fetches the single data/commodities/dashboard.json file from the server
   // whenever its hash changes. Mirrors the history pattern (hash-gated,
-  // optional — only runs when root.commodities exists).
+  // optional - only runs when root.commodities exists).
   //
   // On success returns the parsed dashboard; on hash-match returns null;
   // on ordinary network failure falls back to stale cache; RateLimitedError propagates.
@@ -941,19 +975,36 @@ export class FuelDataClient {
     await this.store.setItem(KEYS.allStationsCacheVersion, ALL_STATIONS_CACHE_VERSION);
   }
 
+  async stationCacheNeedsVerification(): Promise<boolean> {
+    const version = await this.store.getItem(KEYS.countryManifestCacheVersion);
+    return version !== COUNTRY_MANIFEST_CACHE_VERSION;
+  }
+
   async loadAllStationsCache(): Promise<FuelStationFeature[] | null> {
     const version = await this.store.getItem(KEYS.allStationsCacheVersion);
     if (version !== ALL_STATIONS_CACHE_VERSION) return null;
     const raw = await this.store.getItem(KEYS.allStationsData);
     if (!raw) return null;
+
+    let valid: FuelStationFeature[] | null = null;
     try {
       const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return null;
-      const stations = parsed.filter(isFuelStationFeature);
-      return stations.length === parsed.length ? stations : null;
+      if (Array.isArray(parsed)) {
+        const stations = parsed.filter(isFuelStationFeature);
+        if (stations.length === parsed.length) valid = stations;
+      }
     } catch {
-      return null;
+      // Cleaned up below.
     }
+    if (valid) return valid;
+
+    // Do not repeatedly parse a known-bad aggregate on every launch. Removing
+    // the body + version makes the existing tile-rebuild path authoritative.
+    await Promise.allSettled([
+      this.store.removeItem?.(KEYS.allStationsData) ?? Promise.resolve(),
+      this.store.removeItem?.(KEYS.allStationsCacheVersion) ?? Promise.resolve(),
+    ]);
+    return null;
   }
 
   // ---------- Spatial helpers ----------
@@ -1002,7 +1053,7 @@ export class FuelDataClient {
   // looked up via a 3×3 grid-key block around the point so a user near a
   // tile boundary also pulls adjacent tiles.
   //
-  // `changedCountries` should be the array returned by checkForUpdates() —
+  // `changedCountries` should be the array returned by checkForUpdates() -
   // pass it straight through so a country whose hash didn't move is read
   // from cache instead of re-fetched. On the common "nothing changed"
   // day, that combined with checkForUpdates()'s 304 means this whole

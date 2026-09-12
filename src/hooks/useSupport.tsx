@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 
 import { useAdConsent } from '../hooks/useAdConsent';
+import type { PrivacyOptionsResult } from '../hooks/useAdConsent';
 import { useAdRewards, REWARDS } from './useAdRewards';
 import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
@@ -46,6 +47,9 @@ interface SupportValue extends AppearanceSupportValue {
   adLoading: boolean;
   /** True once reward progress is read. */
   rewardsLoaded: boolean;
+  privacyOptionsRequired: boolean;
+  showPrivacyOptions: () => Promise<PrivacyOptionsResult>;
+  privacyRefreshing: boolean;
 }
 
 const AppearanceSupportContext = createContext<AppearanceSupportValue | null>(null);
@@ -100,8 +104,8 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
     [watchedCount],
   );
 
-  // The only place ad consent is requested. This remains user-initiated from
-  // the rewards UI and never runs as a side effect of mounting the provider.
+  // Consent information may refresh on launch, but the consent form and the
+  // rewarded-ad request itself are only initiated from an explicit user action.
   const watchAd = useCallback(async (): Promise<WatchResult> => {
     // Do not let an ad completion race the persisted reward-progress hydration.
     // The rewards UI already disables the button while loading; this guard also
@@ -167,6 +171,9 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
       adLoaded: rewarded.loaded,
       adLoading: rewarded.loading,
       rewardsLoaded,
+      privacyOptionsRequired: consent.privacyOptionsRequired,
+      showPrivacyOptions: consent.showPrivacyOptions,
+      privacyRefreshing: consent.refreshing,
     }),
     [
       appearanceValue,
@@ -178,6 +185,9 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
       rewarded.loaded,
       rewarded.loading,
       rewardsLoaded,
+      consent.privacyOptionsRequired,
+      consent.showPrivacyOptions,
+      consent.refreshing,
     ],
   );
 

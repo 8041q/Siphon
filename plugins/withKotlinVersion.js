@@ -10,7 +10,7 @@ module.exports = function withKotlinVersion(config, { kotlinVersion = '2.3.0' } 
     const pinned = `classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}')`;
 
     if (config.modResults.contents.includes(pinned)) {
-      // Already patched (e.g. plugin ran twice) — nothing to do.
+      // Already patched (e.g. plugin ran twice) - nothing to do.
       return config;
     }
 

@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useCommodities } from '../../src/hooks/useCommodities';
 import { CommodityChart } from '../../src/components/CommodityChart';
+import { MarketIntelligenceCard } from '../../src/components/MarketIntelligenceCard';
+import { MarketDetailsCard } from '../../src/components/MarketDetailsCard';
 import { fuelLabel } from '../../src/utils/fuelNames';
+import { analyzeMarket } from '../../src/utils/marketAnalysis';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../src/hooks/useSupport';
 import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
@@ -20,29 +23,12 @@ const COUNTRIES = [
 ] as const;
 
 type CountryKey = (typeof COUNTRIES)[number]['key'];
-
 const FUELS = ['gasoline95', 'diesel'] as const;
 
-function formatRatio(v: number): string {
-  return v === 0 ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+function formatPct(value: number | null): string {
+  if (value === null) return '-';
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
 }
-
-function formatTrend(v: number | null | undefined): string {
-  if (v === null || v === undefined) return '—';
-  const sign = v > 0 ? '+' : '';
-  return `${sign}${v.toFixed(1)}%`;
-}
-
-function trendColor(
-  v: number | null | undefined,
-  neutral: string,
-  positive: string,
-  negative: string,
-): string {
-  if (v === null || v === undefined) return neutral;
-  return v >= 0 ? positive : negative;
-}
-
 
 export default function MarketScreen() {
   const { t } = useTranslation();
@@ -51,126 +37,98 @@ export default function MarketScreen() {
   const { styleRules } = useAppearanceSupport();
   const cardRules = useStyleConfig(styleRules, 'card');
   const cardStyle = applyComponentRules(cardRules, colors.label);
-
-  const { dashboard, loading, error, reload } = useCommodities();
+  const { dashboard, loading, error } = useCommodities({ refresh: false });
 
   const [country, setCountry] = useState<CountryKey>('combined');
   const [fuel, setFuel] = useState<(typeof FUELS)[number]>('gasoline95');
 
   const metricKey = `${fuel}_${country}`;
   const metrics: CommodityMetrics | undefined = dashboard?.metrics?.[metricKey] ?? undefined;
-
   const retailPoints = dashboard?.retail?.[metricKey] ?? [];
   const crudePoints = dashboard?.crude?.brent ?? [];
+  const wtiPoints = dashboard?.crude?.wti ?? [];
+  const insight = useMemo(
+    () => analyzeMarket(crudePoints, retailPoints, metrics, wtiPoints),
+    [crudePoints, retailPoints, metrics, wtiPoints],
+  );
 
-  const chipBg = (sel: boolean) => ({
-    backgroundColor: sel ? colors.tint : colors.surface,
+  const chipBg = (selected: boolean) => ({
+    backgroundColor: selected ? colors.tint : colors.surface,
   });
-
-  const chipText = (sel: boolean) => ({
+  const chipText = (selected: boolean) => ({
     fontSize: 13,
     fontWeight: '600' as const,
-    color: sel ? colors.labelOnTint : colors.label,
+    color: selected ? colors.labelOnTint : colors.label,
   });
 
+  const snapshot = [
+    { label: t('market.crude_7d'), value: formatPct(insight.crude7), raw: insight.crude7 },
+    { label: t('market.crude_30d'), value: formatPct(insight.crude30), raw: insight.crude30 },
+    { label: t('market.retail_7d'), value: formatPct(insight.retail7), raw: insight.retail7 },
+    { label: t('market.retail_30d'), value: formatPct(insight.retail30), raw: insight.retail30 },
+  ];
+
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['top']}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
       >
-        <Text style={{ fontSize: 28, fontWeight: '700', color: colors.label, marginBottom: 16 }}>
+        <Text style={{ fontSize: 28, fontWeight: '700', color: colors.label, marginBottom: 4 }}>
           {t('market.title')}
         </Text>
-
-        {/* Country selector */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          {COUNTRIES.map((c) => {
-            const sel = country === c.key;
-            return (
-              <TouchableOpacity
-                key={c.key}
-                activeOpacity={0.7}
-                onPress={() => setCountry(c.key)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: sel }}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  borderRadius: 16,
-                  ...chipBg(sel),
-                }}
-              >
-                <Text style={chipText(sel)}>{t(c.labelKey)}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Fuel selector */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-          {FUELS.map((f) => {
-            const sel = fuel === f;
-            return (
-              <TouchableOpacity
-                key={f}
-                activeOpacity={0.7}
-                onPress={() => setFuel(f)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: sel }}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  borderRadius: 16,
-                  ...chipBg(sel),
-                }}
-              >
-                <Text style={chipText(sel)}>{fuelLabel(f)}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {error && dashboard && (
-          <View
-            style={{ backgroundColor: colors.groupedBackground }}
-            className="rounded-md px-md py-sm mb-md"
-            accessibilityLiveRegion="polite"
-          >
-            <Text style={{ color: colors.secondaryLabel, textAlign: 'center' }} className="text-footnote">
-              {t('common.using_cached_data')}
-            </Text>
-          </View>
+        {dashboard?.lastUpdated ? (
+          <Text style={{ color: colors.tertiaryLabel, fontSize: 11, marginBottom: 16 }}>
+            {t('market.updated_at', { date: dashboard.lastUpdated })}
+          </Text>
+        ) : (
+          <View style={{ height: 12 }} />
         )}
 
-        {/* Loading / Empty states */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {COUNTRIES.map((item) => {
+            const selected = country === item.key;
+            return (
+              <TouchableOpacity
+                key={item.key}
+                activeOpacity={0.7}
+                onPress={() => setCountry(item.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, ...chipBg(selected) }}
+              >
+                <Text style={chipText(selected)}>{t(item.labelKey)}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          {FUELS.map((item) => {
+            const selected = fuel === item;
+            return (
+              <TouchableOpacity
+                key={item}
+                activeOpacity={0.7}
+                onPress={() => setFuel(item)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, ...chipBg(selected) }}
+              >
+                <Text style={chipText(selected)}>{fuelLabel(item)}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {loading && !dashboard ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.loading')}
           </Text>
         ) : error && !dashboard ? (
-          <View
-            style={{ padding: 24, alignItems: 'center', gap: 12 }}
-            accessibilityLiveRegion="assertive"
-          >
-            <Text style={{ color: colors.destructive, textAlign: 'center' }}>
-              {t('common.something_went_wrong')}
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => void reload()}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.retry')}
-              style={{ backgroundColor: colors.tint, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 }}
-            >
-              <Text style={{ color: colors.labelOnTint, fontWeight: '600' }}>
-                {t('common.retry')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={{ color: colors.destructive, textAlign: 'center', padding: 24 }}>
+            {t('common.something_went_wrong')}
+          </Text>
         ) : !dashboard || dashboard.status === 'no_crude' ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.no_data')}
@@ -180,7 +138,14 @@ export default function MarketScreen() {
             {t('market.no_data')}
           </Text>
         ) : (
-          <>
+          <View style={{ gap: 12 }}>
+            <MarketIntelligenceCard
+              crude={crudePoints}
+              wti={wtiPoints}
+              retail={retailPoints}
+              metrics={metrics}
+            />
+
             <CommodityChart
               dataA={crudePoints}
               dataB={retailPoints}
@@ -189,97 +154,60 @@ export default function MarketScreen() {
               pendingLabel={retailPoints.length < 2 ? t('market.insufficient_hint') : undefined}
             />
 
-            {/* Insufficient retail notice */}
+            <View>
+              <Text style={{ color: colors.secondaryLabel, marginBottom: 8 }} className="text-footnote font-semibold uppercase tracking-wide">
+                {t('market.snapshot_title')}
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {snapshot.map((item) => {
+                  const valueColor = item.raw === null
+                    ? colors.secondaryLabel
+                    : item.raw > 0
+                      ? colors.priceHigh
+                      : item.raw < 0
+                        ? colors.priceLow
+                        : colors.priceMid;
+                  return (
+                    <View
+                      key={item.label}
+                      style={[
+                        {
+                          flexGrow: 1,
+                          flexBasis: '47%',
+                          backgroundColor: colors.groupedBackground,
+                          borderRadius: 12,
+                          padding: 12,
+                        },
+                        cardStyle,
+                      ]}
+                    >
+                      <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">
+                        {item.label}
+                      </Text>
+                      <Text style={{ color: valueColor }} className="text-title-3 font-semibold mt-xs">
+                        {item.value}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
             {retailPoints.length < 2 && (
-              <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, marginTop: 12 }, cardStyle]}>
+              <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12 }, cardStyle]}>
                 <Text style={{ color: colors.chartLabel, fontSize: 12, textAlign: 'center' }}>
                   {t('market.insufficient_hint')}
                 </Text>
               </View>
             )}
 
-            {/* Metric cards (only fully rendered when retail has meaningful data) */}
-            {retailPoints.length >= 2 && (
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
-                  <Text style={{ fontWeight: '600', color: colors.label }}>
-                    {t('market.lag_label')}
-                  </Text>
-                  <Text style={{ color: colors.chartLabel }}>
-                    {metrics && metrics.status === 'ok' ? t('market.lag_days', { days: metrics.lagDays }) : '—'}
-                  </Text>
-                </View>
-
-                <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
-                  <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14 }}>
-                    {t('market.correlation_label')}
-                  </Text>
-                  <Text style={{ color: colors.chartLabel }}>
-                    {metrics && metrics.status === 'ok' ? metrics.correlation.toFixed(3) : '—'}
-                  </Text>
-                </View>
-
-                <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12 }, cardStyle]}>
-                  <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14, marginBottom: 4 }}>
-                    {t('market.rocket_feather_label')}
-                  </Text>
-                  {metrics && metrics.status === 'ok' ? (() => {
-                    const latestPrice = retailPoints[retailPoints.length - 1]?.value ?? 0;
-                    const toMonthlyPct = (delta: number) =>
-                      latestPrice > 0 ? (delta * 30 / latestPrice) * 100 : 0;
-                    const rPct = toMonthlyPct(metrics.rocket);
-                    const fPct = toMonthlyPct(metrics.feather);
-                    const asym = rPct !== 0 ? Math.abs(fPct / rPct) : 0;
-                    return (
-                      <>
-                        <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
-                          {t('market.rocket_feather_desc', {
-                            rocket: formatRatio(rPct),
-                            feather: formatRatio(fPct),
-                          })}
-                        </Text>
-                        <Text style={{ color: colors.chartLabel, fontSize: 12, marginTop: 4 }}>
-                          {t('market.asymmetry_desc', {
-                            asymmetry: asym !== 0 ? asym.toFixed(2) : '—',
-                          })}
-                        </Text>
-                      </>
-                    );
-                  })() : (
-                    <Text style={{ color: colors.chartLabel, fontSize: 12 }}>
-                      {t('market.insufficient_data')}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* Crude trend cards (always show when crude exists) */}
-            {crudePoints.length >= 2 && (
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-                <View style={[{ flex: 1, backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
-                  <Text style={{ color: colors.label, fontSize: 13 }}>
-                    {t('market.trend_7d')}
-                  </Text>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: trendColor(metrics?.crudeTrend7d, colors.chartLabel, colors.priceLow, colors.priceHigh) }}>
-                    {formatTrend(metrics?.crudeTrend7d)}
-                  </Text>
-                </View>
-                <View style={[{ flex: 1, backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
-                  <Text style={{ color: colors.label, fontSize: 13 }}>
-                    {t('market.trend_30d')}
-                  </Text>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: trendColor(metrics?.crudeTrend30d, colors.chartLabel, colors.priceLow, colors.priceHigh) }}>
-                    {formatTrend(metrics?.crudeTrend30d)}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <Text style={{ color: colors.chartLabel, fontSize: 11, textAlign: 'center', marginTop: 12 }}>
-              {t('market.disclaimer')}
-            </Text>
-          </>
+            <MarketDetailsCard
+              crude={crudePoints}
+              wti={wtiPoints}
+              retail={retailPoints}
+              metrics={metrics}
+            />
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>

@@ -4,7 +4,7 @@ Releases are built in the cloud by EAS and attached to both GitHub Releases and 
 
 ### Releasing a new version
 
-The git tag is the single source of truth. Just create and push a `vX.Y.Z` tag (e.g. `v1.1.0`) — nothing else needs to change:
+The git tag is the single source of truth. Just create and push a `vX.Y.Z` tag (e.g. `v1.1.0`) - nothing else needs to change:
 
 ```bash
 git tag v1.1.0
@@ -33,10 +33,10 @@ A privacy policy is required for Google Play Store submission. We provide a basi
 ### How the app checks for updates
 
 - On launch the app silently verifies whether a newer version exists (no download, result cached 30 min).
-- **Settings → Updates** shows the status, a manual "Check for updates", and — when one exists — a "Download update" button:
+- **Settings → Updates** shows the status, a manual "Check for updates", and - when one exists - a "Download update" button:
   - **GitHub sideload builds**: checks GitHub releases and directs to `https://github.com/8041q/Siphon/releases/latest/download/siphon.apk`
   - **Google Play Store builds**: automatic updates via Play Store (no GitHub check performed)
-  - **iOS**: opens the GitHub release page for now; modify `getUpdateUrl` in `src/hooks/useAppUpdate.ts` when a proper iOS distribution existsEverything else — features, UI, logic — lives in shared code. No double work.
+  - **iOS**: opens the GitHub release page for now; modify `getUpdateUrl` in `src/hooks/useAppUpdate.ts` when a proper iOS distribution existsEverything else - features, UI, logic - lives in shared code. No double work.
 
 ## Features
 
@@ -46,7 +46,7 @@ A privacy policy is required for Google Play Store submission. We provide a basi
 - Theme support: light / dark (future implementation: custom theme colors)
 - Customizable location marker (4 built-in icons, SVGs, or a custom image) - Placeholders still
 - Price-history charts per fuel type, 90-day rolling window (live in server - cached on device, max 100mb for 90 days)
-- Station detail sheet — prices per fuel unit (€/L, €/kg, €/m³), opening schedule, services, payment methods, margin, directions, copy address, distance (API source & Crowdsource)
+- Station detail sheet - prices per fuel unit (€/L, €/kg, €/m³), opening schedule, services, payment methods, margin, directions, copy address, distance (API source & Crowdsource)
 - GPS-based location with cached last known location, doesn't follow user. Used only when requested, so no battery drained continually
 
 ## Prerequisites
@@ -105,7 +105,7 @@ Releases are built in the cloud by EAS and attached to a GitHub Release, so the 
 
 ### Releasing a new version
 
-The git tag is the single source of truth. Just create and push a `vX.Y.Z` tag (e.g. `v1.1.0`) — nothing else needs to change:
+The git tag is the single source of truth. Just create and push a `vX.Y.Z` tag (e.g. `v1.1.0`) - nothing else needs to change:
 
 ```bash
 git tag v1.1.0
@@ -117,7 +117,7 @@ The GitHub Action (`.github/workflows/release.yml`) derives everything from the 
 ### How the app checks for updates
 
 - On launch the app silently verifies against the GitHub releases API whether a newer version exists (no download, result cached 30 min).
-- **Settings → Updates** shows the status, a manual "Check for updates", and — when one exists — a "Download update" button:
+- **Settings → Updates** shows the status, a manual "Check for updates", and - when one exists - a "Download update" button:
   - Android: opens `releases/latest/download/siphon.apk` (user taps to install the APK).
   - iOS: opens the release page for now; swap the URL in `src/hooks/useAppUpdate.ts` (`getUpdateUrl`) when a real iOS distribution path exists.
 
@@ -125,11 +125,11 @@ The GitHub Action (`.github/workflows/release.yml`) derives everything from the 
 
 On app launch, sync runs once, in order:
 
-1. **`checkForUpdates()`** — conditional GET on the root manifest using an ETag (`If-None-Match`). If nothing changed, the server returns `304 Not Modified` with no body, and no countries are flagged as changed.
-2. **`syncAll(changedCountries)`** — refreshes only the tiles whose server-side hash differs from the cached one. On a `304`, this step makes zero network calls.
-3. **`checkHistoryUpdates()`** — downloads missing or changed price-history files, gated by the "Save price history on device" setting (on by default).
+1. **`checkForUpdates()`** - conditional GET on the root manifest using an ETag (`If-None-Match`). If nothing changed, the server returns `304 Not Modified` with no body, and no countries are flagged as changed.
+2. **`syncAll(changedCountries)`** - refreshes only the tiles whose server-side hash differs from the cached one. On a `304`, this step makes zero network calls.
+3. **`checkHistoryUpdates()`** - downloads missing or changed price-history files, gated by the "Save price history on device" setting (on by default).
 
-All three steps only touch the network when something actually changed — on a no-change day, the app runs entirely from cache.
+All three steps only touch the network when something actually changed - on a no-change day, the app runs entirely from cache.
 
 To protect the GitHub data source, sync is guarded client-side (persisted in file-backed storage so it survives cache clears): a rolling **hourly request budget** (~300), a **minimum interval between sync cycles** (10 min), and **backoff on 429/403** responses. When a limit is hit, the app runs from cache and shows a short "sync paused" notice instead of spamming GitHub.
 

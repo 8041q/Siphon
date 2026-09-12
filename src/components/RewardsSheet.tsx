@@ -11,6 +11,7 @@ import type { MutableRefObject } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { ALL_REWARDS, useSupport } from '../hooks/useSupport';
@@ -45,6 +46,7 @@ function clearTimer(ref: TimerRef): void {
 export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function RewardsSheet(_props, ref) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
     const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
   const snapPoints = useMemo(() => ['82%'], []);
@@ -197,7 +199,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       )}
       backgroundComponent={SheetBackground}
     >
-      <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
+      <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
         <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
           {t('settings.rewards_title')}
         </Text>

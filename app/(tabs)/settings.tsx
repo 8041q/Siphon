@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { I18nManager, Linking, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, I18nManager, Linking, ScrollView, Switch, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
@@ -24,8 +24,9 @@ import { EvBreakevenSheet, EvBreakevenSheetHandle } from '../../src/components/E
 import { RewardsSheet, RewardsSheetHandle } from '../../src/components/RewardsSheet';
 import { DonationSheet, DonationSheetHandle } from '../../src/components/DonationSheet';
 import { fuelLabel } from '../../src/utils/fuelNames';
-import { evBreakeven, consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
+import { consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
 import type { Vehicle } from '../../src/utils/vehicles';
+
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -68,11 +69,10 @@ export default function SettingsScreen() {
   const themeChangeVersionRef = useRef(0);
   const languageChangeVersionRef = useRef(0);
 
-  const { watchedCount } = useSupport();
+  const { watchedCount, privacyOptionsRequired, showPrivacyOptions, privacyRefreshing } = useSupport();
   const { paletteId, iconSetId, styleSetId, styleRules, marker: currentMarker } = useAppearanceSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
-  const evResult = evBreakeven(evConfig);
   const { colors } = useThemeTokens();
   const cardRules = useStyleConfig(styleRules, 'card');
   const cardStyle = applyComponentRules(cardRules, colors.label);
@@ -138,6 +138,22 @@ export default function SettingsScreen() {
       } catch {}
     }
     setHistoryEnabled(value);
+  };
+
+  const handlePrivacyOptions = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    const result = await showPrivacyOptions();
+    if (result === 'not_required') {
+      Alert.alert(
+        t('settings.privacy_not_required_title'),
+        t('settings.privacy_not_required_body'),
+      );
+    } else if (result === 'failed') {
+      Alert.alert(
+        t('settings.privacy_error_title'),
+        t('settings.privacy_error_body'),
+      );
+    }
   };
 
   const handleSaveVehicle = (data: Omit<Vehicle, 'id'>, id?: string) => {
@@ -264,20 +280,34 @@ export default function SettingsScreen() {
 
         <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
-            {t('settings.ev_vs_gas')}
+            {t('settings.privacy_ads')}
           </Text>
           <ListItem
-            onPress={() => evSheetRef.current?.present()}
+            onPress={() => { void handlePrivacyOptions(); }}
             trailing={
-              evResult.breakEvenYear !== null
-                ? t('settings.ev_break_even_short', { years: evResult.breakEvenYear })
-                : t('settings.ev_no_break_even_short')
+              privacyRefreshing
+                ? t('settings.checking')
+                : privacyOptionsRequired
+                  ? t('settings.privacy_available')
+                  : undefined
             }
           >
-            {t('settings.ev_vs_gas_sub')}
+            {t('settings.ad_privacy_choices')}
           </ListItem>
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
-            {t('settings.ev_caption')}
+            {t('settings.ads_opt_in_caption')}
+          </Text>
+        </View>
+
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.ev_compare_title')}
+          </Text>
+          <ListItem onPress={() => evSheetRef.current?.present()}>
+            {t('settings.ev_compare_sub')}
+          </ListItem>
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
+            {t('settings.ev_tco_caption')}
           </Text>
         </View>
 
@@ -364,6 +394,7 @@ export default function SettingsScreen() {
         ref={evSheetRef}
         config={evConfig}
         onSave={setEvConfig}
+        vehicles={vehicles}
       />
       <RewardsSheet ref={rewardsSheetRef} />
       <DonationSheet ref={donationSheetRef} />

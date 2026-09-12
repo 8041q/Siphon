@@ -113,7 +113,7 @@ export interface ForecastResult {
   confidence: Confidence;
 }
 
-// Simple linear-regression model. Never run on thin data — callers gate on
+// Simple linear-regression model. Never run on thin data - callers gate on
 // FORECAST_MIN_DAYS via historyCoverageDays.
 function linearRegression(pts: number[]): { slope: number; intercept: number; residualStd: number } {
   const n = pts.length;

@@ -1,280 +1,227 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
-import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
-
 import { Field } from './ui/field';
 import { GlassBox } from './ui/GlassBox';
-import { SheetBackground } from './ui/SheetBackground';
-import {
-  parseDecimal,
-  inRange,
-  evBreakeven,
-  EV_RATE_MIN,
-  EV_RATE_MAX,
-  GAS_PRICE_MIN,
-  GAS_PRICE_MAX,
-  EV_PRICE_MIN,
-  EV_PRICE_MAX,
-  PETROL_PRICE_MIN,
-  PETROL_PRICE_MAX,
-  ANNUAL_KM_MIN,
-  ANNUAL_KM_MAX,
-  BATTERY_REPLACEMENT_COST,
-} from '../utils/vehicles';
+import { SheetBackground, SHEET_HANDLE_INDICATOR_STYLE, SHEET_HANDLE_STYLE } from './ui/SheetBackground';
 import type { EvConfig } from '../utils/vehicles';
-
-interface EvBreakevenSheetProps {
-  config: EvConfig;
-  onSave: (config: EvConfig) => void;
-}
 
 export type EvBreakevenSheetHandle = { present: () => void };
 
-const FIELDS: { key: keyof EvConfig; min: number; max: number }[] = [
-  { key: 'evPrice', min: EV_PRICE_MIN, max: EV_PRICE_MAX },
-  { key: 'petrolPrice', min: PETROL_PRICE_MIN, max: PETROL_PRICE_MAX },
-  { key: 'annualKm', min: ANNUAL_KM_MIN, max: ANNUAL_KM_MAX },
-  { key: 'gasPrice', min: GAS_PRICE_MIN, max: GAS_PRICE_MAX },
-  { key: 'electricityRate', min: EV_RATE_MIN, max: EV_RATE_MAX },
-];
-
-const LABEL_KEYS: Record<keyof EvConfig, string> = {
-  evPrice: 'settings.ev_price',
-  petrolPrice: 'settings.ev_petrol_price',
-  annualKm: 'settings.ev_annual_km',
-  gasPrice: 'settings.ev_gas_price',
-  electricityRate: 'settings.ev_electricity_rate',
+type VehicleLike = {
+  id: string;
+  name: string;
+  fuels: readonly { fuelType: string; consumption: number; capacity: number }[];
 };
 
-export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSheetProps>(
-  function EvBreakevenSheet({ config, onSave }, ref) {
-    const { t } = useTranslation();
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
-    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
-    const snapPoints = useMemo(() => ['90%'], []);
-    const { colors } = useThemeTokens();
+type ScenarioExtras = {
+  ownershipYears: number;
+  evConsumption: number;
+  iceConsumption: number;
+  evMaintenanceYear: number;
+  iceMaintenanceYear: number;
+  resaleEv: number;
+  resaleIce: number;
+  batteryReplacementEnabled: boolean;
+  batteryReplacementYear: number;
+  batteryReplacementCost: number;
+};
 
-    const [values, setValues] = useState<Record<string, string>>({});
-    const [touched, setTouched] = useState<Record<string, boolean>>({});
+const STORAGE_KEY = 'siphon:evOwnershipScenario:v2';
+const DEFAULTS: ScenarioExtras = {
+  ownershipYears: 8,
+  evConsumption: 17,
+  iceConsumption: 6.5,
+  evMaintenanceYear: 0,
+  iceMaintenanceYear: 0,
+  resaleEv: 0,
+  resaleIce: 0,
+  batteryReplacementEnabled: false,
+  batteryReplacementYear: 10,
+  batteryReplacementCost: 8000,
+};
 
-    const configRef = useRef(config);
-    configRef.current = config;
+function num(value: string, fallback: number): number {
+  const parsed = Number(value.replace(',', '.'));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        present: () => {
-          const next: Record<string, string> = {};
-          for (const f of FIELDS) {
-            next[f.key] = String(configRef.current[f.key]);
-          }
-          setValues(next);
-          setTouched({});
-          bottomSheetRef.current?.present();
-        },
-      }),
-      []
-    );
+function ownershipResult(config: EvConfig, extras: ScenarioExtras) {
+  const annualKm = Math.max(0, config.annualKm);
+  const evEnergyYear = (annualKm / 100) * extras.evConsumption * config.electricityRate;
+  const iceEnergyYear = (annualKm / 100) * extras.iceConsumption * config.gasPrice;
+  const evAnnual = evEnergyYear + extras.evMaintenanceYear;
+  const iceAnnual = iceEnergyYear + extras.iceMaintenanceYear;
+  const years = Math.max(1, Math.round(extras.ownershipYears));
+  const battery = extras.batteryReplacementEnabled && extras.batteryReplacementYear <= years
+    ? extras.batteryReplacementCost
+    : 0;
+  const evTotal = config.evPrice + evAnnual * years + battery - extras.resaleEv;
+  const iceTotal = config.petrolPrice + iceAnnual * years - extras.resaleIce;
+  const annualSavings = iceAnnual - evAnnual;
+  const purchaseGap = config.evPrice - config.petrolPrice;
+  const breakEvenYear = annualSavings > 0
+    ? Math.max(0, Math.ceil((purchaseGap + battery) / annualSavings))
+    : null;
+  const perKmEv = annualKm > 0 ? evAnnual / annualKm : 0;
+  const perKmIce = annualKm > 0 ? iceAnnual / annualKm : 0;
+  const variableSavingPerKm = (extras.iceConsumption / 100) * config.gasPrice - (extras.evConsumption / 100) * config.electricityRate;
+  const maintenanceSaving = extras.iceMaintenanceYear - extras.evMaintenanceYear;
+  const ownershipFixedGapPerYear = years > 0 ? (purchaseGap + battery - extras.resaleEv + extras.resaleIce) / years : 0;
+  const breakEvenAnnualKm = variableSavingPerKm > 0
+    ? Math.max(0, (ownershipFixedGapPerYear - maintenanceSaving) / variableSavingPerKm)
+    : null;
+  const electricityBreakEven = extras.evConsumption > 0
+    ? Math.max(0, (((extras.iceConsumption / 100) * config.gasPrice) + maintenanceSaving / Math.max(1, annualKm)) * 100 / extras.evConsumption)
+    : null;
+  return { years, evEnergyYear, iceEnergyYear, evAnnual, iceAnnual, evTotal, iceTotal, annualSavings, breakEvenYear, perKmEv, perKmIce, breakEvenAnnualKm, electricityBreakEven };
+}
 
-    const parsed = useMemo(() => {
-      const out = {} as Record<keyof EvConfig, number | null>;
-      for (const f of FIELDS) {
-        out[f.key] = parseDecimal(values[f.key] ?? '');
+export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, {
+  config: EvConfig;
+  onSave: (config: EvConfig) => void;
+  vehicles?: readonly VehicleLike[];
+}>(function EvBreakevenSheet({ config, onSave, vehicles = [] }, ref) {
+  const { t } = useTranslation();
+  const { colors } = useThemeTokens();
+  const insets = useSafeAreaInsets();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
+  const snapPoints = useMemo(() => ['92%'], []);
+  const [core, setCore] = useState(config);
+  const [extras, setExtras] = useState<ScenarioExtras>(DEFAULTS);
+
+  const evVehicles = useMemo(() => vehicles.filter((v) => v.fuels.some((f) => f.fuelType === 'electric')), [vehicles]);
+  const iceVehicles = useMemo(() => vehicles.filter((v) => v.fuels.some((f) => f.fuelType !== 'electric')), [vehicles]);
+  const [selectedEvId, setSelectedEvId] = useState<string | null>(null);
+  const [selectedIceId, setSelectedIceId] = useState<string | null>(null);
+
+  useEffect(() => { setCore(config); }, [config]);
+  useEffect(() => {
+    void AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw) as Partial<ScenarioExtras>;
+        setExtras((prev) => ({ ...prev, ...parsed }));
+      } catch {
+        void AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined);
       }
-      return out;
-    }, [values]);
+    });
+  }, []);
 
-    const errors = useMemo(() => {
-      const errs: Record<string, string | null> = {};
-      for (const f of FIELDS) {
-        const n = parsed[f.key];
-        if (n === null) {
-          errs[f.key] = (values[f.key] ?? '').trim() === '' ? t('settings.error_required') : t('settings.error_invalid_number');
-        } else if (!inRange(n, f.min, f.max)) {
-          errs[f.key] = t('settings.error_range', { min: f.min, max: f.max });
-        } else {
-          errs[f.key] = null;
-        }
-      }
-      return errs;
-    }, [parsed, values, t]);
+  useEffect(() => {
+    void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(extras)).catch(() => undefined);
+  }, [extras]);
 
-    const valid = useMemo(() => FIELDS.every((f) => parsed[f.key] !== null && inRange(parsed[f.key] as number, f.min, f.max)), [parsed]);
+  useEffect(() => {
+    const vehicle = evVehicles.find((v) => v.id === selectedEvId);
+    const fuel = vehicle?.fuels.find((f) => f.fuelType === 'electric');
+    if (fuel && Number.isFinite(fuel.consumption)) setExtras((prev) => ({ ...prev, evConsumption: fuel.consumption }));
+  }, [evVehicles, selectedEvId]);
 
-    const result = useMemo(() => {
-      if (!valid) return null;
-      const cfg = {} as EvConfig;
-      for (const f of FIELDS) {
-        cfg[f.key] = parsed[f.key] as number;
-      }
-      return evBreakeven(cfg);
-    }, [valid, parsed]);
+  useEffect(() => {
+    const vehicle = iceVehicles.find((v) => v.id === selectedIceId);
+    const fuel = vehicle?.fuels.find((f) => f.fuelType !== 'electric');
+    if (fuel && Number.isFinite(fuel.consumption)) setExtras((prev) => ({ ...prev, iceConsumption: fuel.consumption }));
+  }, [iceVehicles, selectedIceId]);
 
-    // Live apply: every valid field is saved the moment it's typed. Invalid or
-    // untouched fields keep their previously saved value.
-    useEffect(() => {
-      const current = configRef.current;
-      const next = { ...current };
-      let changed = false;
-      for (const f of FIELDS) {
-        const n = parsed[f.key];
-        if (n !== null && inRange(n, f.min, f.max) && current[f.key] !== n) {
-          next[f.key] = n;
-          changed = true;
-        }
-      }
-      if (changed) onSave(next);
-    }, [parsed, onSave]);
+  useImperativeHandle(ref, () => ({
+    present: () => {
+      setCore(config);
+      bottomSheetRef.current?.present();
+    },
+  }), [config]);
 
-    return (
-        <BottomSheetModal
-        ref={bottomSheetRef}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        handleStyle={SHEET_HANDLE_STYLE}
-        handleIndicatorStyle={[
-          SHEET_HANDLE_INDICATOR_STYLE,
-          { backgroundColor: colors.handleIndicator },
-        ]}
-        onChange={handleSheetChange}
-        onDismiss={handleSheetDismiss}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-        )}
-        backgroundComponent={SheetBackground}
-      >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16 }}>
-          <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
-            {t('settings.ev_title')}
-          </Text>
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
-            {t('settings.ev_caption')}
-          </Text>
+  const saveCore = (key: keyof EvConfig, value: string) => {
+    const next = { ...core, [key]: num(value, core[key]) };
+    setCore(next);
+    onSave(next);
+  };
+  const saveExtra = (key: keyof ScenarioExtras, value: string) => {
+    setExtras((prev) => ({ ...prev, [key]: num(value, Number(prev[key])) }));
+  };
 
-          <View className="gap-md">
-            {FIELDS.map((f) => (
-              <Field
-                key={f.key}
-                label={t(LABEL_KEYS[f.key])}
-                value={values[f.key] ?? ''}
-                onChangeText={(text) => {
-                  setValues((prev) => ({ ...prev, [f.key]: text }));
-                  setTouched((prev) => ({ ...prev, [f.key]: true }));
-                }}
-                keyboardType="decimal-pad"
-                error={touched[f.key] ? errors[f.key] : null}
-              />
-            ))}
+  const result = useMemo(() => ownershipResult(core, extras), [core, extras]);
+  const winner = Math.abs(result.evTotal - result.iceTotal) < 100 ? 'close' : result.evTotal < result.iceTotal ? 'ev' : 'ice';
+
+  const vehicleChip = (vehicle: VehicleLike, selected: boolean, onPress: () => void) => (
+    <TouchableOpacity key={vehicle.id} onPress={onPress} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: selected ? colors.tint : colors.groupedBackground }}>
+      <Text style={{ color: selected ? colors.labelOnTint : colors.label }} className="text-footnote font-semibold">{vehicle.name}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      enableContentPanningGesture={false}
+      enableDynamicSizing={false}
+      handleStyle={SHEET_HANDLE_STYLE}
+      handleIndicatorStyle={[SHEET_HANDLE_INDICATOR_STYLE, { backgroundColor: colors.handleIndicator }]}
+      onChange={handleSheetChange}
+      onDismiss={handleSheetDismiss}
+      backdropComponent={(props) => <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />}
+      backgroundComponent={SheetBackground}
+    >
+      <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+        <Text style={{ color: colors.label }} className="text-title-2 font-semibold mb-xs">{t('settings.ev_title')}</Text>
+        <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">{t('settings.ev_tco_caption')}</Text>
+
+        {(evVehicles.length > 0 || iceVehicles.length > 0) && (
+          <View className="gap-sm mb-lg">
+            {evVehicles.length > 0 && <>
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_pick_ev')}</Text>
+              <View className="flex-row flex-wrap gap-sm">{evVehicles.map((v) => vehicleChip(v, selectedEvId === v.id, () => setSelectedEvId(v.id)))}</View>
+            </>}
+            {iceVehicles.length > 0 && <>
+              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_pick_ice')}</Text>
+              <View className="flex-row flex-wrap gap-sm">{iceVehicles.map((v) => vehicleChip(v, selectedIceId === v.id, () => setSelectedIceId(v.id)))}</View>
+            </>}
           </View>
+        )}
 
-          {result && (
-            <GlassBox component="card" color={colors.groupedBackground} className="rounded-md p-md mt-lg gap-xs">
-              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
-                {t('settings.ev_per_year_title')}
-              </Text>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_annual_cost_ev')}</Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.evRunningPerYear.toFixed(0)} €</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_annual_cost_gas')}</Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.petrolRunningPerYear.toFixed(0)} €</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_maintenance')}</Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">~{result.maintenancePerYear.toFixed(0)} €</Text>
-              </View>
-              <View style={{ backgroundColor: colors.separator }} className="h-px my-xs" />
-              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
-                {t('settings.ev_once_title')}
-              </Text>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
-                  {t('settings.ev_battery_replacement_once', { year: result.batteryEndOfServiceYear })}
-                </Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{BATTERY_REPLACEMENT_COST.toFixed(0)} €</Text>
-              </View>
-              <View style={{ backgroundColor: colors.separator }} className="h-px my-xs" />
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
-                  {t('settings.ev_total_ev', { years: result.batteryEndOfServiceYear })}
-                </Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.evTotal(result.batteryEndOfServiceYear).toFixed(0)} €</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
-                  {t('settings.ev_total_petrol', { years: result.batteryEndOfServiceYear })}
-                </Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.petrolTotal(result.batteryEndOfServiceYear).toFixed(0)} €</Text>
-              </View>
-              {result.breakEvenYear !== null ? (
-                <Text style={{ color: colors.label }} className="text-callout font-semibold mt-sm">
-                  {t('settings.ev_becomes_cheaper', { year: result.breakEvenYear })}
-                </Text>
-              ) : (
-                <Text style={{ color: colors.destructive }} className="text-callout font-semibold mt-sm">
-                  {t('settings.ev_no_break_even')}
-                </Text>
-              )}
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-xs">
-                {t('settings.ev_break_even_hint')}
-              </Text>
-              <View style={{ backgroundColor: colors.separator }} className="h-px my-xs" />
-              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide mt-xs">
-                {t('settings.ev_co2_title')}
-              </Text>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_co2_gas')}</Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.annualGasCo2.toFixed(0)} kg</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_co2_ev')}</Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.annualEvCo2.toFixed(0)} kg</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_co2_battery')}</Text>
-                <Text style={{ color: colors.label }} className="text-body font-semibold">{result.batteryCo2.toFixed(0)} kg</Text>
-              </View>
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-xs">
-                {t('settings.ev_battery_note')}
-              </Text>
-            </GlassBox>
-          )}
+        <View className="gap-md">
+          <Field label={t('settings.ev_price')} value={String(core.evPrice)} onChangeText={(v) => saveCore('evPrice', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_petrol_price')} value={String(core.petrolPrice)} onChangeText={(v) => saveCore('petrolPrice', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_annual_km')} value={String(core.annualKm)} onChangeText={(v) => saveCore('annualKm', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_gas_price')} value={String(core.gasPrice)} onChangeText={(v) => saveCore('gasPrice', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_electricity_rate')} value={String(core.electricityRate)} onChangeText={(v) => saveCore('electricityRate', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_consumption_kwh')} value={String(extras.evConsumption)} onChangeText={(v) => saveExtra('evConsumption', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_consumption_l')} value={String(extras.iceConsumption)} onChangeText={(v) => saveExtra('iceConsumption', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_ownership_years')} value={String(extras.ownershipYears)} onChangeText={(v) => saveExtra('ownershipYears', v)} keyboardType="number-pad" />
+          <Field label={t('settings.ev_maintenance_ev')} value={String(extras.evMaintenanceYear)} onChangeText={(v) => saveExtra('evMaintenanceYear', v)} keyboardType="decimal-pad" />
+          <Field label={t('settings.ev_maintenance_ice')} value={String(extras.iceMaintenanceYear)} onChangeText={(v) => saveExtra('iceMaintenanceYear', v)} keyboardType="decimal-pad" />
+        </View>
 
-          {result && (
-            <View className="mt-lg gap-xs">
-              <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
-                {t('settings.ev_how_to_read')}
-              </Text>
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
-                {t('settings.ev_help_ev')}
-              </Text>
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
-                {t('settings.ev_help_gas')}
-              </Text>
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
-                {t('settings.ev_help_battery')}
-              </Text>
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
-                {t('settings.ev_help_break_even')}
-              </Text>
-              <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">
-                {t('settings.ev_help_co2')}
-              </Text>
-            </View>
-          )}
-
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center mt-xl">
-            {t('settings.ev_auto_save')}
+        <GlassBox component="card" className="rounded-md p-md mt-lg gap-sm">
+          <Text style={{ color: colors.label }} className="text-headline font-semibold">{t(`settings.ev_result_${winner}`)}</Text>
+          <View className="flex-row justify-between"><Text style={{ color: colors.secondaryLabel }}>{t('settings.ev_cost_100_ev')}</Text><Text style={{ color: colors.label }} className="font-semibold">{(result.perKmEv * 100).toFixed(2)} €</Text></View>
+          <View className="flex-row justify-between"><Text style={{ color: colors.secondaryLabel }}>{t('settings.ev_cost_100_ice')}</Text><Text style={{ color: colors.label }} className="font-semibold">{(result.perKmIce * 100).toFixed(2)} €</Text></View>
+          <View className="flex-row justify-between"><Text style={{ color: colors.secondaryLabel }}>{t('settings.ev_total_ev', { years: result.years })}</Text><Text style={{ color: colors.label }} className="font-semibold">{result.evTotal.toFixed(0)} €</Text></View>
+          <View className="flex-row justify-between"><Text style={{ color: colors.secondaryLabel }}>{t('settings.ev_total_petrol', { years: result.years })}</Text><Text style={{ color: colors.label }} className="font-semibold">{result.iceTotal.toFixed(0)} €</Text></View>
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+            {result.breakEvenYear === 0
+              ? t('settings.ev_already_cheaper')
+              : result.breakEvenYear !== null
+                ? t('settings.ev_becomes_cheaper', { year: result.breakEvenYear })
+                : t('settings.ev_no_break_even')}
           </Text>
-        </BottomSheetScrollView>
-      </BottomSheetModal>
-    );
-  }
-);
+          {result.breakEvenAnnualKm !== null && Number.isFinite(result.breakEvenAnnualKm) && (
+            <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_break_even_km', { km: Math.round(result.breakEvenAnnualKm) })}</Text>
+          )}
+          {result.electricityBreakEven !== null && Number.isFinite(result.electricityBreakEven) && (
+            <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_break_even_electricity', { rate: result.electricityBreakEven.toFixed(2) })}</Text>
+          )}
+          <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">{t('settings.ev_method_note')}</Text>
+        </GlassBox>
+      </BottomSheetScrollView>
+    </BottomSheetModal>
+  );
+});

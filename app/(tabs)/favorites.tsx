@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 
 import { StationCard } from '../../src/components/StationCard';
 import { useStationCatalog, useStationDistances, useStationSync, useUI } from '../../src/hooks/useApp';
@@ -15,10 +16,11 @@ const ItemSeparator = () => <View style={{ height: 12 }} />;
 
 export default function FavoritesScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { allStations, getStationById } = useStationCatalog();
   const { stationDistances, routedStationIds, distanceLoading } = useStationDistances();
   const { loading, error, offline, reload } = useStationSync();
-  const { favorites, setSelectedStation, toggleFavorite } = useUI();
+  const { favorites, setSelectedStation, requestMapFocus, toggleFavorite } = useUI();
   const { colors } = useThemeTokens();
   const insets = useSafeAreaInsets();
 
@@ -37,6 +39,14 @@ export default function FavoritesScreen() {
     [setSelectedStation],
   );
 
+  const handleShowOnMap = useCallback(
+    (station: FuelStationFeature) => {
+      requestMapFocus(station);
+      router.navigate('/');
+    },
+    [requestMapFocus, router],
+  );
+
   const listExtraData = useMemo(
     () => ({ stationDistances, routedStationIds, distanceLoading }),
     [stationDistances, routedStationIds, distanceLoading],
@@ -49,6 +59,7 @@ export default function FavoritesScreen() {
         onPress={handleStationPress}
         favorite
         onToggleFavorite={toggleFavorite}
+        onShowOnMap={handleShowOnMap}
         distanceKm={stationDistances.get(item.properties.id)}
         distanceLoading={distanceLoading}
         distanceRouted={routedStationIds.has(item.properties.id)}
@@ -56,6 +67,7 @@ export default function FavoritesScreen() {
     ),
     [
       handleStationPress,
+      handleShowOnMap,
       toggleFavorite,
       stationDistances,
       routedStationIds,

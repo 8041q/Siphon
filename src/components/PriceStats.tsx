@@ -26,7 +26,7 @@ function StatCell({ label, value, valueColor }: { label: string; value: string; 
 function ChangeCell({ label, pct }: { label: string; pct: number | null }) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
-  if (pct === null) return <StatCell label={label} value="—" />;
+  if (pct === null) return <StatCell label={label} value="-" />;
   const down = pct <= 0;
   const value = `${down ? '▼' : '▲'} ${Math.abs(pct).toFixed(1)}%`;
   return (

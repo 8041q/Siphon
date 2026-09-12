@@ -5,11 +5,14 @@ import {
   MobileAds,
   RewardedAd,
   RewardedAdEventType,
+  TestIds,
 } from 'react-native-google-mobile-ads';
 
-export const REWARDED_AD_UNIT_ID = Platform.OS === 'ios'
+const PRODUCTION_REWARDED_AD_UNIT_ID = Platform.OS === 'ios'
   ? 'ca-app-pub-9869503535733811/3385404717'
   : 'ca-app-pub-9869503535733811/3093760673';
+
+export const REWARDED_AD_UNIT_ID = __DEV__ ? TestIds.REWARDED : PRODUCTION_REWARDED_AD_UNIT_ID;
 
 const LOAD_TIMEOUT_MS = 15_000;
 
