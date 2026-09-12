@@ -1,130 +1,284 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
+import { Linking, Platform } from 'react-native';
+import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
 
-// Determine if this is a store build (Play Store, etc.) vs sideload/GitHub build
-const isStoreBuild = Constants.expoConfig?.extra?.distribution === 'playstore';
+const GITHUB_REPO = '8041q/Siphon';
+const GITHUB_API_LATEST_RELEASE = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases/latest`;
+const ANDROID_PACKAGE = Application.applicationId ?? 'com.ctr_8041q.siphon';
+const PLAY_STORE_WEB_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
+const PLAY_STORE_APP_URL = `market://details?id=${ANDROID_PACKAGE}`;
+const CHECK_TIMEOUT_MS = 10_000;
 
-const REPO = '8041q/Siphon';
-const RELEASES_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
-const UPDATE_KEY = 'siphon:update:check';
-const UPDATE_TTL_MS = 30 * 60 * 1000;
+export type AppDistribution = 'play' | 'github' | 'preview' | 'development' | 'unknown';
+export type AppUpdateKind = 'none' | 'ota' | 'binary';
+export type AppUpdateError = 'no_releases' | 'check_failed' | 'apply_failed' | null;
 
-export type UpdateError = 'network' | 'rate_limit' | 'no_releases';
+type GitHubAsset = {
+  name?: unknown;
+  browser_download_url?: unknown;
+};
 
-export interface UpdateStatus {
+type GitHubRelease = {
+  tag_name?: unknown;
+  html_url?: unknown;
+  assets?: unknown;
+};
+
+type UpdateSnapshot = {
+  checking: boolean;
+  applying: boolean;
   updateAvailable: boolean;
+  updateKind: AppUpdateKind;
   latestVersion: string | null;
   installedVersion: string;
-  checking: boolean;
-  error: UpdateError | null;
+  distribution: AppDistribution;
+  error: AppUpdateError;
+  releaseUrl: string | null;
+  apkUrl: string | null;
+};
+
+function distributionForBuild(): AppDistribution {
+  if (__DEV__) return 'development';
+  const channel = Updates.channel;
+  if (channel === 'production-github') return 'github';
+  if (channel === 'production' && Platform.OS === 'android') return 'play';
+  if (channel === 'preview') return 'preview';
+  if (channel === 'development') return 'development';
+  return 'unknown';
 }
 
-export function getInstalledVersion(): string {
-  return Constants.expoConfig?.version ?? '0.0.0';
+function normalizeVersion(value: string | null | undefined): string {
+  if (!value) return '0.0.0';
+  return value.trim().replace(/^v/i, '').split('-')[0] || '0.0.0';
 }
 
-// Android downloads the APK directly from the release asset; iOS opens the
-// release page until a proper iOS distribution path exists. Gate any platform
-// decision here so removing iOS later is a one-line change.
-export function getUpdateUrl(): string {
-  return Platform.OS === 'android'
-    ? `https://github.com/${REPO}/releases/latest/download/siphon.apk`
-    : `https://github.com/${REPO}/releases/latest`;
-}
-
-function parseSemver(version: string): number[] {
-  const match = version.replace(/^v/i, '').match(/(\d+)\.(\d+)\.(\d+)/);
-  if (!match) return [];
+function parseVersion(value: string): [number, number, number] | null {
+  const match = normalizeVersion(value).match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
 
-function isNewer(latest: string, installed: string): boolean {
-  const a = parseSemver(latest);
-  const b = parseSemver(installed);
-  if (a.length === 0 || b.length === 0) return false;
-  for (let i = 0; i < 3; i++) {
-    if (a[i] > b[i]) return true;
-    if (a[i] < b[i]) return false;
+function isNewerVersion(candidate: string, installed: string): boolean {
+  const next = parseVersion(candidate);
+  const current = parseVersion(installed);
+  if (!next || !current) return false;
+  for (let index = 0; index < 3; index += 1) {
+    if (next[index] !== current[index]) return next[index] > current[index];
   }
   return false;
 }
 
-interface FetchResult {
-  tag: string | null;
-  error: UpdateError | null;
+function installedVersionForBuild(): string {
+  // runtimeVersion uses the appVersion policy in app.json, so it is the native
+  // app version for release builds and stays stable across EAS OTA updates.
+  return normalizeVersion(Application.nativeApplicationVersion ?? Updates.runtimeVersion);
 }
 
-async function fetchLatestTag(): Promise<FetchResult> {
+const initialSnapshot: UpdateSnapshot = {
+  checking: false,
+  applying: false,
+  updateAvailable: false,
+  updateKind: 'none',
+  latestVersion: null,
+  installedVersion: installedVersionForBuild(),
+  distribution: distributionForBuild(),
+  error: null,
+  releaseUrl: null,
+  apkUrl: null,
+};
+
+let snapshot = initialSnapshot;
+let checkPromise: Promise<void> | null = null;
+let hasCheckedThisLaunch = false;
+const listeners = new Set<(next: UpdateSnapshot) => void>();
+
+function publish(next: Partial<UpdateSnapshot>) {
+  snapshot = { ...snapshot, ...next };
+  for (const listener of listeners) listener(snapshot);
+}
+
+async function fetchLatestGitHubRelease(): Promise<{
+  version: string;
+  releaseUrl: string;
+  apkUrl: string | null;
+} | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
   try {
-    const res = await fetch(RELEASES_URL, {
+    const response = await fetch(GITHUB_API_LATEST_RELEASE, {
       headers: { Accept: 'application/vnd.github+json' },
+      signal: controller.signal,
     });
-    if (res.status === 404) return { tag: null, error: 'no_releases' };
-    if (res.status === 403) return { tag: null, error: 'rate_limit' };
-    if (!res.ok) return { tag: null, error: 'network' };
-    const data = await res.json();
-    const tag = typeof data.tag_name === 'string' ? data.tag_name.replace(/^v/i, '') : null;
-    return { tag, error: null };
-  } catch {
-    return { tag: null, error: 'network' };
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`GitHub release check failed: ${response.status}`);
+
+    const release = (await response.json()) as GitHubRelease;
+    if (typeof release.tag_name !== 'string') throw new Error('GitHub release is missing tag_name');
+    const releaseUrl = typeof release.html_url === 'string' ? release.html_url : GITHUB_RELEASES_URL;
+    const assets = Array.isArray(release.assets) ? (release.assets as GitHubAsset[]) : [];
+    const apk = assets.find(
+      (asset) => typeof asset.name === 'string' && asset.name.toLowerCase().endsWith('.apk'),
+    );
+
+    return {
+      version: normalizeVersion(release.tag_name),
+      releaseUrl,
+      apkUrl: typeof apk?.browser_download_url === 'string' ? apk.browser_download_url : null,
+    };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
-export function useAppUpdate() {
-  const [status, setStatus] = useState<UpdateStatus>({
-    updateAvailable: false,
-    latestVersion: null,
-    installedVersion: getInstalledVersion(),
-    checking: false,
-    error: null,
-  });
+async function runCheck(force = false): Promise<void> {
+  if (!force && hasCheckedThisLaunch) return;
+  if (checkPromise) return checkPromise;
 
-  const check = useCallback(async (force = false) => {
-    if (!force) {
-      const raw = await AsyncStorage.getItem(UPDATE_KEY);
-      if (raw) {
-        try {
-          const cached = JSON.parse(raw);
-          if (Date.now() - cached.at < UPDATE_TTL_MS) {
-            setStatus({
-              updateAvailable: !!cached.updateAvailable,
-              latestVersion: cached.latestVersion ?? null,
-              installedVersion: getInstalledVersion(),
-              checking: false,
-              error: null,
-            });
-            return;
-          }
-        } catch {}
+  checkPromise = (async () => {
+    hasCheckedThisLaunch = true;
+    publish({ checking: true, error: null });
+
+    let otaAvailable = false;
+    let otaCheckFailed = false;
+    if (!__DEV__ && Updates.isEnabled) {
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        otaAvailable = result.isAvailable || result.isRollBackToEmbedded;
+      } catch {
+        otaCheckFailed = true;
       }
     }
 
-    setStatus((s) => ({ ...s, checking: true, error: null }));
-    const installed = getInstalledVersion();
-    const { tag, error } = await fetchLatestTag();
-    if (error) {
-      setStatus({ updateAvailable: false, latestVersion: null, installedVersion: installed, checking: false, error });
-    } else if (tag) {
-      const updateAvailable = isNewer(tag, installed);
-      await AsyncStorage.setItem(
-        UPDATE_KEY,
-        JSON.stringify({ at: Date.now(), updateAvailable, latestVersion: tag })
-      );
-      setStatus({ updateAvailable, latestVersion: tag, installedVersion: installed, checking: false, error: null });
-    } else {
-      setStatus((s) => ({ ...s, checking: false, error: null }));
+    const distribution = distributionForBuild();
+    const installedVersion = installedVersionForBuild();
+    let release: Awaited<ReturnType<typeof fetchLatestGitHubRelease>> = null;
+    let releaseCheckFailed = false;
+
+    // GitHub Releases is the canonical binary-version feed for public Android
+    // builds. Preview/development builds only participate in EAS Update.
+    if (distribution === 'play' || distribution === 'github') {
+      try {
+        release = await fetchLatestGitHubRelease();
+      } catch {
+        releaseCheckFailed = true;
+      }
     }
-  }, []);
+
+    if (release && isNewerVersion(release.version, installedVersion)) {
+      publish({
+        checking: false,
+        applying: false,
+        updateAvailable: true,
+        updateKind: 'binary',
+        latestVersion: release.version,
+        installedVersion,
+        distribution,
+        error: null,
+        releaseUrl: release.releaseUrl,
+        apkUrl: release.apkUrl,
+      });
+      return;
+    }
+
+    if (otaAvailable) {
+      publish({
+        checking: false,
+        applying: false,
+        updateAvailable: true,
+        updateKind: 'ota',
+        latestVersion: installedVersion,
+        installedVersion,
+        distribution,
+        error: null,
+        releaseUrl: release?.releaseUrl ?? null,
+        apkUrl: release?.apkUrl ?? null,
+      });
+      return;
+    }
+
+    const noReleases = (distribution === 'play' || distribution === 'github') && !release && !releaseCheckFailed;
+    publish({
+      checking: false,
+      applying: false,
+      updateAvailable: false,
+      updateKind: 'none',
+      latestVersion: release?.version ?? null,
+      installedVersion,
+      distribution,
+      error: noReleases ? 'no_releases' : releaseCheckFailed || otaCheckFailed ? 'check_failed' : null,
+      releaseUrl: release?.releaseUrl ?? null,
+      apkUrl: release?.apkUrl ?? null,
+    });
+  })().finally(() => {
+    checkPromise = null;
+  });
+
+  return checkPromise;
+}
+
+async function openPlayStore(): Promise<void> {
+  try {
+    await Linking.openURL(PLAY_STORE_APP_URL);
+  } catch {
+    await Linking.openURL(PLAY_STORE_WEB_URL);
+  }
+}
+
+async function applyAvailableUpdate(): Promise<boolean> {
+  if (snapshot.applying || !snapshot.updateAvailable) return false;
+  publish({ applying: true, error: null });
+
+  try {
+    if (snapshot.updateKind === 'ota') {
+      await Updates.fetchUpdateAsync();
+      await Updates.reloadAsync();
+      return true;
+    }
+
+    if (snapshot.updateKind === 'binary') {
+      if (snapshot.distribution === 'play') {
+        await openPlayStore();
+        publish({ applying: false });
+        return true;
+      }
+
+      if (snapshot.distribution === 'github') {
+        await Linking.openURL(snapshot.apkUrl ?? snapshot.releaseUrl ?? GITHUB_RELEASES_URL);
+        publish({ applying: false });
+        return true;
+      }
+    }
+  } catch {
+    publish({ applying: false, error: 'apply_failed' });
+    return false;
+  }
+
+  publish({ applying: false, error: 'apply_failed' });
+  return false;
+}
+
+export function getUpdateUrl(): string {
+  if (snapshot.distribution === 'play') return PLAY_STORE_WEB_URL;
+  return snapshot.apkUrl ?? snapshot.releaseUrl ?? GITHUB_RELEASES_URL;
+}
+
+export function useAppUpdate() {
+  const [state, setState] = useState<UpdateSnapshot>(snapshot);
 
   useEffect(() => {
-    // Only check for updates via GitHub for sideload builds
-    // Store builds (Play Store, etc.) get updates through the store
-    if (!isStoreBuild) {
-      check();
-    }
-  }, [check]);
+    listeners.add(setState);
+    setState(snapshot);
+    void runCheck(false);
+    return () => {
+      listeners.delete(setState);
+    };
+  }, []);
 
-  return { ...status, check };
+  return {
+    ...state,
+    check: runCheck,
+    applyUpdate: applyAvailableUpdate,
+  };
 }

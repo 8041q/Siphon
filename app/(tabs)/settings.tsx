@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, I18nManager, Linking, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, I18nManager, ScrollView, Switch, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { client, useUI } from '../../src/hooks/useApp';
 import { useAppearanceSupport, useSupport } from '../../src/hooks/useSupport';
-import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
+import { useAppUpdate } from '../../src/hooks/useAppUpdate';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
@@ -26,7 +26,7 @@ import { DonationSheet, DonationSheetHandle } from '../../src/components/Donatio
 import { fuelLabel } from '../../src/utils/fuelNames';
 import { consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
 import type { Vehicle } from '../../src/utils/vehicles';
-
+import { clearRouteDistanceCache } from '../../src/utils/routeDistance';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -55,7 +55,18 @@ function normalizeLanguage(value: string): SupportedLanguage {
 export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { historyEnabled, setHistoryEnabled } = useUI();
-  const { updateAvailable, latestVersion, installedVersion, checking, error, check } = useAppUpdate();
+  const {
+    updateAvailable,
+    updateKind,
+    latestVersion,
+    installedVersion,
+    distribution,
+    checking,
+    applying,
+    error,
+    check,
+    applyUpdate,
+  } = useAppUpdate();
   const insets = useSafeAreaInsets();
   const [themePref, setThemePref] = useState<ThemePref>('system');
   const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => normalizeLanguage(i18nInstance.language));
@@ -76,10 +87,6 @@ export default function SettingsScreen() {
   const { colors } = useThemeTokens();
   const cardRules = useStyleConfig(styleRules, 'card');
   const cardStyle = applyComponentRules(cardRules, colors.label);
-
-  const handleDownloadUpdate = () => {
-    Linking.openURL(getUpdateUrl()).catch(() => {});
-  };
 
   const persistLanguage = useCallback(async (lng: string) => {
     if (!isSupportedLanguage(lng)) return;
@@ -140,6 +147,11 @@ export default function SettingsScreen() {
     setHistoryEnabled(value);
   };
 
+  const handleClearRoutes = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    await clearRouteDistanceCache().catch(() => 0);
+  };
+
   const handlePrivacyOptions = async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     const result = await showPrivacyOptions();
@@ -155,6 +167,25 @@ export default function SettingsScreen() {
       );
     }
   };
+
+  const handleApplyUpdate = async () => {
+    if (applying) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    const ok = await applyUpdate();
+    if (!ok) {
+      Alert.alert(t('settings.update_error_title'), t('settings.update_apply_failed'));
+    }
+  };
+
+  const updateActionLabel = applying
+    ? t('settings.installing_update')
+    : updateKind === 'ota'
+      ? t('settings.install_update')
+      : distribution === 'play'
+        ? t('settings.update_on_play')
+        : t('settings.download_apk');
+
+  const distributionLabel = t(`settings.distribution_${distribution}`);
 
   const handleSaveVehicle = (data: Omit<Vehicle, 'id'>, id?: string) => {
     if (id) updateVehicle({ ...data, id });
@@ -280,6 +311,16 @@ export default function SettingsScreen() {
 
         <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
+            {t('settings.data_storage')}
+          </Text>
+          <ListItem onPress={handleClearRoutes}>{t('settings.clear_route_cache')}</ListItem>
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
+            {t('settings.route_cache_caption')}
+          </Text>
+        </View>
+
+        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.privacy_ads')}
           </Text>
           <ListItem
@@ -321,22 +362,37 @@ export default function SettingsScreen() {
                 ? t('settings.checking')
                 : error === 'no_releases'
                   ? t('settings.no_releases')
-                  : error
+                  : error === 'check_failed'
                     ? t('settings.update_check_failed')
-                    : updateAvailable
-                      ? t('settings.update_available_version', { version: latestVersion })
-                      : t('settings.up_to_date')
+                    : error === 'apply_failed'
+                      ? t('settings.update_apply_failed_short')
+                      : updateKind === 'ota'
+                        ? t('settings.update_available_ota')
+                        : updateKind === 'binary'
+                          ? t('settings.update_available_version', { version: latestVersion })
+                          : t('settings.up_to_date')
             }
           >
             {t('settings.update_status')}
           </ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
-          <ListItem onPress={() => check(true)}>{t('settings.check_for_updates')}</ListItem>
+          <ListItem trailing={distributionLabel}>{t('settings.update_distribution')}</ListItem>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <ListItem onPress={() => { void check(true); }}>{t('settings.check_for_updates')}</ListItem>
           {updateAvailable && (
             <>
               <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
-              <View className="px-lg py-md">
-                <Button onPress={handleDownloadUpdate}>{t('settings.download_update')}</Button>
+              <View className="px-lg py-md gap-xs">
+                <Button onPress={() => { void handleApplyUpdate(); }}>
+                  {updateActionLabel}
+                </Button>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
+                  {updateKind === 'ota'
+                    ? t('settings.update_ota_caption')
+                    : distribution === 'play'
+                      ? t('settings.update_play_caption')
+                      : t('settings.update_github_caption')}
+                </Text>
               </View>
             </>
           )}
