@@ -4,6 +4,7 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 
 import { Field } from './ui/field';
@@ -54,6 +55,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
   function EvBreakevenSheet({ config, onSave }, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['90%'], []);
     const { colors } = useThemeTokens();
 
@@ -140,6 +142,8 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, EvBreakevenSh
           SHEET_HANDLE_INDICATOR_STYLE,
           { backgroundColor: colors.handleIndicator },
         ]}
+        onChange={handleSheetChange}
+        onDismiss={handleSheetDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}

@@ -19,6 +19,7 @@ import { useDonations } from '../hooks/useDonations';
 import { SUPPORT, DONATION_TIERS, type DonationTierId } from '../config/support';
 import { Icon } from '../theme/Icon';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
 import { GlassBox } from './ui/GlassBox';
@@ -29,6 +30,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
   function DonationSheet(_props, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['52%'], []);
 
     const { colors } = useThemeTokens();
@@ -98,6 +100,8 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
           SHEET_HANDLE_INDICATOR_STYLE,
           { backgroundColor: colors.handleIndicator },
         ]}
+        onChange={handleSheetChange}
+        onDismiss={handleSheetDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}

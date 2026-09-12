@@ -5,7 +5,10 @@
     "station": "Estação",
     "unknown_station": "Estação desconhecida",
     "something_went_wrong": "Algo correu mal",
-    "and": "e"
+    "and": "e",
+    "loading": "A carregar…",
+    "retry": "Tentar novamente",
+    "using_cached_data": "A usar dados em cache"
   },
   "tabs": {
     "map": "Mapa",
@@ -18,7 +21,8 @@
     "offline_banner": "A usar dados em cache — sem ligação",
     "search_area": "Pesquisar esta área",
     "empty_search": "Nenhuma estação encontrada",
-    "stations_found": "Postos: {{count}}"
+    "stations_found": "Postos: {{count}}",
+    "locate_me": "Localizar-me"
   },
   "search": {
     "placeholder": "Pesquisar estações...",
@@ -44,7 +48,14 @@
     "no_sort": "Predefinido",
     "sort_price": "Preço",
     "sort_distance": "Distância",
-    "sort_fuel": "Combustível para ordenação"
+    "sort_fuel": "Combustível para ordenação",
+    "any_country": "Qualquer país",
+    "more_fuels": "Mais combustíveis ({{count}})",
+    "fewer_fuels": "Mostrar menos combustíveis",
+    "sort_recommended": "Recomendado",
+    "sort_cheapest": "Preço mais baixo",
+    "sort_nearest": "Mais perto",
+    "sort_fuel_hint": "Escolha o combustível cujo preço quer comparar"
   },
   "favorites": {
     "empty_title": "Ainda sem favoritos",
@@ -69,14 +80,14 @@
     "spanish": "Espanhol",
     "french": "Francês",
     "german": "Alemão",
-    "location_marker": "Location Marker",
-    "marker_style": "Style",
-    "marker_icons": "Icons",
-    "marker_svg": "Custom SVG",
-    "marker_image": "Custom Image",
-    "marker_import_image": "Import from Gallery",
-    "marker_change_image": "Change Image",
-    "marker_custom_image": "Custom Image",
+    "location_marker": "Marcador de localização",
+    "marker_style": "Estilo",
+    "marker_icons": "Ícones",
+    "marker_svg": "SVG personalizado",
+    "marker_image": "Imagem personalizada",
+    "marker_import_image": "Importar da galeria",
+    "marker_change_image": "Alterar imagem",
+    "marker_custom_image": "Imagem personalizada",
     "updates": "Atualizações",
     "update_status": "Estado",
     "checking": "A verificar…",
@@ -197,7 +208,6 @@
     "watch_ad": "Ver um anúncio",
     "rewards_ad_loading": "A carregar anúncio…",
     "rewards_palettes": "Paletas de Cores",
-    "rewards_palettes": "Paletas de Cores",
     "rewards_icons": "Conjuntos de Ícones",
     "rewards_styles": "Estilos",
     "rewards_markers": "Marcadores de Localização",
@@ -206,7 +216,23 @@
     "reward_svg_flame": "Chama",
     "reward_svg_leaf": "Folha",
     "reward_svg_crown": "Coroa",
-    "rewards_footnote": "Os anúncios são opcionais e nunca interrompem. Ver um desbloqueia a próxima recompensa na sequência."
+    "rewards_footnote": "Os anúncios são opcionais e nunca interrompem. Ver um desbloqueia a próxima recompensa na sequência.",
+    "worth_round_trip": "{{distance}} ida e volta",
+    "worth_unit_mismatch": "Não é possível comparar este combustível porque o preço do posto e a capacidade do veículo usam unidades diferentes.",
+    "worth_out_of_range": "Este posto fica além da autonomia de um depósito configurada para este veículo.",
+    "worth_no_comparison": "Não há postos comparáveis suficientes num raio de {{radius}} km para avaliar esta viagem.",
+    "worth_reference": "Melhor alternativa próxima: {{station}} · €{{price}} · a {{distance}}",
+    "worth_full_tank_saving": "Poupança no preço num depósito cheio: €{{saving}}",
+    "worth_extra_trip_cost": "Custo extra de condução face à alternativa: €{{cost}}",
+    "worth_trip_cost_saved": "Poupa cerca de €{{cost}} em condução face à alternativa",
+    "worth_break_even_fill": "Quantidade mínima face a esta alternativa: {{amount}} {{unit}}",
+    "worth_break_even_over_capacity": "Mesmo um depósito cheio não compensa o custo extra da viagem.",
+    "worth_net_saved": "Vale a pena — cerca de €{{amount}} melhor no total",
+    "worth_net_loss": "Não vale a pena — cerca de €{{amount}} pior no total",
+    "worth_estimated_distance": "A usar uma distância estimada enquanto a rota real é calculada.",
+    "worth_full_tank_assumption": "A comparação assume abastecer até à capacidade configurada do veículo.",
+    "worth_full_tank_extra": "O preço do combustível custa mais €{{cost}} num depósito cheio",
+    "worth_net_even": "Custo total praticamente igual"
   },
   "screen": {
     "price_history": "Histórico de Preços"
@@ -235,7 +261,10 @@
     "forecast_disclaimer": "Estimativa estatística baseada nos últimos 80 dias. Os preços dependem das condições do mercado — não é aconselhamento financeiro.",
     "banner_title": "Abasteça hoje!",
     "banner_low30": "O preço atual é o mínimo de 30 dias.",
-    "banner_drop": "Os preços caíram {{pct}}% esta semana."
+    "banner_drop": "Os preços caíram {{pct}}% esta semana.",
+    "station_not_found": "Estação não encontrada.",
+    "no_fuels": "Não existem dados de preços de combustível para esta estação.",
+    "no_history": "Ainda não existe histórico de preços para este combustível."
   },
   "station": {
     "view_price_history": "Ver Histórico de Preços",
@@ -277,7 +306,11 @@
     "payment_multibanco": "Multibanco",
     "payment_mbway": "MbWay",
     "payment_outros": "Outros",
-    "payment_disclaimer": "Informação de pagamentos do registo oficial — pode estar incompleta"
+    "payment_disclaimer": "Informação de pagamentos do registo oficial — pode estar incompleta",
+    "copy_address": "Copiar morada",
+    "add_favorite": "Adicionar aos favoritos",
+    "remove_favorite": "Remover dos favoritos",
+    "payment_info": "Informação sobre métodos de pagamento"
   },
   "price_chart": {
     "no_data": "Histórico de preços indisponível.",

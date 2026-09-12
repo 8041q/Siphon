@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -9,6 +9,7 @@ import { Icon } from '../theme/Icon';
 import { type UserLocationMarkerConfig, saveMarkerImage } from '../hooks/useUserLocationMarker';
 import { useSupport } from '../hooks/useSupport';
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
 import { SheetBackground } from './ui/SheetBackground';
@@ -30,26 +31,43 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
   function LocationMarkerSheet({ onRequestUnlockSvg }, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['50%'], []);
     const { colors } = useThemeTokens();
 
     const { marker: currentMarker, setMarker, isUnlocked } = useSupport();
     const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
+    const lockedNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const mountedRef = useRef(false);
+
+    useEffect(() => {
+      mountedRef.current = true;
+      return () => {
+        mountedRef.current = false;
+        if (lockedNoticeTimerRef.current) clearTimeout(lockedNoticeTimerRef.current);
+      };
+    }, []);
 
     useImperativeHandle(ref, () => ({
       present: () => bottomSheetRef.current?.present(),
     }));
 
     const handleSelectSvg = useCallback((name: string) => {
-      Haptics.selectionAsync();
+      void Haptics.selectionAsync().catch(() => undefined);
       setMarker({ type: 'svg', value: name });
       bottomSheetRef.current?.dismiss();
     }, [setMarker]);
 
     const handleLockedSvgTap = useCallback((name: string) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
       setLockedNoticeName(name);
-      setTimeout(() => setLockedNoticeName((current) => (current === name ? null : current)), LOCKED_NOTICE_MS);
+      if (lockedNoticeTimerRef.current) clearTimeout(lockedNoticeTimerRef.current);
+      lockedNoticeTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) {
+          setLockedNoticeName((current) => (current === name ? null : current));
+        }
+        lockedNoticeTimerRef.current = null;
+      }, LOCKED_NOTICE_MS);
       onRequestUnlockSvg?.(name);
     }, [onRequestUnlockSvg]);
 
@@ -85,6 +103,8 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
           SHEET_HANDLE_INDICATOR_STYLE,
           { backgroundColor: colors.handleIndicator },
         ]}
+        onChange={handleSheetChange}
+        onDismiss={handleSheetDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}
@@ -111,51 +131,42 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                   onPress={() => (unlocked ? handleSelectSvg(name) : handleLockedSvgTap(name))}
                   className="items-center gap-xs"
                   style={{ width: '22%' }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected, disabled: !unlocked }}
+                  accessibilityLabel={name}
                 >
-                  <View style={{ width: 54, height: 54 }}>
-                    {/* Fake shadow: a plain, non-elevated View with no children, so it can
-                        never share a render layer with the SvgXml canvas. Avoids the Android
-                        bug where `elevation` leaves a hole behind an SVG's own bounding box. */}
-                    <View
-                      pointerEvents="none"
-                      style={{
+                  <View style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 27,
+                        backgroundColor: colors.markerBackground,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: colors.label,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 3,
+                    elevation: 3,
+                    borderWidth: selected ? 2.5 : 0,
+                    borderColor: selected ? colors.tint : 'transparent',
+                    opacity: unlocked ? 1 : 0.4,
+                  }}>
+                    {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
+                    {!unlocked && (
+                      <View style={{
                         position: 'absolute',
-                        top: 1.5,
-                        left: 0,
-                        width: 54,
-                        height: 54,
-                        borderRadius: 27,
-                        backgroundColor: 'rgba(0,0,0,0.18)',
-                      }}
-                    />
-                    <View style={{
-                      width: 54,
-                      height: 54,
-                      borderRadius: 27,
-                      backgroundColor: colors.markerBackground,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: selected ? 2.5 : 0,
-                      borderColor: selected ? colors.tint : 'transparent',
-                      opacity: unlocked ? 1 : 0.4,
-                    }}>
-                      {SvgComponent && <SvgComponent size={26} color={colors.tint} />}
-                      {!unlocked && (
-                        <View style={{
-                          position: 'absolute',
-                          right: 4,
-                          bottom: 4,
-                          width: 18,
-                          height: 18,
-                          borderRadius: 9,
-                          backgroundColor: colors.markerBackground,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                          <Icon name="lock" size={11} color={colors.tint} />
-                        </View>
-                      )}
-                    </View>
+                        end: 4,
+                        bottom: 4,
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        backgroundColor: colors.markerBackground,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <Icon name="lock" size={11} color={colors.tint} />
+                      </View>
+                    )}
                   </View>
                   <Text
                     className="text-caption1 text-center"
@@ -183,7 +194,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                 borderRadius: 32,
                 overflow: 'hidden',
                 borderWidth: 2.5,
-                borderColor: '#FFFFFF',
+                borderColor: colors.tint,
                 marginBottom: 12,
               }}>
                 <Image
@@ -210,7 +221,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
               style={{ backgroundColor: colors.groupedBackground }}
               className="flex-row items-center justify-center py-md px-lg rounded-lg mb-xl"
             >
-              <View style={{ marginRight: 8 }}>
+              <View style={{ marginEnd: 8 }}>
                 <Icon name="my_location" size={18} color={colors.tint} />
               </View>
               <Text style={{ color: colors.label }} className="text-body">

@@ -7,12 +7,13 @@ import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { FuelStationFeature } from '../api/siphonClient';
+import type { FuelKey, FuelStationFeature } from '../api/siphonClient';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
 import { formatSchedule, marginLabel } from '../utils/schedule';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { Icon } from '../theme/Icon';
-import { useUI, useStations } from '../hooks/useApp';
+import { useUI, useStationDistances } from '../hooks/useApp';
+import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { WorthTheDrive } from './WorthTheDrive';
@@ -27,23 +28,24 @@ function priceColorStyle(price: number, colors: { priceLow: string; priceMid: st
   return { color: colors.priceHigh };
 }
 
-function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClose }: { station: FuelStationFeature; snapIndex: number; distanceKm?: number; distanceLoading?: boolean; onClose: () => void }) {
+function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distanceRouted = false, onClose }: { station: FuelStationFeature; snapIndex: number; distanceKm?: number; distanceLoading?: boolean; distanceRouted?: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { name, brand, address, fuels, hours, schedule, services, paymentMethods, observations, otherServices, lastUpdated, extra, source } = station.properties;
   const [showPaymentTip, setShowPaymentTip] = useState(false);
-  const entries = Object.entries(fuels ?? {}) as [string, number][];
+  const entries = Object.entries(fuels) as [FuelKey, number][];
   const locationParts = getLocationParts(station.properties);
   const { favorites, toggleFavorite } = useUI();
   const favorite = favorites?.has(station.properties.id) ?? false;
+  const displayName = brand || name || t('common.unknown_station');
 
   const handleCopyAddress = useCallback(() => {
     const formatted = formatStationAddress(station.properties);
-    Clipboard.setStringAsync(formatted);
+    void Clipboard.setStringAsync(formatted).catch(() => undefined);
   }, [station.properties]);
 
   const handleOpenInMaps = useCallback(() => {
     const url = getMapsUrl(station);
-    Linking.openURL(url);
+    void Linking.openURL(url).catch(() => undefined);
   }, [station]);
 
   const { colors } = useThemeTokens();
@@ -51,9 +53,9 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
   return (
     <View className="gap-md p-lg">
       <View className="flex-row items-start justify-between">
-        <View className="flex-1 mr-2">
+        <View className="flex-1" style={{ marginEnd: 8 }}>
           <Text style={{ color: colors.label }} className="text-title-2">
-            {brand || name || t('common.unknown_station')}
+            {displayName}
           </Text>
           {brand && name && brand !== name && (
             <Text style={{ color: colors.secondaryLabel }} className="text-callout mt-0.5">
@@ -61,7 +63,14 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
             </Text>
           )}
         </View>
-        <Pressable onPress={() => toggleFavorite(station)} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable
+          onPress={() => toggleFavorite(station)}
+          style={{ padding: 4 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={`${favorite ? t('station.remove_favorite') : t('station.add_favorite')}: ${displayName}`}
+          accessibilityState={{ selected: favorite }}
+        >
           <View className="rounded-sm p-1.5">
             <Icon
               name={favorite ? 'star.fill' : 'star'}
@@ -73,7 +82,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
       </View>
 
       <View className="flex-row items-start">
-        <View className="flex-1 mr-2">
+        <View className="flex-1" style={{ marginEnd: 8 }}>
           <Text style={{ color: colors.secondaryLabel }} className="text-callout">{cleanAddress(station.properties)}</Text>
           {locationParts.length > 0 && (
             <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline mt-0.5">
@@ -83,12 +92,12 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
           {distanceKm !== undefined && (
             <View className="flex-row items-center gap-1 mt-0.5">
               <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline">
-                {distanceKm < 1
+                {!distanceRouted ? '~' : ''}{distanceKm < 1
                   ? `${(distanceKm * 1000).toFixed(0)} m`
                   : `${distanceKm.toFixed(1)} km`}{' '}
                 {t('station.from_location')}
               </Text>
-              {distanceLoading && (
+              {distanceLoading && !distanceRouted && (
                 <Text style={{ color: colors.priceMid }} className="text-[10px]">
                   ({t('station.distance_optimizing')})
                 </Text>
@@ -97,12 +106,24 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
           )}
         </View>
         <View className="flex-row items-center gap-1">
-          <Pressable onPress={handleOpenInMaps} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable
+            onPress={handleOpenInMaps}
+            style={{ padding: 4 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('station.open_in_maps')}
+          >
             <GlassBox component="card" className="rounded-sm p-1.5">
               <Icon name="directions" size={19} color={colors.secondaryLabel} />
             </GlassBox>
           </Pressable>
-          <Pressable onPress={handleCopyAddress} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable
+            onPress={handleCopyAddress}
+            style={{ padding: 4 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('station.copy_address')}
+          >
             <GlassBox component="card" className="rounded-sm p-1.5">
               <Icon name="copy" size={19} color={colors.secondaryLabel} />
             </GlassBox>
@@ -134,6 +155,8 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
             }}
             style={{ backgroundColor: colors.tint }}
             className="rounded-md py-md items-center"
+            accessibilityRole="button"
+            accessibilityLabel={t('station.view_price_history')}
           >
             <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">
               {t('station.view_price_history')}
@@ -144,7 +167,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
       {snapIndex >= 1 && (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
           <View className="gap-md">
-            {distanceKm !== undefined && <WorthTheDrive station={station} distanceKm={distanceKm} />}
+            {distanceKm !== undefined && <WorthTheDrive station={station} distanceKm={distanceKm} distanceRouted={distanceRouted} />}
 
             <View style={{ backgroundColor: colors.separator }} className="h-px" />
 
@@ -159,40 +182,51 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
                   </Text>
                 ) : (
                   <>
-                    {hours.weekdays && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.weekdays')}: {hours.weekdays}</Text>}
-                    {hours.saturday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.saturday')}: {hours.saturday}</Text>}
-                    {hours.sunday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.sunday')}: {hours.sunday}</Text>}
-                    {hours.holiday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.holiday')}: {hours.holiday}</Text>}
+                    {hours?.weekdays && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.weekdays')}: {hours?.weekdays}</Text>}
+                    {hours?.saturday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.saturday')}: {hours?.saturday}</Text>}
+                    {hours?.sunday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.sunday')}: {hours?.sunday}</Text>}
+                    {hours?.holiday && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.holiday')}: {hours?.holiday}</Text>}
                   </>)}
               </View>
             ) : null}
 
-            {services?.length > 0 && (
+            {services && services.length > 0 && (
               <View>
                 <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('station.services')}
                 </Text>
                 <Text style={{ color: colors.secondaryLabel }} className="text-callout">
-                  {Array.isArray(services) ? services.join(', ') : services}
+                  {services.join(', ')}
                 </Text>
               </View>
             )}
 
-            {paymentMethods?.length > 0 && (
+            {paymentMethods && paymentMethods.length > 0 && (
               <View>
                 <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('station.payment_methods')}
                 </Text>
                 <View className="flex-row items-center">
                   <Text style={{ color: colors.secondaryLabel }} className="text-callout flex-1">
-                    {Array.isArray(paymentMethods) ? paymentMethods.map((pm: string) => `${t(`station.payment_${pm.toLowerCase()}`, { defaultValue: pm })}`).join(', ') : `${t(`station.payment_${(paymentMethods as string).toLowerCase()}`, { defaultValue: paymentMethods })}`}
+                    {paymentMethods
+                      .map((method) => t(`station.payment_${method.toLowerCase()}`, { defaultValue: method }))
+                      .join(', ')}
                   </Text>
-                  <Pressable onPress={() => setShowPaymentTip(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Pressable
+                    onPress={() => setShowPaymentTip(true)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('station.payment_info')}
+                  >
                     <Icon name="info.circle" size={14} color={colors.secondaryLabel} />
                   </Pressable>
                 </View>
                 {showPaymentTip && (
-                  <Pressable onPress={() => setShowPaymentTip(false)}>
+                  <Pressable
+                    onPress={() => setShowPaymentTip(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('station.payment_disclaimer')}
+                  >
                     <GlassBox component="card" color={colors.surface} style={{ borderColor: colors.separator }} className="mt-2 p-md rounded-md border">
                       <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('station.payment_disclaimer')}</Text>
                     </GlassBox>
@@ -232,9 +266,11 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, onClos
 
 export function StationDetailSheet() {
   const { selectedStation, setSelectedStation } = useUI();
-  const { stationDistances, distanceLoading } = useStations();
+  const { stationDistances, routedStationIds, distanceLoading } = useStationDistances();
   const distanceKm = selectedStation ? stationDistances.get(selectedStation.properties.id) : undefined;
+  const distanceRouted = selectedStation ? routedStationIds.has(selectedStation.properties.id) : false;
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { handleSheetChange: handleBackSheetChange, handleSheetDismiss: handleBackSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
   const isPresentedRef = useRef(false);
   const lastPresentedIdRef = useRef<string | null>(null);
   const [snapIndex, setSnapIndex] = useState(0);
@@ -251,24 +287,29 @@ export function StationDetailSheet() {
   const insets = useSafeAreaInsets();
 
   const handleReport = useCallback(() => {
-    Linking.openURL(REPORT_ISSUE_URL);
+    void Linking.openURL(REPORT_ISSUE_URL).catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (!selectedStation) return;
     lastPresentedIdRef.current = selectedStation.properties.id;
     if (isPresentedRef.current) return;
-    isPresentedRef.current = true;
     setSnapIndex(0);
-    // Defer present() so it never collides with an in-flight dismiss animation
-    // (calling present() mid-dismiss is silently ignored and leaves the sheet
-    // "closed" but stuck, which felt like taps doing nothing on Android).
-    requestAnimationFrame(() => {
-      bottomSheetRef.current?.present();
+
+    // Defer present() so it never collides with an in-flight dismiss animation.
+    // Mark the sheet as presented only when the deferred frame actually runs;
+    // otherwise a cancelled frame can leave the ref stuck in a false-open state.
+    const frame = requestAnimationFrame(() => {
+      if (!bottomSheetRef.current) return;
+      isPresentedRef.current = true;
+      bottomSheetRef.current.present();
     });
+
+    return () => cancelAnimationFrame(frame);
   }, [selectedStation]);
 
   const handleDismiss = useCallback(() => {
+    handleBackSheetDismiss();
     isPresentedRef.current = false;
     setSnapIndex(0);
     // Only clear the selection if it's still the station this sheet presented.
@@ -277,11 +318,12 @@ export function StationDetailSheet() {
     if (selectedStation && selectedStation.properties.id === lastPresentedIdRef.current) {
       setSelectedStation(null);
     }
-  }, [setSelectedStation, selectedStation]);
+  }, [handleBackSheetDismiss, setSelectedStation, selectedStation]);
 
   const handleChange = useCallback((index: number) => {
+    handleBackSheetChange(index);
     setSnapIndex(index);
-  }, []);
+  }, [handleBackSheetChange]);
 
   return (
     <BottomSheetModal
@@ -312,6 +354,7 @@ export function StationDetailSheet() {
               snapIndex={snapIndex}
               distanceKm={distanceKm}
               distanceLoading={distanceLoading}
+              distanceRouted={distanceRouted}
               onClose={() => bottomSheetRef.current?.dismiss()}
             />
           ) : (
@@ -326,6 +369,8 @@ export function StationDetailSheet() {
                 onPress={handleReport}
                 style={{ borderColor: colors.separator }}
                 className="rounded-md py-md items-center flex-row justify-center gap-sm"
+                accessibilityRole="button"
+                accessibilityLabel={t('station.report_incorrect_info')}
               >
                 <Icon name="flag" size={16} color={colors.tint} />
                 <Text style={{ color: colors.tint }} className="font-semibold text-callout">

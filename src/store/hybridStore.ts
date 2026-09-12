@@ -13,12 +13,8 @@ function ensureDir(dir: Directory): void {
 }
 
 function assertSafeRelative(relative: string): void {
-  if (relative.startsWith('/')) {
-    throw new Error('Unsafe key path (absolute): ' + relative);
-  }
-  if (relative.split('/').includes('..')) {
-    throw new Error('Unsafe key path (.. traversal): ' + relative);
-  }
+  if (relative.startsWith('/')) throw new Error(`Unsafe key path (absolute): ${relative}`);
+  if (relative.split('/').includes('..')) throw new Error(`Unsafe key path (.. traversal): ${relative}`);
 }
 
 function tileFilePath(key: string): File {
@@ -40,38 +36,68 @@ function rateFilePath(key: string): File {
 }
 
 function isFileKey(key: string): boolean {
-  return (
-    key.startsWith('siphon:data:') ||
-    key.startsWith('siphon:history:') ||
-    key.startsWith('siphon:rate:')
-  );
+  return key.startsWith('siphon:data:') || key.startsWith('siphon:history:') || key.startsWith('siphon:rate:');
 }
 
 function filePathForKey(key: string): File {
   if (key.startsWith('siphon:data:')) return tileFilePath(key);
   if (key.startsWith('siphon:history:')) return historyFilePath(key);
   if (key.startsWith('siphon:rate:')) return rateFilePath(key);
-  throw new Error('Unsupported key: ' + key);
+  throw new Error(`Unsupported key: ${key}`);
 }
 
 function ensureNestedDir(base: Directory, subPath: string): void {
   const lastSlash = subPath.lastIndexOf('/');
-  if (lastSlash > 0) {
-    ensureDir(new Directory(base, subPath.slice(0, lastSlash)));
+  if (lastSlash > 0) ensureDir(new Directory(base, subPath.slice(0, lastSlash)));
+}
+
+function ensureParentForKey(key: string): void {
+  ensureDir(DATA_DIR);
+  if (key.startsWith('siphon:data:')) {
+    ensureDir(TILES_DIR);
+    ensureNestedDir(TILES_DIR, key.slice('siphon:data:'.length));
+  } else if (key.startsWith('siphon:history:')) {
+    ensureDir(HISTORY_DIR);
+    ensureNestedDir(HISTORY_DIR, key.slice('siphon:history:'.length));
+  } else if (key.startsWith('siphon:rate:')) {
+    ensureDir(RATE_DIR);
   }
 }
 
 function listFilesRecursive(dir: Directory, prefix: string): string[] {
   ensureDir(dir);
   return dir.list().flatMap((item) => {
-    if (item instanceof File) {
-      return prefix + item.name;
-    }
-    if (item instanceof Directory) {
-      return listFilesRecursive(item, prefix + item.name + '/');
-    }
+    if (item instanceof File) return prefix + item.name;
+    if (item instanceof Directory) return listFilesRecursive(item, prefix + item.name + '/');
     return [];
   });
+}
+
+function tempFileFor(destination: File): File {
+  const safeName = destination.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return new File(DATA_DIR, `.tmp-${safeName}-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+}
+
+async function writeFileAtomically(destination: File, value: string): Promise<void> {
+  ensureDir(DATA_DIR);
+  const temp = tempFileFor(destination);
+  let moved = false;
+  try {
+    temp.create({ overwrite: true, intermediates: true });
+    temp.write(value);
+    await temp.move(destination, { overwrite: true });
+    // File.move() updates the File instance's URI to the destination. Never
+    // delete `temp` after this point or we'd delete the committed cache file.
+    moved = true;
+  } finally {
+    if (!moved) {
+      try {
+        if (temp.exists) temp.delete();
+      } catch {
+        // Best-effort cleanup only.
+      }
+    }
+  }
 }
 
 export const hybridStore: KeyValueStore = {
@@ -89,19 +115,8 @@ export const hybridStore: KeyValueStore = {
       await AsyncStorage.setItem(key, value);
       return;
     }
-    ensureDir(DATA_DIR);
-    if (key.startsWith('siphon:data:')) {
-      ensureDir(TILES_DIR);
-      ensureNestedDir(TILES_DIR, key.slice('siphon:data:'.length));
-    }
-    if (key.startsWith('siphon:history:')) {
-      ensureDir(HISTORY_DIR);
-      ensureNestedDir(HISTORY_DIR, key.slice('siphon:history:'.length));
-    }
-    if (key.startsWith('siphon:rate:')) {
-      ensureDir(RATE_DIR);
-    }
-    filePathForKey(key).write(value);
+    ensureParentForKey(key);
+    await writeFileAtomically(filePathForKey(key), value);
   },
 
   async listKeys(prefix: string): Promise<string[]> {
@@ -127,6 +142,11 @@ export const hybridStore: KeyValueStore = {
       await AsyncStorage.removeItem(key);
       return;
     }
-    try { filePathForKey(key).delete(); } catch {}
+    try {
+      const file = filePathForKey(key);
+      if (file.exists) file.delete();
+    } catch {
+      // Missing/corrupt cache entries are already equivalent to removed.
+    }
   },
 };

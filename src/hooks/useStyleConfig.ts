@@ -1,3 +1,4 @@
+import type { ViewStyle } from 'react-native';
 import type { ComponentRules, StyleRules } from '../theme/styles';
 
 export function useStyleConfig(rules: StyleRules, component: keyof StyleRules): ComponentRules {
@@ -6,7 +7,7 @@ export function useStyleConfig(rules: StyleRules, component: keyof StyleRules): 
 
 /** True when the given surface should render a glassmorphism backdrop. */
 export function isGlass(rules: ComponentRules): boolean {
-  return !!rules.glass;
+  return rules.glass === true;
 }
 
 /**
@@ -14,12 +15,9 @@ export function isGlass(rules: ComponentRules): boolean {
  * `opacity` is intentionally excluded when `glass` is active — glass surfaces
  * handle transparency via a blur backdrop, not a whole-view opacity fade that
  * would also fade the text/children.
- *
- * `borderColor` is applied whenever a `borderStyle` is present so that
- * retro / dotted borders are visible across every palette + dark mode.
  */
-export function applyComponentRules(rules: ComponentRules, borderColor?: string): Record<string, any> {
-  const style: Record<string, any> = {};
+export function applyComponentRules(rules: ComponentRules, borderColor?: string): ViewStyle {
+  const style: ViewStyle = {};
   if (rules.borderRadius !== undefined) style.borderRadius = rules.borderRadius;
   if (rules.borderStyle !== undefined) {
     style.borderStyle = rules.borderStyle;

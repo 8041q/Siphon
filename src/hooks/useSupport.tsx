@@ -1,37 +1,25 @@
-import React, { createContext, useCallback, useContext, useMemo } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 
 import { useAdConsent } from '../hooks/useAdConsent';
-
-import { useAdRewards, PALETTE_REWARDS, ICON_REWARDS, STYLE_REWARDS } from './useAdRewards';
+import { useAdRewards, REWARDS } from './useAdRewards';
 import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
 import { useIconSet } from './useIconSet';
 import { useStyleSet } from './useStyleSet';
 import type { IconSetId, IconSetDef } from '../theme/icons';
-
 import { useRewardedAd } from './useRewardedAd';
 import { useUserLocationMarker, type UserLocationMarkerConfig } from './useUserLocationMarker';
 import type { Palette, PaletteId } from '../theme/palettes';
 import type { StyleSetId, StyleRules } from '../theme/styles';
 
-export const ALL_REWARDS: RewardItem[] = [...ICON_REWARDS, ...STYLE_REWARDS, ...PALETTE_REWARDS];
+export const ALL_REWARDS: readonly RewardItem[] = REWARDS;
 
 type WatchResult =
-  | { earned: true; unlockedItem: RewardItem | null }
+  | { earned: true; unlockedItems: readonly RewardItem[] }
   | { earned: false; reason: 'consent' | 'failed' };
 
-interface SupportValue {
-  watchedCount: number;
-  isUnlocked: (id: string) => boolean;
-  /** Ads still needed to unlock `id`. 0 once unlocked. */
-  remainingFor: (id: string) => number;
-  unlockedItemAfter: (count: number) => RewardItem | null;
-  watchAd: () => Promise<WatchResult>;
-  adLoaded: boolean;
-  adLoading: boolean;
+export interface AppearanceSupportValue {
   palette: Palette;
-  /** True once reward progress is read */
-  rewardsLoaded: boolean;
   paletteId: PaletteId;
   setPaletteId: (id: PaletteId) => void;
   paletteVariables: Record<string, string>;
@@ -41,83 +29,170 @@ interface SupportValue {
   styleSetId: StyleSetId;
   setStyleSetId: (id: StyleSetId) => void;
   styleRules: StyleRules;
-  /**
-   * Single shared location-marker instance
-   */
   marker: UserLocationMarkerConfig;
   setMarker: (config: UserLocationMarkerConfig) => void;
   markerLoaded: boolean;
   availableMarkers: readonly string[];
 }
 
+interface SupportValue extends AppearanceSupportValue {
+  watchedCount: number;
+  isUnlocked: (id: string) => boolean;
+  /** Ads still needed to unlock `id`. 0 once unlocked. */
+  remainingFor: (id: string) => number;
+  unlockedItemsAfter: (count: number) => readonly RewardItem[];
+  watchAd: () => Promise<WatchResult>;
+  adLoaded: boolean;
+  adLoading: boolean;
+  /** True once reward progress is read. */
+  rewardsLoaded: boolean;
+}
+
+const AppearanceSupportContext = createContext<AppearanceSupportValue | null>(null);
 const SupportContext = createContext<SupportValue | null>(null);
 
 export function SupportProvider({ children }: { children: React.ReactNode }) {
   const rewards = useAdRewards();
-  const palette = usePalette();
-  const iconSet = useIconSet();
-  const styleSet = useStyleSet();
+  const paletteState = usePalette();
+  const iconSetState = useIconSet();
+  const styleSetState = useStyleSet();
   const rewarded = useRewardedAd();
   const consent = useAdConsent();
   const locationMarker = useUserLocationMarker();
 
-  const unlockedItemAfter = useCallback((count: number): RewardItem | null => {
-    return ALL_REWARDS.find((r) => r.requiredWatches === count) ?? null;
+  const watchedCount = rewards.watchedCount;
+  const isUnlocked = rewards.isUnlocked;
+  const recordWatch = rewards.recordWatch;
+  const rewardsLoaded = rewards.loaded;
+  const ensureConsent = consent.ensureConsent;
+  const watchRewardedAd = rewarded.watchAd;
+
+  // Older builds accidentally hydrated every reward as unlocked. If a user
+  // selected one of those items, the selection itself may still be persisted.
+  // Once real reward progress is known, reset any selection the count does not
+  // actually entitle the user to.
+  useEffect(() => {
+    if (!rewardsLoaded) return;
+    if (!isUnlocked(paletteState.paletteId)) paletteState.setPaletteId('default');
+    if (!isUnlocked(iconSetState.iconSetId)) iconSetState.setIconSetId('ionicons');
+    if (!isUnlocked(styleSetState.styleSetId)) styleSetState.setStyleSetId('default');
+  }, [
+    rewardsLoaded,
+    isUnlocked,
+    paletteState.paletteId,
+    paletteState.setPaletteId,
+    iconSetState.iconSetId,
+    iconSetState.setIconSetId,
+    styleSetState.styleSetId,
+    styleSetState.setStyleSetId,
+  ]);
+
+  const unlockedItemsAfter = useCallback((count: number): readonly RewardItem[] => {
+    return ALL_REWARDS.filter((reward) => reward.requiredWatches === count);
   }, []);
 
   const remainingFor = useCallback(
     (id: string) => {
-      const reward = ALL_REWARDS.find((r) => r.id === id);
+      const reward = ALL_REWARDS.find((item) => item.id === id);
       if (!reward) return 0;
-      return Math.max(0, reward.requiredWatches - rewards.watchedCount);
+      return Math.max(0, reward.requiredWatches - watchedCount);
     },
-    [rewards.watchedCount],
+    [watchedCount],
   );
 
-  // The ONLY place ad consent is requested.
-  // Only runs as a direct result of the user tapping "Watch an ad"
-  // never on launch, never preloaded, never triggered elsewhere
+  // The only place ad consent is requested. This remains user-initiated from
+  // the rewards UI and never runs as a side effect of mounting the provider.
   const watchAd = useCallback(async (): Promise<WatchResult> => {
-    const allowed = await consent.ensureConsent();
+    // Do not let an ad completion race the persisted reward-progress hydration.
+    // The rewards UI already disables the button while loading; this guard also
+    // makes the provider safe for any future callers.
+    if (!rewardsLoaded) return { earned: false, reason: 'failed' };
+
+    const allowed = await ensureConsent();
     if (!allowed) return { earned: false, reason: 'consent' };
 
-    const earned = await rewarded.watchAd();
+    const earned = await watchRewardedAd();
     if (!earned) return { earned: false, reason: 'failed' };
 
-    const before = rewards.watchedCount;
-    rewards.recordWatch();
-    return { earned: true, unlockedItem: unlockedItemAfter(before + 1) };
-  }, [consent, rewarded, rewards.watchedCount, rewards.recordWatch, unlockedItemAfter]);
+    const nextCount = recordWatch();
+    return { earned: true, unlockedItems: unlockedItemsAfter(nextCount) };
+  }, [rewardsLoaded, ensureConsent, watchRewardedAd, recordWatch, unlockedItemsAfter]);
 
-  const value = useMemo<SupportValue>(
+  // Theme/style consumers are extremely common (cards, map, tab bar). Keep
+  // their context separate from ad/reward state so an ad loading transition
+  // does not invalidate every themed surface in the app.
+  const appearanceValue = useMemo<AppearanceSupportValue>(
     () => ({
-      watchedCount: rewards.watchedCount,
-      isUnlocked: rewards.isUnlocked,
-      remainingFor,
-      unlockedItemAfter,
-      watchAd,
-      adLoaded: rewarded.loaded,
-      adLoading: rewarded.loading,
-      rewardsLoaded: rewards.loaded,
-      palette: palette.palette,
-      paletteId: palette.paletteId,
-      setPaletteId: palette.setPaletteId,
-      paletteVariables: palette.variables,
-      iconSetId: iconSet.iconSetId,
-      setIconSetId: iconSet.setIconSetId,
-      iconSet: iconSet.iconSet,
-      styleSetId: styleSet.styleSetId,
-      setStyleSetId: styleSet.setStyleSetId,
-      styleRules: styleSet.rules,
+      palette: paletteState.palette,
+      paletteId: paletteState.paletteId,
+      setPaletteId: paletteState.setPaletteId,
+      paletteVariables: paletteState.variables,
+      iconSetId: iconSetState.iconSetId,
+      setIconSetId: iconSetState.setIconSetId,
+      iconSet: iconSetState.iconSet,
+      styleSetId: styleSetState.styleSetId,
+      setStyleSetId: styleSetState.setStyleSetId,
+      styleRules: styleSetState.rules,
       marker: locationMarker.marker,
       setMarker: locationMarker.setMarker,
       markerLoaded: locationMarker.loaded,
       availableMarkers: locationMarker.availableMarkers,
     }),
-    [rewards, palette, iconSet, styleSet, rewarded, watchAd, remainingFor, unlockedItemAfter, locationMarker],
+    [
+      paletteState.palette,
+      paletteState.paletteId,
+      paletteState.setPaletteId,
+      paletteState.variables,
+      iconSetState.iconSetId,
+      iconSetState.setIconSetId,
+      iconSetState.iconSet,
+      styleSetState.styleSetId,
+      styleSetState.setStyleSetId,
+      styleSetState.rules,
+      locationMarker.marker,
+      locationMarker.setMarker,
+      locationMarker.loaded,
+      locationMarker.availableMarkers,
+    ],
   );
 
-  return <SupportContext.Provider value={value}>{children}</SupportContext.Provider>;
+  const value = useMemo<SupportValue>(
+    () => ({
+      ...appearanceValue,
+      watchedCount,
+      isUnlocked,
+      remainingFor,
+      unlockedItemsAfter,
+      watchAd,
+      adLoaded: rewarded.loaded,
+      adLoading: rewarded.loading,
+      rewardsLoaded,
+    }),
+    [
+      appearanceValue,
+      watchedCount,
+      isUnlocked,
+      remainingFor,
+      unlockedItemsAfter,
+      watchAd,
+      rewarded.loaded,
+      rewarded.loading,
+      rewardsLoaded,
+    ],
+  );
+
+  return (
+    <AppearanceSupportContext.Provider value={appearanceValue}>
+      <SupportContext.Provider value={value}>{children}</SupportContext.Provider>
+    </AppearanceSupportContext.Provider>
+  );
+}
+
+/** Use for palette/style/icon/marker consumers that do not need reward state. */
+export function useAppearanceSupport(): AppearanceSupportValue {
+  const ctx = useContext(AppearanceSupportContext);
+  if (!ctx) throw new Error('useAppearanceSupport must be used within SupportProvider');
+  return ctx;
 }
 
 export function useSupport(): SupportValue {

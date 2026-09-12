@@ -1,24 +1,20 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useColorScheme } from 'nativewind';
 
-import { useSupport } from './useSupport';
+import { useAppearanceSupport } from './useSupport';
 import type { ColorSlot } from '../theme/types';
 
 /**
- * Return resolved `ui` and `station` color values for the current
- * palette + color scheme.  Unlike `tokens.color[scheme]`, this
- * respects the active palette (not just the default).
+ * Return resolved UI/station colors for the active palette + color scheme.
+ * This intentionally subscribes only to appearance state, not rewards/ad state.
  */
 export function useThemeTokens() {
-  const { palette } = useSupport();
+  const { palette } = useAppearanceSupport();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   const colors = useMemo(() => palette[scheme], [palette, scheme]);
+  const get = useCallback((key: ColorSlot): string => colors[key], [colors]);
 
-  function get(key: ColorSlot): string {
-    return colors[key];
-  }
-
-  return { colors, get, scheme };
+  return useMemo(() => ({ colors, get, scheme }), [colors, get, scheme]);
 }

@@ -5,6 +5,7 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
 
@@ -33,6 +34,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
   function LanguageSheet({ currentLang, onSelectLanguage, onDismiss }, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['40%'], []);
 
     const { colors } = useThemeTokens();
@@ -47,6 +49,11 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
       bottomSheetRef.current?.dismiss();
     }, [onSelectLanguage]);
 
+    const handleDismiss = useCallback(() => {
+      handleSheetDismiss();
+      onDismiss();
+    }, [handleSheetDismiss, onDismiss]);
+
     return (
       <BottomSheetModal
         ref={bottomSheetRef}
@@ -59,7 +66,8 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
           SHEET_HANDLE_INDICATOR_STYLE,
           { backgroundColor: colors.handleIndicator },
         ]}
-        onDismiss={onDismiss}
+        onChange={handleSheetChange}
+        onDismiss={handleDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
         )}

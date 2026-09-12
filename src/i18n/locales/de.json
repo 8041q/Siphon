@@ -5,7 +5,10 @@
     "station": "Tankstelle",
     "unknown_station": "Unbekannte Tankstelle",
     "something_went_wrong": "Etwas ist schiefgelaufen",
-    "and": "und"
+    "and": "und",
+    "loading": "Wird geladen…",
+    "retry": "Erneut versuchen",
+    "using_cached_data": "Zwischengespeicherte Daten werden verwendet"
   },
   "tabs": {
     "map": "Karte",
@@ -18,7 +21,8 @@
     "offline_banner": "Verwende zwischengespeicherte Daten — keine Verbindung",
     "search_area": "Diesen Bereich durchsuchen",
     "empty_search": "Keine Tankstellen gefunden",
-    "stations_found": "Tankstellen: {{count}}"
+    "stations_found": "Tankstellen: {{count}}",
+    "locate_me": "Mich lokalisieren"
   },
   "search": {
     "placeholder": "Tankstellen suchen...",
@@ -44,7 +48,14 @@
     "no_sort": "Standard",
     "sort_price": "Preis",
     "sort_distance": "Entfernung",
-    "sort_fuel": "Kraftstoff für Preisreihenfolge"
+    "sort_fuel": "Kraftstoff für Preisreihenfolge",
+    "any_country": "Beliebiges Land",
+    "more_fuels": "Mehr Kraftstoffe ({{count}})",
+    "fewer_fuels": "Weniger Kraftstoffe anzeigen",
+    "sort_recommended": "Empfohlen",
+    "sort_cheapest": "Niedrigster Preis",
+    "sort_nearest": "Am nächsten",
+    "sort_fuel_hint": "Wählen Sie den Kraftstoffpreis für den Vergleich"
   },
   "favorites": {
     "empty_title": "Noch keine Favoriten",
@@ -69,14 +80,14 @@
     "spanish": "Spanisch",
     "french": "Französisch",
     "german": "Deutsch",
-    "location_marker": "Location Marker",
-    "marker_style": "Style",
-    "marker_icons": "Icons",
-    "marker_svg": "Custom SVG",
-    "marker_image": "Custom Image",
-    "marker_import_image": "Import from Gallery",
-    "marker_change_image": "Change Image",
-    "marker_custom_image": "Custom Image",
+    "location_marker": "Standortmarkierung",
+    "marker_style": "Stil",
+    "marker_icons": "Symbole",
+    "marker_svg": "Benutzerdefiniertes SVG",
+    "marker_image": "Benutzerdefiniertes Bild",
+    "marker_import_image": "Aus Galerie importieren",
+    "marker_change_image": "Bild ändern",
+    "marker_custom_image": "Benutzerdefiniertes Bild",
     "updates": "Updates",
     "update_status": "Status",
     "checking": "Prüfe…",
@@ -118,7 +129,7 @@
     "worth_it": "Lohnt sich — Sie sparen €{{saving}}, die Fahrt kostet €{{cost}}",
     "not_worth": "Lohnt sich nicht — die Fahrt kostet €{{cost}}, die Ersparnis beträgt €{{saving}}",
     "cheapest_nearby": "Günstigste in der Nähe: €{{price}}",
-    "this_is_cheapest": "De goedkoopste",
+    "this_is_cheapest": "Die günstigste in der Nähe",
     "ev_vs_gas": "EV vs Verbrenner - vergelijking",
     "ev_vs_gas_sub": "Terugverdientijd van een elektrische auto",
     "ev_caption": "Vergleicht die Gesamtkosten und CO₂ eines E-Autos mit einem Benzin-/Dieselauto über die gesamte Lebensdauer, inklusive dem einmaligen Batterietausch.",
@@ -197,7 +208,6 @@
     "watch_ad": "Anzeige ansehen",
     "rewards_ad_loading": "Anzeige wird geladen…",
     "rewards_palettes": "Farbpaletten",
-    "rewards_palettes": "Farbpaletten",
     "rewards_icons": "Symbolsätze",
     "rewards_styles": "Stile",
     "rewards_markers": "Standort-Marker",
@@ -206,7 +216,23 @@
     "reward_svg_flame": "Flamme",
     "reward_svg_leaf": "Blatt",
     "reward_svg_crown": "Krone",
-    "rewards_footnote": "Anzeigen sind freiwillig und stören nie. Eine anzusehen schaltet die nächste Belohnung frei."
+    "rewards_footnote": "Anzeigen sind freiwillig und stören nie. Eine anzusehen schaltet die nächste Belohnung frei.",
+    "worth_round_trip": "{{distance}} Hin- und Rückfahrt",
+    "worth_unit_mismatch": "Dieser Kraftstoff kann nicht verglichen werden, weil Stationspreis und Fahrzeugkapazität unterschiedliche Einheiten verwenden.",
+    "worth_out_of_range": "Diese Tankstelle liegt außerhalb der konfigurierten Reichweite mit einer Tankfüllung.",
+    "worth_no_comparison": "Im Umkreis von {{radius}} km gibt es nicht genügend vergleichbare Tankstellen für diese Bewertung.",
+    "worth_reference": "Beste Alternative in der Nähe: {{station}} · €{{price}} · {{distance}} entfernt",
+    "worth_full_tank_saving": "Preisvorteil bei einer vollen Tankfüllung: €{{saving}}",
+    "worth_extra_trip_cost": "Zusätzliche Fahrtkosten gegenüber der Alternative: €{{cost}}",
+    "worth_trip_cost_saved": "Sie sparen gegenüber der Alternative etwa €{{cost}} an Fahrtkosten",
+    "worth_break_even_fill": "Mindestmenge gegenüber dieser Alternative: {{amount}} {{unit}}",
+    "worth_break_even_over_capacity": "Selbst eine volle Tankfüllung würde die zusätzlichen Fahrtkosten nicht ausgleichen.",
+    "worth_net_saved": "Lohnt sich — insgesamt etwa €{{amount}} günstiger",
+    "worth_net_loss": "Lohnt sich nicht — insgesamt etwa €{{amount}} teurer",
+    "worth_estimated_distance": "Es wird eine geschätzte Entfernung verwendet, während die reale Route berechnet wird.",
+    "worth_full_tank_assumption": "Der Vergleich geht von einer Füllung bis zur konfigurierten Fahrzeugkapazität aus.",
+    "worth_full_tank_extra": "Der Kraftstoffpreis kostet bei einer vollen Tankfüllung €{{cost}} mehr",
+    "worth_net_even": "Insgesamt praktisch gleich teuer"
   },
   "screen": {
     "price_history": "Preisverlauf"
@@ -235,7 +261,10 @@
     "forecast_disclaimer": "Statistische Schätzung auf Basis der letzten 80 Tage. Preise hängen von Marktbedingungen ab — keine Finanzberatung.",
     "banner_title": "Heute tanken!",
     "banner_low30": "Der aktuelle Preis ist ein 30-Tage-Tiefststand.",
-    "banner_drop": "Die Preise sind diese Woche um {{pct}}% gefallen."
+    "banner_drop": "Die Preise sind diese Woche um {{pct}}% gefallen.",
+    "station_not_found": "Tankstelle nicht gefunden.",
+    "no_fuels": "Für diese Tankstelle sind keine Kraftstoffpreisdaten verfügbar.",
+    "no_history": "Für diesen Kraftstoff ist noch kein Preisverlauf verfügbar."
   },
   "station": {
     "view_price_history": "Preisverlauf anzeigen",
@@ -277,7 +306,11 @@
     "payment_multibanco": "Karte",
     "payment_mbway": "Mobil",
     "payment_outros": "Sonstige",
-    "payment_disclaimer": "Zahlungsinformationen aus offiziellem Register — möglicherweise unvollständig"
+    "payment_disclaimer": "Zahlungsinformationen aus offiziellem Register — möglicherweise unvollständig",
+    "copy_address": "Adresse kopieren",
+    "add_favorite": "Zu Favoriten hinzufügen",
+    "remove_favorite": "Aus Favoriten entfernen",
+    "payment_info": "Informationen zu Zahlungsmethoden"
   },
   "price_chart": {
     "no_data": "Preisverlauf nicht verfügbar.",

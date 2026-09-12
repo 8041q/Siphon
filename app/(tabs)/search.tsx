@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,25 +8,33 @@ import { Icon } from '../../src/components/ui/icon';
 import { StationCard } from '../../src/components/StationCard';
 import { FilterSheet } from '../../src/components/FilterSheet';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
-import { useStations, useLocationState, useUI } from '../../src/hooks/useApp';
+import { useStationCatalog, useStationDistances, useStationSync, useLocationState, useUI } from '../../src/hooks/useApp';
 import { tabBarClearance } from '../../src/theme/layout';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 import { roadEstimateKm } from '../../src/utils/routeDistance';
 
+const ItemSeparator = () => <View style={{ height: 12 }} />;
+
 export default function SearchScreen() {
   const { t } = useTranslation();
-  const { allStations } = useStations();
+  const { allStations } = useStationCatalog();
+  const { stationDistances, routedStationIds, distanceLoading } = useStationDistances();
+  const { loading, error, offline, reload } = useStationSync();
   const { setSelectedStation, favorites, toggleFavorite, searchFilter, setSearchFilter } = useUI();
   const { location } = useLocationState();
   const { colors } = useThemeTokens();
   const filterSheetRef = useRef<{ present: () => void }>(null);
 
   const [brandQuery, setBrandQuery] = useState('');
+  const deferredBrandQuery = useDeferredValue(brandQuery);
+
+  const needsDistanceData = Boolean(searchFilter.maxDistance || searchFilter.sortBy === 'distance');
+  const relevantDistances = needsDistanceData ? stationDistances : null;
 
   const filterCount = useMemo(() => {
     let count = 0;
-    if (searchFilter.countries && searchFilter.countries.length > 0) count++;
-    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) count++;
+    if (searchFilter.countries?.length) count++;
+    if (searchFilter.fuelTypes?.length) count++;
     if (searchFilter.priceRange) count++;
     if (searchFilter.city?.trim()) count++;
     if (searchFilter.maxDistance) count++;
@@ -38,126 +46,158 @@ export default function SearchScreen() {
     (station: FuelStationFeature) => {
       setSelectedStation(station);
     },
-    [setSelectedStation]
+    [setSelectedStation],
   );
 
-  const secondaryLabel = colors.secondaryLabel;
-
-  const filtered = useMemo(() => {
-    let result = allStations;
-
-    if (brandQuery.trim()) {
-      const q = brandQuery.trim().toLowerCase();
-      result = result.filter(
-        (s) =>
-          (s.properties.brand ?? '').toLowerCase().includes(q) ||
-          (s.properties.name ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    if (searchFilter.countries && searchFilter.countries.length > 0) {
-      result = result.filter((s) =>
-        searchFilter.countries!.includes(s.properties.source)
-      );
-    }
-
-    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
-      result = result.filter((s) => {
-        const fuels = s.properties.fuels ?? {};
-        return searchFilter.fuelTypes!.some((key) => key in fuels);
-      });
-    }
-
-    if (searchFilter.priceRange) {
-      const max = searchFilter.priceRange.max;
-      result = result.filter((s) => {
-        const fuels = s.properties.fuels ?? {};
-        if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
-          return searchFilter.fuelTypes.some((key) => typeof fuels[key] === 'number' && fuels[key] < max);
-        }
-        return Object.values(fuels).some((p) => Number(p) < max);
-      });
-    }
-
-    if (searchFilter.city?.trim()) {
-      const q = searchFilter.city.trim().toLowerCase();
-      result = result.filter((s) => {
-        const p = s.properties;
-        return (
-          (p.municipality ?? '').toLowerCase().includes(q) ||
-          (p.city ?? '').toLowerCase().includes(q) ||
-          (p.address ?? '').toLowerCase().includes(q)
-        );
-      });
-    }
-
-    if (searchFilter.maxDistance && location) {
-      const maxKm = searchFilter.maxDistance;
-      const userLat = location.latitude;
-      const userLng = location.longitude;
-
-      const withDistance = result.map((s) => {
-        const [slng, slat] = s.geometry.coordinates;
-        const dist = roadEstimateKm(userLat, userLng, slat, slng);
-        return { station: s, distance: dist };
-      });
-
-      const withinRange = withDistance.filter((d) => d.distance <= maxKm);
-      withinRange.sort((a, b) => a.distance - b.distance);
-
-      return withinRange.map((d) => d.station);
-    }
-
-    return result;
-  }, [brandQuery, allStations, searchFilter.countries, searchFilter.fuelTypes, searchFilter.priceRange, searchFilter.city, searchFilter.maxDistance, location]);
-
   const results = useMemo(() => {
-    if (!searchFilter.sortBy) return filtered;
+    const brandNeedle = deferredBrandQuery.trim().toLocaleLowerCase();
+    const cityNeedle = searchFilter.city?.trim().toLocaleLowerCase() ?? '';
+    const countries = searchFilter.countries;
+    const fuelTypes = searchFilter.fuelTypes;
+    const priceMax = searchFilter.priceRange?.max;
+    const maxDistance = searchFilter.maxDistance;
+    const sortBy = searchFilter.sortBy;
+    const needsDistance = Boolean(location && (maxDistance || sortBy === 'distance'));
+    const distanceById = needsDistance ? new Map<string, number>() : null;
 
-    const result = [...filtered];
-    if (searchFilter.sortBy === 'price') {
-      const fuelKey = searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95';
-      result.sort((a, b) => {
-        const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
-        const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
-        return priceA - priceB;
+    let result = allStations.filter((station) => {
+      const properties = station.properties;
+
+      if (brandNeedle) {
+        const brand = (properties.brand ?? '').toLocaleLowerCase();
+        const name = (properties.name ?? '').toLocaleLowerCase();
+        if (!brand.includes(brandNeedle) && !name.includes(brandNeedle)) return false;
+      }
+
+      if (countries?.length && !countries.includes(properties.source)) return false;
+
+      const fuels = properties.fuels ?? {};
+      if (fuelTypes?.length && !fuelTypes.some((key) => key in fuels)) return false;
+
+      if (priceMax != null) {
+        const relevantPrices = fuelTypes?.length
+          ? fuelTypes.map((key) => fuels[key])
+          : Object.values(fuels);
+        if (!relevantPrices.some((price) => typeof price === 'number' && Number.isFinite(price) && price < priceMax)) {
+          return false;
+        }
+      }
+
+      if (cityNeedle) {
+        const municipality = properties.municipality.toLocaleLowerCase();
+        const administrativeArea =
+          (properties.source === 'PT' ? properties.district : properties.province).toLocaleLowerCase();
+        const address = properties.address.toLocaleLowerCase();
+        if (
+          !municipality.includes(cityNeedle) &&
+          !administrativeArea.includes(cityNeedle) &&
+          !address.includes(cityNeedle)
+        ) {
+          return false;
+        }
+      }
+
+      if (distanceById && location) {
+        const [stationLng, stationLat] = station.geometry.coordinates;
+        const distance =
+          relevantDistances?.get(properties.id) ??
+          roadEstimateKm(location.latitude, location.longitude, stationLat, stationLng);
+        distanceById.set(properties.id, distance);
+        if (maxDistance && distance > maxDistance) return false;
+      }
+
+      return true;
+    });
+
+    if (sortBy === 'price') {
+      const fuelKey = searchFilter.sortByFuel ?? fuelTypes?.[0] ?? 'gasoline95';
+      result = [...result].sort((a, b) => {
+        const priceA = a.properties.fuels?.[fuelKey];
+        const priceB = b.properties.fuels?.[fuelKey];
+        const safeA = typeof priceA === 'number' && Number.isFinite(priceA) ? priceA : Number.POSITIVE_INFINITY;
+        const safeB = typeof priceB === 'number' && Number.isFinite(priceB) ? priceB : Number.POSITIVE_INFINITY;
+        return safeA - safeB;
       });
-    } else if (searchFilter.sortBy === 'distance' && location) {
-      const userLat = location.latitude;
-      const userLng = location.longitude;
-      result.sort((a, b) => {
-        const [aLng, aLat] = a.geometry.coordinates;
-        const [bLng, bLat] = b.geometry.coordinates;
-        return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
-      });
+    } else if (sortBy === 'distance' && distanceById) {
+      result = [...result].sort(
+        (a, b) =>
+          (distanceById.get(a.properties.id) ?? Number.POSITIVE_INFINITY) -
+          (distanceById.get(b.properties.id) ?? Number.POSITIVE_INFINITY),
+      );
     }
 
     return result;
-  }, [filtered, searchFilter.sortBy, searchFilter.sortByFuel, searchFilter.fuelTypes, location]);
+  }, [allStations, deferredBrandQuery, location, relevantDistances, searchFilter]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <View className="flex-1">
         <View className="px-4 flex-row items-center gap-2">
           <View className="flex-1">
-            <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} secondaryLabel={secondaryLabel} />
+            <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} secondaryLabel={colors.secondaryLabel} />
           </View>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => filterSheetRef.current?.present()}
-              style={{ backgroundColor: colors.groupedBackground, borderRadius: 8, padding: 12 }}
-            >
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => filterSheetRef.current?.present()}
+            style={{ backgroundColor: colors.groupedBackground, borderRadius: 8, padding: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={
+              filterCount > 0
+                ? t('search.active_filters', { count: filterCount })
+                : t('search.filters')
+            }
+            accessibilityState={{ selected: filterCount > 0 }}
+          >
             <View className="relative">
-              <Icon name="filter_list" size={20} color={secondaryLabel} />
+              <Icon name="filter_list" size={20} color={colors.secondaryLabel} />
               {filterCount > 0 && (
-                <View style={{ position: 'absolute', top: -6, right: -6, backgroundColor: colors.tint, borderRadius: 9999, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                  <Text className="text-[10px] font-bold">{filterCount}</Text>
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    end: -6,
+                    backgroundColor: colors.tint,
+                    borderRadius: 9999,
+                    minWidth: 16,
+                    height: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 4,
+                  }}
+                >
+                  <Text className="text-[10px] font-bold" style={{ color: colors.labelOnTint }}>
+                    {filterCount}
+                  </Text>
                 </View>
               )}
             </View>
           </TouchableOpacity>
         </View>
-        <StationList results={results} handleStationPress={handleStationPress} favorites={favorites} onToggleFavorite={toggleFavorite} />
+
+        {allStations.length > 0 && (offline || error) && (
+          <View
+            style={{ backgroundColor: colors.groupedBackground }}
+            className="mx-4 mt-sm rounded-md px-md py-sm"
+            accessibilityLiveRegion="polite"
+          >
+            <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
+              {t('common.using_cached_data')}
+            </Text>
+          </View>
+        )}
+
+        <StationList
+          results={results}
+          handleStationPress={handleStationPress}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
+          stationDistances={stationDistances}
+          routedStationIds={routedStationIds}
+          distanceLoading={distanceLoading}
+          loading={loading && allStations.length === 0}
+          error={allStations.length === 0 ? error : null}
+          onRetry={reload}
+        />
       </View>
 
       <FilterSheet
@@ -169,32 +209,140 @@ export default function SearchScreen() {
   );
 }
 
-function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: { brandQuery: string; setBrandQuery: (q: string) => void; secondaryLabel: string }) {
+type SearchBarProps = {
+  brandQuery: string;
+  setBrandQuery: (query: string) => void;
+  secondaryLabel: string;
+};
+
+function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: SearchBarProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.groupedBackground, borderRadius: 8, paddingHorizontal: 12, height: 44 }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.groupedBackground,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        height: 44,
+      }}
+    >
       <Icon name="magnifyingglass" size={20} color={secondaryLabel} />
       <TextInput
         value={brandQuery}
         onChangeText={setBrandQuery}
         placeholder={t('search.placeholder')}
         placeholderTextColor={secondaryLabel}
-        className="flex-1 ml-2 py-0"
-        style={{ color: colors.label, textAlignVertical: 'center' }}
+        style={{
+          flex: 1,
+          marginStart: 8,
+          paddingVertical: 0,
+          color: colors.label,
+          textAlignVertical: 'center',
+        }}
+        returnKeyType="search"
+        autoCorrect={false}
+        accessibilityLabel={t('search.placeholder')}
       />
     </View>
   );
 }
 
-function StationList({ results, handleStationPress, favorites, onToggleFavorite }: { results: FuelStationFeature[]; handleStationPress: (station: FuelStationFeature) => void; favorites?: Set<string>; onToggleFavorite?: (station: FuelStationFeature) => void }) {
+type StationListProps = {
+  results: FuelStationFeature[];
+  handleStationPress: (station: FuelStationFeature) => void;
+  favorites?: Set<string>;
+  onToggleFavorite?: (station: FuelStationFeature) => void;
+  stationDistances: ReadonlyMap<string, number>;
+  routedStationIds: ReadonlySet<string>;
+  distanceLoading: boolean;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+};
+
+const StationList = memo(function StationList({
+  results,
+  handleStationPress,
+  favorites,
+  onToggleFavorite,
+  stationDistances,
+  routedStationIds,
+  distanceLoading,
+  loading,
+  error,
+  onRetry,
+}: StationListProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
   const insets = useSafeAreaInsets();
-  if (!results || results.length === 0) {
+
+  const listExtraData = useMemo(
+    () => ({ favorites, stationDistances, routedStationIds, distanceLoading }),
+    [favorites, stationDistances, routedStationIds, distanceLoading],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FuelStationFeature }) => (
+      <StationCard
+        station={item}
+        onPress={handleStationPress}
+        favorite={favorites?.has(item.properties.id) ?? false}
+        onToggleFavorite={onToggleFavorite}
+        distanceKm={stationDistances.get(item.properties.id)}
+        distanceLoading={distanceLoading}
+        distanceRouted={routedStationIds.has(item.properties.id)}
+      />
+    ),
+    [
+      favorites,
+      handleStationPress,
+      onToggleFavorite,
+      stationDistances,
+      routedStationIds,
+      distanceLoading,
+    ],
+  );
+
+  if (loading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-title-3" style={{ color: colors.secondaryLabel }}>
+      <View className="flex-1 items-center justify-center px-xl" accessibilityLiveRegion="polite">
+        <Text className="text-title-3 text-center" style={{ color: colors.secondaryLabel }}>
+          {t('common.loading')}
+        </Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center px-xl gap-md" accessibilityLiveRegion="assertive">
+        <Text className="text-title-3 text-center" style={{ color: colors.secondaryLabel }}>
+          {t('common.something_went_wrong')}
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.retry')}
+          style={{ backgroundColor: colors.tint }}
+          className="rounded-md px-lg py-sm"
+        >
+          <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">
+            {t('common.retry')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center px-xl" accessibilityLiveRegion="polite">
+        <Text className="text-title-3 text-center" style={{ color: colors.secondaryLabel }}>
           {t('search.no_results')}
         </Text>
       </View>
@@ -203,7 +351,7 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
 
   return (
     <View className="flex-1 gap-1 pt-lg" style={{ overflow: 'hidden' }}>
-        <Text className="text-headline mb-sm px-4" style={{ color: colors.label }}>
+      <Text className="text-headline mb-sm px-4" style={{ color: colors.label }}>
         {t('search.results_header')} ({results.length})
       </Text>
       <FlashList
@@ -211,12 +359,11 @@ function StationList({ results, handleStationPress, favorites, onToggleFavorite 
         keyExtractor={(item) => item.properties.id}
         style={{ flex: 1, overflow: 'hidden' }}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        renderItem={({ item }) => (
-          <StationCard station={item} onPress={handleStationPress} favorites={favorites} onToggleFavorite={onToggleFavorite} />
-        )}
+        ItemSeparatorComponent={ItemSeparator}
+        renderItem={renderItem}
+        extraData={listExtraData}
+        keyboardShouldPersistTaps="handled"
       />
     </View>
   );
-}
-
+});

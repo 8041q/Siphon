@@ -1,33 +1,47 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { FuelDataClient, FuelStationFeature, CountryCode } from '../api/siphonClient';
+import { FuelDataClient, isFuelKey, type FuelKey, type FuelStationFeature, type CountryCode } from '../api/siphonClient';
 import { RateLimitedError } from '../api/rateLimit';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
-import { roadEstimateKm, roadDistanceKm } from '../utils/routeDistance';
+import { roadEstimateKm, roadDistanceKm, roadDistancesKm } from '../utils/routeDistance';
 import { enrichStations } from '../utils/markerEnrichment';
 import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
 import i18n from '../i18n';
 
 const OSRM_ENRICH_LIMIT = 100;
+const OSRM_TABLE_BATCH_SIZE = 20;
 
-interface StationState {
-  stations: FuelStationFeature[];
+interface StationCatalogState {
   allStations: FuelStationFeature[];
+  getStationById: (id: string) => FuelStationFeature | undefined;
+}
+
+interface StationMapDataState {
+  stations: FuelStationFeature[];
+  filteredStations: FuelStationFeature[];
+}
+
+interface StationDistanceState {
   stationDistances: Map<string, number>;
+  routedStationIds: ReadonlySet<string>;
   distanceLoading: boolean;
-  distanceImproving: boolean;
-  improveDistances: () => void;
+  ensureRoutedDistance: (station: FuelStationFeature) => Promise<void>;
+  isDistanceRouted: (stationId: string) => boolean;
+}
+
+interface StationSyncState {
   loading: boolean;
   error: string | null;
   offline: boolean;
   rateLimited: boolean;
   syncProgress: string | null;
-  filteredStations: FuelStationFeature[];
   reload: () => void;
 }
+
+export type StationState = StationCatalogState & StationMapDataState & StationDistanceState & StationSyncState;
 
 interface LocationState {
   location: ReturnType<typeof useLocation>['location'];
@@ -41,12 +55,12 @@ export type SortOption = 'price' | 'distance';
 export type SearchFilter = {
   brand?: string;
   countries?: CountryCode[];
-  fuelTypes?: string[];
+  fuelTypes?: FuelKey[];
   priceRange?: { max: number } | null;
   city?: string;
   maxDistance?: number;
   sortBy?: SortOption;
-  sortByFuel?: string;
+  sortByFuel?: FuelKey;
 };
 
 interface UIState {
@@ -64,7 +78,10 @@ interface Actions {
   loadStationsForRegion: (lat: number, lng: number, bounds?: [number, number, number, number]) => Promise<FuelStationFeature[]>;
 }
 
-const StationContext = createContext<StationState | null>(null);
+const StationCatalogContext = createContext<StationCatalogState | null>(null);
+const StationMapDataContext = createContext<StationMapDataState | null>(null);
+const StationDistanceContext = createContext<StationDistanceState | null>(null);
+const StationSyncContext = createContext<StationSyncState | null>(null);
 const LocationContext = createContext<LocationState | null>(null);
 const UIContext = createContext<UIState | null>(null);
 const ActionsContext = createContext<Actions | null>(null);
@@ -83,16 +100,31 @@ function defaultSearchFilter(): SearchFilter {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { location, requesting: requestingLocation, refresh: refreshLocation, locateWithGps } = useLocation();
+  const {
+    location,
+    requesting: requestingLocation,
+    hydrated: locationHydrated,
+    refresh: refreshLocation,
+    locateWithGps,
+  } = useLocation();
   const [stations, setStations] = useState<FuelStationFeature[]>([]);
   const [allStations, setAllStations] = useState<FuelStationFeature[]>([]);
+  const allStationsById = useMemo(() => {
+    const index = new Map<string, FuelStationFeature>();
+    for (const station of allStations) index.set(station.properties.id, station);
+    return index;
+  }, [allStations]);
+  const getStationById = useCallback(
+    (id: string) => allStationsById.get(id),
+    [allStationsById],
+  );
   const [stationDistances, setStationDistances] = useState<Map<string, number>>(new Map());
+  const [routedStationIds, setRoutedStationIds] = useState<Set<string>>(new Set());
+  const routedStationIdsRef = useRef<Set<string>>(routedStationIds);
+  routedStationIdsRef.current = routedStationIds;
   const [distanceLoading, setDistanceLoading] = useState(false);
-  const [distanceImproving, setDistanceImproving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const stationDistancesRef = useRef<Map<string, number>>(stationDistances);
-  stationDistancesRef.current = stationDistances;
 
   const [offline, setOffline] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
@@ -100,104 +132,174 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
   const [searchFilter, setSearchFilter] = useState<SearchFilter>(defaultSearchFilter());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const favoritesRef = useRef<Set<string>>(favorites);
+  favoritesRef.current = favorites;
   const [historyEnabled, setHistoryEnabledState] = useState(true);
-  const started = useRef(false);
+  const bootLoadStartedRef = useRef(false);
+  const hydrationSeqRef = useRef(0);
   const changedCountriesRef = useRef<CountryCode[]>([]);
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const regionWaiterRef = useRef<((stations: FuelStationFeature[]) => void) | null>(null);
+  const regionWaiterRef = useRef<{ seq: number; resolve: (stations: FuelStationFeature[]) => void } | null>(null);
+  const regionRequestSeqRef = useRef(0);
+  const loadSeqRef = useRef(0);
+  const enrichSeqRef = useRef(0);
+  const enrichingRef = useRef(false);
+  const autoRouteKeyRef = useRef<string | null>(null);
+  const distanceLocationKeyRef = useRef<string | null>(null);
   const unmountedRef = useRef(false);
 
   const handleSetSearchFilter = useCallback((f: SearchFilter) => {
     setSearchFilter(f);
-    AsyncStorage.setItem(SEARCH_FILTER_KEY, JSON.stringify(f));
+    void AsyncStorage.setItem(SEARCH_FILTER_KEY, JSON.stringify(f)).catch(() => undefined);
   }, []);
 
   const toggleFavorite = useCallback((station: FuelStationFeature) => {
     const id = station.properties.id;
-    setFavorites((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify([...newSet]));
-      return newSet;
-    });
+    const next = new Set(favoritesRef.current);
+    const adding = !next.has(id);
+    if (adding) next.add(id);
+    else next.delete(id);
+
+    favoritesRef.current = next;
+    setFavorites(next);
+    if (adding) {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    }
+    void AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify([...next])).catch(() => undefined);
   }, []);
 
-  const setHistoryEnabled = useCallback(async (enabled: boolean) => {
+  const setHistoryEnabled = useCallback((enabled: boolean) => {
     setHistoryEnabledState(enabled);
-    await AsyncStorage.setItem(HISTORY_ENABLED_KEY, String(enabled));
+    void AsyncStorage.setItem(HISTORY_ENABLED_KEY, String(enabled)).catch(() => undefined);
   }, []);
 
   useEffect(() => {
     unmountedRef.current = false;
-    return () => { unmountedRef.current = true; };
+    return () => {
+      unmountedRef.current = true;
+      loadSeqRef.current += 1;
+      enrichSeqRef.current += 1;
+      enrichingRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (!started.current) {
-      started.current = true;
-      refreshLocation();
-      AsyncStorage.getItem(HISTORY_ENABLED_KEY).then((val) => {
-        if (val === 'false') setHistoryEnabledState(false);
-      });
-      AsyncStorage.getItem(SEARCH_FILTER_KEY).then((val) => {
-        if (val) {
-          try {
-            const parsed = JSON.parse(val) as SearchFilter;
-            if ('fuelType' in parsed && !('fuelTypes' in parsed)) {
-              (parsed as any).fuelTypes = parsed.fuelType ? [parsed.fuelType] : undefined;
-              delete (parsed as any).fuelType;
-            }
-            setSearchFilter(parsed);
-          } catch {}
+    const run = ++hydrationSeqRef.current;
+    void refreshLocation();
+
+    void (async () => {
+      const [historyRaw, searchRaw, favoritesRaw] = await Promise.all([
+        AsyncStorage.getItem(HISTORY_ENABLED_KEY).catch(() => null),
+        AsyncStorage.getItem(SEARCH_FILTER_KEY).catch(() => null),
+        AsyncStorage.getItem(FAVORITES_KEY).catch(() => null),
+      ]);
+      if (unmountedRef.current || hydrationSeqRef.current !== run) return;
+
+      if (historyRaw === 'false') setHistoryEnabledState(false);
+
+      if (searchRaw) {
+        try {
+          const raw = JSON.parse(searchRaw) as Record<string, unknown>;
+          const fuelTypes =
+            Array.isArray(raw.fuelTypes)
+              ? raw.fuelTypes.filter((value): value is FuelKey => typeof value === 'string' && isFuelKey(value))
+              : typeof raw.fuelType === 'string' && isFuelKey(raw.fuelType)
+                ? [raw.fuelType]
+                : undefined;
+
+          const parsed: SearchFilter = {
+            brand: typeof raw.brand === 'string' ? raw.brand : undefined,
+            countries: Array.isArray(raw.countries)
+              ? raw.countries.filter((value): value is CountryCode => value === 'ES' || value === 'PT')
+              : undefined,
+            fuelTypes,
+            priceRange:
+              raw.priceRange && typeof raw.priceRange === 'object' &&
+              typeof (raw.priceRange as { max?: unknown }).max === 'number'
+                ? { max: (raw.priceRange as { max: number }).max }
+                : null,
+            city: typeof raw.city === 'string' ? raw.city : undefined,
+            maxDistance: typeof raw.maxDistance === 'number' ? raw.maxDistance : undefined,
+            sortBy: raw.sortBy === 'price' || raw.sortBy === 'distance' ? raw.sortBy : undefined,
+            sortByFuel: typeof raw.sortByFuel === 'string' && isFuelKey(raw.sortByFuel) ? raw.sortByFuel : undefined,
+          };
+          setSearchFilter(parsed);
+        } catch {
+          // Ignore corrupt persisted filters.
         }
-      });
-      AsyncStorage.getItem(FAVORITES_KEY).then((val) => {
-        if (val) {
-          try {
-            const parsed = JSON.parse(val) as string[];
-            setFavorites(new Set(parsed));
-          } catch {}
+      }
+
+      if (favoritesRaw) {
+        try {
+          const parsed = JSON.parse(favoritesRaw) as unknown;
+          if (Array.isArray(parsed)) {
+            const nextFavorites = new Set(parsed.filter((value): value is string => typeof value === 'string'));
+            favoritesRef.current = nextFavorites;
+            setFavorites(nextFavorites);
+          }
+        } catch {
+          // Ignore corrupt persisted favorites.
         }
-      });
-    }
+      }
+    })();
+
+    return () => {
+      if (hydrationSeqRef.current === run) hydrationSeqRef.current += 1;
+    };
   }, [refreshLocation]);
 
-  const loadAllStationsData = useCallback(async () => {
+  const rebuildAllStationsData = useCallback(async (): Promise<FuelStationFeature[]> => {
     try {
-      const cached = await client.loadAllStationsCache();
-      if (cached && cached.length > 0) {
-        setAllStations(cached);
-        return;
-      }
       const all = await client.getAllCachedStations();
-      if (unmountedRef.current) return;
+      if (unmountedRef.current) return [];
       setAllStations(all);
-      await client.saveAllStationsCache(all);
-    } catch (e) {
-      console.warn('[loadAllStationsData] failed:', e);
+      await client.saveAllStationsCache(all).catch(() => undefined);
+      return all;
+    } catch (error) {
+      if (!unmountedRef.current) console.warn('[rebuildAllStationsData] failed:', error);
+      return [];
     }
   }, []);
 
+  const loadAllStationsData = useCallback(async (): Promise<FuelStationFeature[]> => {
+    try {
+      const cached = await client.loadAllStationsCache();
+      if (unmountedRef.current) return [];
+      if (cached && cached.length > 0) {
+        setAllStations(cached);
+        return cached;
+      }
+      return rebuildAllStationsData();
+    } catch (error) {
+      if (!unmountedRef.current) console.warn('[loadAllStationsData] failed:', error);
+      return [];
+    }
+  }, [rebuildAllStationsData]);
+
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setOffline(false);
-    setRateLimited(false);
-    setSyncProgress(null);
+    const run = ++loadSeqRef.current;
+    const isActive = () => !unmountedRef.current && loadSeqRef.current === run;
+
+    if (isActive()) {
+      setLoading(true);
+      setError(null);
+      setOffline(false);
+      setRateLimited(false);
+      setSyncProgress(null);
+    }
 
     try {
       // Hard guard: if we're inside a GitHub backoff window or the hourly
-      // budget is gone, run entirely from cache. Cooldown (we just synced)
-      // is silent — data is already fresh. Blocked surfaces a notice.
+      // budget is gone, run entirely from cache. Cooldown is intentionally silent.
       const gate = await client.rateLimiter.shouldRunSync();
+      if (!isActive()) return;
+
       if (gate === 'blocked') {
         setRateLimited(true);
-        await loadAllStationsData();
+        const cached = await loadAllStationsData();
+        if (isActive() && cached.length === 0) {
+          setError(i18n.t('common.something_went_wrong'));
+        }
         return;
       }
       if (gate === 'cooldown') {
@@ -205,136 +307,265 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      await client.rateLimiter.recordSyncStarted();
-
       setSyncProgress(i18n.t('sync.checking_updates'));
       const result = await client.checkForUpdates();
-      setOffline(result.offline);
-      changedCountriesRef.current = result.changedCountries;
+      if (!isActive()) return;
 
+      setOffline(result.offline);
+
+      // A failed root-manifest request already tells us the network is not
+      // usable. Do not immediately follow it with manifest/tile/history calls.
+      if (result.offline) {
+        changedCountriesRef.current = [];
+        const cached = await loadAllStationsData();
+        if (isActive() && cached.length === 0) setError(i18n.t('sync.no_connection'));
+        return;
+      }
+
+      changedCountriesRef.current = result.changedCountries;
       setSyncProgress(i18n.t('sync.syncing_data'));
+
       await client.syncAll(result.changedCountries, (loaded, total) => {
+        if (!isActive()) return;
         if (total > 0 && result.changedCountries.length > 0) {
           setSyncProgress(i18n.t('sync.syncing_progress', { loaded, total }));
         }
       });
+      if (!isActive()) return;
 
-      // Price history: gated by the settings toggle. Reads the stored flag
-      // directly so the check is strictly skipped when disabled, regardless
-      // of state hydration timing. Runs exactly once per launch — there is
-      // no manual refresh path that could spam the API.
-      if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY)) !== 'false') {
+      if (result.root) {
+        await client.commitRootManifest(result.root, result.etag);
+        if (!isActive()) return;
+      }
+
+      // Country hashes are now reflected in local manifests/tiles. Keeping this
+      // list around would make every later map pan re-fetch those manifests.
+      changedCountriesRef.current = [];
+
+      if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY).catch(() => null)) !== 'false') {
         await client.checkHistoryUpdates();
       }
+      if (!isActive()) return;
 
-      // Commodity dashboard: a single tiny file, always fetched once per
-      // launch (hash-gated so unchanged → zero network traffic).
-      await client.refreshCommodityDashboard().catch(() => {});
-
-      await loadAllStationsData();
-
-      if (result.offline) {
-        setError(i18n.t('sync.no_connection'));
-      }
-    } catch (e: any) {
-      if (e instanceof RateLimitedError) {
-        setRateLimited(true);
+      await client.refreshCommodityDashboard().catch(() => undefined);
+      if (result.changedCountries.length > 0) {
+        await rebuildAllStationsData();
       } else {
-        setError(e.message ?? i18n.t('common.something_went_wrong'));
+        await loadAllStationsData();
+      }
+      if (!isActive()) return;
+
+      // Cooldown means the previous sync actually completed successfully.
+      await client.rateLimiter.recordSyncCompleted().catch(() => undefined);
+    } catch (error: unknown) {
+      changedCountriesRef.current = [];
+      if (!isActive()) return;
+
+      // Network/rate-limit failures should still leave the app usable when
+      // local station data exists.
+      const cached = await loadAllStationsData();
+      if (!isActive()) return;
+
+      if (error instanceof RateLimitedError) {
+        setRateLimited(true);
+        if (cached.length === 0) setError(i18n.t('common.something_went_wrong'));
+      } else if (cached.length > 0) {
+        setOffline(true);
+      } else {
+        const message = error instanceof Error ? error.message : i18n.t('common.something_went_wrong');
+        setError(message);
       }
     } finally {
-      setLoading(false);
-      setSyncProgress(null);
+      if (isActive()) {
+        setLoading(false);
+        setSyncProgress(null);
+      }
     }
-  }, [loadAllStationsData]);
+  }, [loadAllStationsData, rebuildAllStationsData]);
 
   useEffect(() => {
-    if (started.current && !requestingLocation) {
-      load();
-    }
-  }, [requestingLocation, load]);
+    if (!locationHydrated || bootLoadStartedRef.current) return;
+    bootLoadStartedRef.current = true;
+    void load();
+  }, [locationHydrated, load]);
 
-  // Instant, low-accuracy road estimates for every station as soon as we know
-  // the user's location. This is synchronous and never blocks the UI.
+  // Keep an already-open detail sheet attached to the freshest station object
+  // after a successful sync/cache rebuild. Without this, the map/list can show
+  // new prices while the sheet keeps the pre-sync object until it is reopened.
+  useEffect(() => {
+    if (loading || !selectedStation || allStations.length === 0) return;
+    const latest = allStationsById.get(selectedStation.properties.id);
+    if (latest && latest !== selectedStation) setSelectedStation(latest);
+  }, [allStations.length, allStationsById, loading, selectedStation]);
+
+  const locationRouteKey = useCallback((lat: number, lng: number) => {
+    return `${Math.round(lat * 1000)}:${Math.round(lng * 1000)}`;
+  }, []);
+
+  // Instant road-shaped estimates for every station. These render immediately;
+  // precise OSRM routes replace the nearest values in the background once GPS
+  // (not merely the approximate cached location) is available.
   useEffect(() => {
     if (!allStations.length) return;
     if (location.latitude === 0 && location.longitude === 0) return;
 
-    // A new location invalidates any in-flight OSRM enrichment from the old spot.
     enrichSeqRef.current += 1;
-    if (enrichingRef.current) {
-      setDistanceLoading(false);
-      setDistanceImproving(false);
-      enrichingRef.current = false;
-    }
+    enrichingRef.current = false;
+    autoRouteKeyRef.current = null;
+    setDistanceLoading(false);
 
     const userLat = location.latitude;
     const userLng = location.longitude;
+    distanceLocationKeyRef.current = locationRouteKey(userLat, userLng);
 
     const map = new Map<string, number>();
-    for (const s of allStations) {
-      const [slng, slat] = s.geometry.coordinates;
-      map.set(s.properties.id, roadEstimateKm(userLat, userLng, slat, slng));
+    for (const station of allStations) {
+      const [stationLng, stationLat] = station.geometry.coordinates;
+      if (!Number.isFinite(stationLat) || !Number.isFinite(stationLng)) continue;
+      const estimate = roadEstimateKm(userLat, userLng, stationLat, stationLng);
+      if (Number.isFinite(estimate)) map.set(station.properties.id, estimate);
     }
-    setStationDistances(new Map(map));
-  }, [allStations, location.latitude, location.longitude]);
+    setStationDistances(map);
+    const emptyRouted = new Set<string>();
+    routedStationIdsRef.current = emptyRouted;
+    setRoutedStationIds(emptyRouted);
+  }, [allStations, location.latitude, location.longitude, locationRouteKey]);
 
-  const enrichSeqRef = useRef(0);
-  const enrichingRef = useRef(false);
-
-  // On-demand OSRM refinement. Only the N nearest stations are enriched, batched
-  // with bounded concurrency. Each batch updates the map as it completes, and a
-  // per-run sequence guard ensures a stale run (triggered by an old location)
-  // never overwrites a newer one.
-  const improveDistances = useCallback(async () => {
+  // Route the nearest stations automatically in small OSRM Table batches. This
+  // replaces the old "improve calculation" button while keeping request volume
+  // bounded and preserving instant estimates if OSRM is unavailable.
+  const refineNearbyDistances = useCallback(async () => {
     if (enrichingRef.current) return;
     const { latitude: lat, longitude: lng } = location;
-    if (location.approximate) return;
-    if (!allStations.length) return;
+    if (location.approximate || !allStations.length) return;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
+    const routeKey = locationRouteKey(lat, lng);
+    if (distanceLocationKeyRef.current !== routeKey) return;
+
+    const run = ++enrichSeqRef.current;
     enrichingRef.current = true;
-    enrichSeqRef.current += 1;
-    const run = enrichSeqRef.current;
-    setDistanceLoading(true);
-    setDistanceImproving(true);
+    if (!unmountedRef.current) {
+      setDistanceLoading(true);
+    }
 
-    const userId = `user:${Math.round(lat * 100)}:${Math.round(lng * 100)}`;
+    try {
+      const userId = `user:${routeKey}`;
+      const ranked = allStations
+        .map((station) => {
+          const [longitude, latitude] = station.geometry.coordinates;
+          const estimate = roadEstimateKm(lat, lng, latitude, longitude);
+          if (!Number.isFinite(estimate)) return null;
+          return { id: station.properties.id, latitude, longitude, estimate };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => a.estimate - b.estimate)
+        .slice(0, OSRM_ENRICH_LIMIT);
 
-    const ranked = [...allStations]
-      .map((s) => {
-        const [slng, slat] = s.geometry.coordinates;
-        return { stationId: s.properties.id, slat, slng, estimate: roadEstimateKm(lat, lng, slat, slng) };
-      })
-      .sort((a, b) => a.estimate - b.estimate)
-      .slice(0, OSRM_ENRICH_LIMIT);
+      // Build from fresh estimates instead of the state ref so a location change
+      // can never seed this run with distances from the previous position.
+      const map = new Map<string, number>();
+      for (const station of allStations) {
+        const [stationLng, stationLat] = station.geometry.coordinates;
+        const estimate = roadEstimateKm(lat, lng, stationLat, stationLng);
+        if (Number.isFinite(estimate)) map.set(station.properties.id, estimate);
+      }
+      for (let i = 0; i < ranked.length; i += OSRM_TABLE_BATCH_SIZE) {
+        if (unmountedRef.current || enrichSeqRef.current !== run || distanceLocationKeyRef.current !== routeKey) return;
+        const batch = ranked.slice(i, i + OSRM_TABLE_BATCH_SIZE);
+        const batchResults = await roadDistancesKm(lat, lng, batch, userId);
+        if (unmountedRef.current || enrichSeqRef.current !== run || distanceLocationKeyRef.current !== routeKey) return;
 
-    const map = new Map<string, number>(stationDistancesRef.current);
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < ranked.length && enrichSeqRef.current === run; i += BATCH_SIZE) {
-      const batch = ranked.slice(i, i + BATCH_SIZE);
-      const results = await Promise.allSettled(
-        batch.map((p) => roadDistanceKm(lat, lng, p.slat, p.slng, userId, p.stationId))
-      );
-
-      let hasOSRM = false;
-      results.forEach((r, j) => {
-        if (r.status === 'fulfilled') {
-          map.set(batch[j].stationId, r.value.value);
-          hasOSRM = true;
+        const newlyRouted: string[] = [];
+        for (const point of batch) {
+          const result = batchResults.get(point.id);
+          if (!result || !Number.isFinite(result.value) || result.source !== 'route') continue;
+          map.set(point.id, result.value);
+          newlyRouted.push(point.id);
         }
-      });
 
-      if (hasOSRM) {
-        setStationDistances(new Map(map));
+        // Publish only real route improvements. When OSRM is unavailable the
+        // estimates are already in the map, so avoid five no-op list/map renders.
+        // A selected station can be routed independently while table batches run,
+        // so union IDs instead of replacing the routed set.
+        if (newlyRouted.length > 0) {
+          setStationDistances(new Map(map));
+          setRoutedStationIds((current) => {
+            const next = new Set(current);
+            for (const id of newlyRouted) next.add(id);
+            routedStationIdsRef.current = next;
+            return next;
+          });
+        }
+      }
+    } finally {
+      if (!unmountedRef.current && enrichSeqRef.current === run) {
+        setDistanceLoading(false);
+        enrichingRef.current = false;
       }
     }
+  }, [allStations, location, locationRouteKey]);
 
-    if (enrichSeqRef.current === run) {
-      setDistanceLoading(false);
-      setDistanceImproving(false);
+  // Automatically refine after a precise location is available. The key is
+  // location-bucket + station count so a successful data sync at the same GPS
+  // position can refine newly-added stations once without looping on renders.
+  useEffect(() => {
+    if (location.approximate || !allStations.length) return;
+    const key = `${locationRouteKey(location.latitude, location.longitude)}:${allStations.length}`;
+    if (autoRouteKeyRef.current === key) return;
+    autoRouteKeyRef.current = key;
+    void refineNearbyDistances();
+  }, [allStations.length, refineNearbyDistances, location.approximate, location.latitude, location.longitude, locationRouteKey]);
+
+  const isDistanceRouted = useCallback(
+    (stationId: string) => routedStationIdsRef.current.has(stationId),
+    [],
+  );
+
+  // A station opened from search/favorites can be outside the nearest automatic
+  // batch. Refine that one station immediately so trip economics use a real
+  // route whenever OSRM is reachable.
+  const ensureRoutedDistance = useCallback(async (station: FuelStationFeature) => {
+    if (location.approximate || routedStationIdsRef.current.has(station.properties.id)) return;
+    const lat = location.latitude;
+    const lng = location.longitude;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const routeKey = locationRouteKey(lat, lng);
+    if (distanceLocationKeyRef.current !== routeKey) return;
+
+    const [stationLng, stationLat] = station.geometry.coordinates;
+    const result = await roadDistanceKm(
+      lat,
+      lng,
+      stationLat,
+      stationLng,
+      `user:${routeKey}`,
+      station.properties.id,
+    );
+    if (unmountedRef.current || distanceLocationKeyRef.current !== routeKey) return;
+
+    if (Number.isFinite(result.value)) {
+      setStationDistances((current) => {
+        const next = new Map(current);
+        next.set(station.properties.id, result.value);
+        return next;
+      });
     }
-    enrichingRef.current = false;
-  }, [location, allStations]);
+    if (result.source === 'route') {
+      setRoutedStationIds((current) => {
+        if (current.has(station.properties.id)) return current;
+        const next = new Set(current);
+        next.add(station.properties.id);
+        routedStationIdsRef.current = next;
+        return next;
+      });
+    }
+  }, [location, locationRouteKey]);
+
+  useEffect(() => {
+    if (!selectedStation) return;
+    void ensureRoutedDistance(selectedStation);
+  }, [ensureRoutedDistance, selectedStation]);
 
   useEffect(() => {
     return () => {
@@ -342,129 +573,189 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(regionTimerRef.current);
         regionTimerRef.current = null;
       }
-      regionWaiterRef.current?.([]);
+      regionRequestSeqRef.current += 1;
+      regionWaiterRef.current?.resolve([]);
       regionWaiterRef.current = null;
     };
   }, []);
 
-  const loadStationsForRegion = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
-    return new Promise<FuelStationFeature[]>((resolve) => {
-      if (regionTimerRef.current) {
-        clearTimeout(regionTimerRef.current);
-        regionTimerRef.current = null;
-      }
-      regionWaiterRef.current?.([]);
-      regionWaiterRef.current = resolve;
-
-      regionTimerRef.current = setTimeout(async () => {
-        regionWaiterRef.current = null;
-        try {
-          const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
-          if (unmountedRef.current) {
-            resolve([]);
-            return;
-          }
-          setStations(enrichStations(nearby));
-          resolve(nearby);
-        } catch (e) {
-          console.warn('[loadStationsForRegion] failed:', e);
-          resolve([]);
+  const loadStationsForRegion = useCallback(
+    (lat: number, lng: number, bounds?: [number, number, number, number]) => {
+      return new Promise<FuelStationFeature[]>((resolve) => {
+        if (regionTimerRef.current) {
+          clearTimeout(regionTimerRef.current);
+          regionTimerRef.current = null;
         }
-      }, 50);
-    });
-  }, []);
+
+        // Resolve the previous debounced/in-flight caller immediately. Its native
+        // request may still finish, but the sequence guard below prevents stale data.
+        regionWaiterRef.current?.resolve([]);
+
+        const seq = ++regionRequestSeqRef.current;
+        regionWaiterRef.current = { seq, resolve };
+
+        regionTimerRef.current = setTimeout(async () => {
+          regionTimerRef.current = null;
+          try {
+            const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
+            if (unmountedRef.current || regionRequestSeqRef.current !== seq) {
+              resolve([]);
+              return;
+            }
+
+            setStations(enrichStations(nearby));
+            resolve(nearby);
+          } catch (error) {
+            if (!unmountedRef.current && regionRequestSeqRef.current === seq) {
+              console.warn('[loadStationsForRegion] failed:', error);
+            }
+            resolve([]);
+          } finally {
+            if (regionWaiterRef.current?.seq === seq) {
+              regionWaiterRef.current = null;
+            }
+          }
+        }, 50);
+      });
+    },
+    [],
+  );
+
+  const distanceFilterMap = searchFilter.maxDistance ? stationDistances : null;
 
   const filteredStations = useMemo(() => {
     let result = stations;
-    if (searchFilter.brand) {
-      const q = searchFilter.brand.toLowerCase();
+    const countries = searchFilter.countries;
+    const fuelTypes = searchFilter.fuelTypes;
+    const cityQuery = searchFilter.city?.trim().toLowerCase();
+
+    if (searchFilter.brand?.trim()) {
+      const query = searchFilter.brand.trim().toLowerCase();
       result = result.filter(
-        (s) =>
-          (s.properties.brand ?? '').toLowerCase().includes(q) ||
-          (s.properties.name ?? '').toLowerCase().includes(q)
+        (station) =>
+          (station.properties.brand ?? '').toLowerCase().includes(query) ||
+          (station.properties.name ?? '').toLowerCase().includes(query),
       );
     }
 
-    if (searchFilter.countries && searchFilter.countries.length > 0) {
-      result = result.filter((s) =>
-        searchFilter.countries!.includes(s.properties.source)
-      );
+    if (countries?.length) {
+      result = result.filter((station) => countries.includes(station.properties.source));
     }
 
-    if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
-      result = result.filter((s) => {
-        const fuels = s.properties.fuels ?? {};
-        return searchFilter.fuelTypes!.some((key) => key in fuels);
+    if (fuelTypes?.length) {
+      result = result.filter((station) => {
+        const fuels = station.properties.fuels ?? {};
+        return fuelTypes.some((key) => key in fuels);
       });
     }
 
     if (searchFilter.priceRange) {
       const max = searchFilter.priceRange.max;
-      result = result.filter((s) => {
-        const fuels = s.properties.fuels ?? {};
-        if (searchFilter.fuelTypes && searchFilter.fuelTypes.length > 0) {
-          return searchFilter.fuelTypes.some((key) => typeof fuels[key] === 'number' && fuels[key] < max);
+      result = result.filter((station) => {
+        const fuels = station.properties.fuels ?? {};
+        if (fuelTypes?.length) {
+          return fuelTypes.some((key) => typeof fuels[key] === 'number' && fuels[key] < max);
         }
-        return Object.values(fuels).some((p) => Number(p) < max);
+        return Object.values(fuels).some((price) => Number(price) < max);
       });
     }
 
-    if (searchFilter.city?.trim()) {
-      const q = searchFilter.city.trim().toLowerCase();
-      result = result.filter((s) => {
-        const p = s.properties;
+    if (cityQuery) {
+      result = result.filter((station) => {
+        const properties = station.properties;
+        const administrativeArea =
+          properties.source === 'PT' ? properties.district : properties.province;
         return (
-          (p.municipality ?? '').toLowerCase().includes(q) ||
-          (p.city ?? '').toLowerCase().includes(q) ||
-          (p.address ?? '').toLowerCase().includes(q)
+          properties.municipality.toLowerCase().includes(cityQuery) ||
+          administrativeArea.toLowerCase().includes(cityQuery) ||
+          properties.address.toLowerCase().includes(cityQuery)
         );
       });
     }
 
-    return result;
-  }, [stations, searchFilter.brand, searchFilter.countries, searchFilter.fuelTypes, searchFilter.priceRange, searchFilter.city]);
-
-  const sortedStations = useMemo(() => {
-    if (!searchFilter.sortBy) return filteredStations;
-
-    const result = [...filteredStations];
-    if (searchFilter.sortBy === 'price') {
-      const fuelKey = searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95';
-      result.sort((a, b) => {
-        const priceA = a.properties.fuels?.[fuelKey] ?? Infinity;
-        const priceB = b.properties.fuels?.[fuelKey] ?? Infinity;
-        return priceA - priceB;
-      });
-    } else if (searchFilter.sortBy === 'distance') {
-      const userLat = location.latitude;
-      const userLng = location.longitude;
-      result.sort((a, b) => {
-        const [aLng, aLat] = a.geometry.coordinates;
-        const [bLng, bLat] = b.geometry.coordinates;
-        return roadEstimateKm(userLat, userLng, aLat, aLng) - roadEstimateKm(userLat, userLng, bLat, bLng);
+    if (
+      searchFilter.maxDistance &&
+      Number.isFinite(location.latitude) &&
+      Number.isFinite(location.longitude) &&
+      (location.latitude !== 0 || location.longitude !== 0)
+    ) {
+      const maxDistance = searchFilter.maxDistance;
+      result = result.filter((station) => {
+        const knownDistance = distanceFilterMap?.get(station.properties.id);
+        if (knownDistance != null && Number.isFinite(knownDistance)) {
+          return knownDistance <= maxDistance;
+        }
+        const [stationLng, stationLat] = station.geometry.coordinates;
+        return roadEstimateKm(
+          location.latitude,
+          location.longitude,
+          stationLat,
+          stationLng,
+        ) <= maxDistance;
       });
     }
 
+    // Sorting is intentionally not done here: this collection feeds the map,
+    // where order is irrelevant. Avoiding a distance sort keeps the GeoJSON
+    // source stable when only the user's location changes. Search owns its own
+    // list sorting logic.
     return result;
-  }, [filteredStations, searchFilter.sortBy, searchFilter.sortByFuel, searchFilter.fuelTypes, location.latitude, location.longitude]);
+  }, [
+    stations,
+    searchFilter.brand,
+    searchFilter.countries,
+    searchFilter.fuelTypes,
+    searchFilter.priceRange,
+    searchFilter.city,
+    searchFilter.maxDistance,
+    location.latitude,
+    location.longitude,
+    distanceFilterMap,
+  ]);
 
-  const stationValue = useMemo<StationState>(
+  const stationCatalogValue = useMemo<StationCatalogState>(
+    () => ({
+      allStations,
+      getStationById,
+    }),
+    [allStations, getStationById],
+  );
+
+  const stationMapDataValue = useMemo<StationMapDataState>(
     () => ({
       stations,
-      allStations,
+      filteredStations,
+    }),
+    [stations, filteredStations],
+  );
+
+  const stationDistanceValue = useMemo<StationDistanceState>(
+    () => ({
       stationDistances,
+      routedStationIds,
       distanceLoading,
-      distanceImproving,
-      improveDistances,
+      ensureRoutedDistance,
+      isDistanceRouted,
+    }),
+    [
+      stationDistances,
+      routedStationIds,
+      distanceLoading,
+      ensureRoutedDistance,
+      isDistanceRouted,
+    ],
+  );
+
+  const stationSyncValue = useMemo<StationSyncState>(
+    () => ({
       loading,
       error,
       offline,
       rateLimited,
       syncProgress,
-      filteredStations: sortedStations,
       reload: load,
     }),
-    [stations, allStations, stationDistances, distanceLoading, distanceImproving, improveDistances, loading, error, offline, rateLimited, syncProgress, sortedStations, load]
+    [loading, error, offline, rateLimited, syncProgress, load],
   );
 
   const locationValue = useMemo<LocationState>(
@@ -499,22 +790,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <StationContext.Provider value={stationValue}>
-      <LocationContext.Provider value={locationValue}>
-        <UIContext.Provider value={uiValue}>
-          <ActionsContext.Provider value={actionsValue}>
-            {children}
-          </ActionsContext.Provider>
-        </UIContext.Provider>
-      </LocationContext.Provider>
-    </StationContext.Provider>
+    <StationCatalogContext.Provider value={stationCatalogValue}>
+      <StationMapDataContext.Provider value={stationMapDataValue}>
+        <StationDistanceContext.Provider value={stationDistanceValue}>
+          <StationSyncContext.Provider value={stationSyncValue}>
+            <LocationContext.Provider value={locationValue}>
+              <UIContext.Provider value={uiValue}>
+                <ActionsContext.Provider value={actionsValue}>
+                  {children}
+                </ActionsContext.Provider>
+              </UIContext.Provider>
+            </LocationContext.Provider>
+          </StationSyncContext.Provider>
+        </StationDistanceContext.Provider>
+      </StationMapDataContext.Provider>
+    </StationCatalogContext.Provider>
   );
 }
 
-export function useStations(): StationState {
-  const ctx = useContext(StationContext);
-  if (!ctx) throw new Error('useStations must be used within AppProvider');
+export function useStationCatalog(): StationCatalogState {
+  const ctx = useContext(StationCatalogContext);
+  if (!ctx) throw new Error('useStationCatalog must be used within AppProvider');
   return ctx;
+}
+
+export function useStationMapData(): StationMapDataState {
+  const ctx = useContext(StationMapDataContext);
+  if (!ctx) throw new Error('useStationMapData must be used within AppProvider');
+  return ctx;
+}
+
+export function useStationDistances(): StationDistanceState {
+  const ctx = useContext(StationDistanceContext);
+  if (!ctx) throw new Error('useStationDistances must be used within AppProvider');
+  return ctx;
+}
+
+export function useStationSync(): StationSyncState {
+  const ctx = useContext(StationSyncContext);
+  if (!ctx) throw new Error('useStationSync must be used within AppProvider');
+  return ctx;
+}
+
+/**
+ * Compatibility hook for callers that genuinely need the complete station
+ * surface. Prefer the narrower hooks above in render-heavy components.
+ */
+export function useStations(): StationState {
+  return {
+    ...useStationCatalog(),
+    ...useStationMapData(),
+    ...useStationDistances(),
+    ...useStationSync(),
+  };
 }
 
 export function useLocationState(): LocationState {

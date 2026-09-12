@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -7,17 +7,19 @@ import { useCommodities } from '../../src/hooks/useCommodities';
 import { CommodityChart } from '../../src/components/CommodityChart';
 import { fuelLabel } from '../../src/utils/fuelNames';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
-import { useSupport } from '../../src/hooks/useSupport';
+import { useAppearanceSupport } from '../../src/hooks/useSupport';
 import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
 import { tabBarClearance } from '../../src/theme/layout';
 
 import type { CommodityMetrics } from '../../src/api/siphonClient';
 
-const COUNTRIES: { key: string; labelKey: string }[] = [
+const COUNTRIES = [
   { key: 'es', labelKey: 'market.country_es' },
   { key: 'pt', labelKey: 'market.country_pt' },
   { key: 'combined', labelKey: 'market.country_combined' },
-];
+] as const;
+
+type CountryKey = (typeof COUNTRIES)[number]['key'];
 
 const FUELS = ['gasoline95', 'diesel'] as const;
 
@@ -31,24 +33,29 @@ function formatTrend(v: number | null | undefined): string {
   return `${sign}${v.toFixed(1)}%`;
 }
 
-function trendColor(v: number | null | undefined, neutral: string): string {
+function trendColor(
+  v: number | null | undefined,
+  neutral: string,
+  positive: string,
+  negative: string,
+): string {
   if (v === null || v === undefined) return neutral;
-  return v >= 0 ? '#34C759' : '#FF3B30';
+  return v >= 0 ? positive : negative;
 }
+
 
 export default function MarketScreen() {
   const { t } = useTranslation();
-  const { colors, scheme } = useThemeTokens();
+  const { colors } = useThemeTokens();
   const insets = useSafeAreaInsets();
-  const isDark = scheme === 'dark';
-  const { styleRules } = useSupport();
+  const { styleRules } = useAppearanceSupport();
   const cardRules = useStyleConfig(styleRules, 'card');
   const cardStyle = applyComponentRules(cardRules, colors.label);
 
-  const { dashboard, loading } = useCommodities();
+  const { dashboard, loading, error, reload } = useCommodities();
 
-  const [country, setCountry] = useState('combined');
-  const [fuel, setFuel] = useState('gasoline95');
+  const [country, setCountry] = useState<CountryKey>('combined');
+  const [fuel, setFuel] = useState<(typeof FUELS)[number]>('gasoline95');
 
   const metricKey = `${fuel}_${country}`;
   const metrics: CommodityMetrics | undefined = dashboard?.metrics?.[metricKey] ?? undefined;
@@ -88,6 +95,8 @@ export default function MarketScreen() {
                 key={c.key}
                 activeOpacity={0.7}
                 onPress={() => setCountry(c.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: sel }}
                 style={{
                   paddingHorizontal: 14,
                   paddingVertical: 6,
@@ -110,6 +119,8 @@ export default function MarketScreen() {
                 key={f}
                 activeOpacity={0.7}
                 onPress={() => setFuel(f)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: sel }}
                 style={{
                   paddingHorizontal: 14,
                   paddingVertical: 6,
@@ -123,11 +134,43 @@ export default function MarketScreen() {
           })}
         </View>
 
+        {error && dashboard && (
+          <View
+            style={{ backgroundColor: colors.groupedBackground }}
+            className="rounded-md px-md py-sm mb-md"
+            accessibilityLiveRegion="polite"
+          >
+            <Text style={{ color: colors.secondaryLabel, textAlign: 'center' }} className="text-footnote">
+              {t('common.using_cached_data')}
+            </Text>
+          </View>
+        )}
+
         {/* Loading / Empty states */}
-        {loading ? (
+        {loading && !dashboard ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.loading')}
           </Text>
+        ) : error && !dashboard ? (
+          <View
+            style={{ padding: 24, alignItems: 'center', gap: 12 }}
+            accessibilityLiveRegion="assertive"
+          >
+            <Text style={{ color: colors.destructive, textAlign: 'center' }}>
+              {t('common.something_went_wrong')}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => void reload()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.retry')}
+              style={{ backgroundColor: colors.tint, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 }}
+            >
+              <Text style={{ color: colors.labelOnTint, fontWeight: '600' }}>
+                {t('common.retry')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : !dashboard || dashboard.status === 'no_crude' ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
             {t('market.no_data')}
@@ -148,7 +191,7 @@ export default function MarketScreen() {
 
             {/* Insufficient retail notice */}
             {retailPoints.length < 2 && (
-              <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, marginTop: 12 }, cardStyle]}>
+              <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, marginTop: 12 }, cardStyle]}>
                 <Text style={{ color: colors.chartLabel, fontSize: 12, textAlign: 'center' }}>
                   {t('market.insufficient_hint')}
                 </Text>
@@ -158,7 +201,7 @@ export default function MarketScreen() {
             {/* Metric cards (only fully rendered when retail has meaningful data) */}
             {retailPoints.length >= 2 && (
               <View style={{ gap: 8, marginTop: 12 }}>
-                <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
+                <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
                   <Text style={{ fontWeight: '600', color: colors.label }}>
                     {t('market.lag_label')}
                   </Text>
@@ -167,7 +210,7 @@ export default function MarketScreen() {
                   </Text>
                 </View>
 
-                <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
+                <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStyle]}>
                   <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14 }}>
                     {t('market.correlation_label')}
                   </Text>
@@ -176,7 +219,7 @@ export default function MarketScreen() {
                   </Text>
                 </View>
 
-                <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12 }, cardStyle]}>
+                <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12 }, cardStyle]}>
                   <Text style={{ fontWeight: '600', color: colors.label, fontSize: 14, marginBottom: 4 }}>
                     {t('market.rocket_feather_label')}
                   </Text>
@@ -214,19 +257,19 @@ export default function MarketScreen() {
             {/* Crude trend cards (always show when crude exists) */}
             {crudePoints.length >= 2 && (
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-                <View style={[{ flex: 1, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
+                <View style={[{ flex: 1, backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
                   <Text style={{ color: colors.label, fontSize: 13 }}>
                     {t('market.trend_7d')}
                   </Text>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: trendColor(metrics?.crudeTrend7d, colors.chartLabel) }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: trendColor(metrics?.crudeTrend7d, colors.chartLabel, colors.priceLow, colors.priceHigh) }}>
                     {formatTrend(metrics?.crudeTrend7d)}
                   </Text>
                 </View>
-                <View style={[{ flex: 1, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
+                <View style={[{ flex: 1, backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12, alignItems: 'center' }, cardStyle]}>
                   <Text style={{ color: colors.label, fontSize: 13 }}>
                     {t('market.trend_30d')}
                   </Text>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: trendColor(metrics?.crudeTrend30d, colors.chartLabel) }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: trendColor(metrics?.crudeTrend30d, colors.chartLabel, colors.priceLow, colors.priceHigh) }}>
                     {formatTrend(metrics?.crudeTrend30d)}
                   </Text>
                 </View>

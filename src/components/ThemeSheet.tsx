@@ -5,6 +5,7 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useTranslation } from 'react-i18next';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
+import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
 
@@ -33,6 +34,7 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
   function ThemeSheet({ currentTheme, onSelectTheme, onDismiss }, ref) {
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['30%'], []);
     const pendingTheme = useRef<ThemePref | null>(null);
 
@@ -49,12 +51,13 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
     }, []);
 
     const handleDismiss = useCallback(() => {
+      handleSheetDismiss();
       if (pendingTheme.current) {
         onSelectTheme(pendingTheme.current);
         pendingTheme.current = null;
       }
       onDismiss();
-    }, [onSelectTheme, onDismiss]);
+    }, [handleSheetDismiss, onSelectTheme, onDismiss]);
 
     return (
       <BottomSheetModal
@@ -68,6 +71,7 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
           SHEET_HANDLE_INDICATOR_STYLE,
           { backgroundColor: colors.handleIndicator },
         ]}
+        onChange={handleSheetChange}
         onDismiss={handleDismiss}
         backdropComponent={(props) => (
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />

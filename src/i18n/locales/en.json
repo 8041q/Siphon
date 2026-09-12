@@ -5,7 +5,10 @@
     "station": "Station",
     "unknown_station": "Unknown station",
     "something_went_wrong": "Something went wrong",
-    "and": "and"
+    "and": "and",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "using_cached_data": "Using cached data"
   },
   "tabs": {
     "map": "Map",
@@ -18,7 +21,8 @@
     "offline_banner": "Using cached data — no connection",
     "search_area": "Search this area",
     "empty_search": "No stations found",
-    "stations_found": "Stations: {{count}}"
+    "stations_found": "Stations: {{count}}",
+    "locate_me": "Locate me"
   },
   "search": {
     "placeholder": "Search stations...",
@@ -44,7 +48,14 @@
     "no_sort": "Default",
     "sort_price": "Price",
     "sort_distance": "Distance",
-    "sort_fuel": "Fuel for price sort"
+    "sort_fuel": "Fuel for price sort",
+    "any_country": "Any country",
+    "more_fuels": "More fuels ({{count}})",
+    "fewer_fuels": "Show fewer fuels",
+    "sort_recommended": "Recommended",
+    "sort_cheapest": "Lowest price",
+    "sort_nearest": "Nearest",
+    "sort_fuel_hint": "Choose the fuel price to compare"
   },
   "favorites": {
     "empty_title": "No favorites yet",
@@ -205,7 +216,23 @@
     "reward_svg_flame": "Flame",
     "reward_svg_leaf": "Leaf",
     "reward_svg_crown": "Crown",
-    "rewards_footnote": "Ads are opt-in and never interrupt you. Watching one unlocks the next reward on the ladder."
+    "rewards_footnote": "Ads are opt-in and never interrupt you. Watching one unlocks the next reward on the ladder.",
+    "worth_round_trip": "{{distance}} round trip",
+    "worth_unit_mismatch": "This fuel can't be compared because the station price and your vehicle capacity use different units.",
+    "worth_out_of_range": "This station is beyond the configured one-tank range for this vehicle.",
+    "worth_no_comparison": "Not enough comparable stations within {{radius}} km to judge this trip.",
+    "worth_reference": "Best nearby alternative: {{station}} · €{{price}} · {{distance}} away",
+    "worth_full_tank_saving": "Pump-price saving on a full tank: €{{saving}}",
+    "worth_extra_trip_cost": "Extra driving cost vs the alternative: €{{cost}}",
+    "worth_trip_cost_saved": "You save about €{{cost}} in driving vs the alternative",
+    "worth_break_even_fill": "Break-even vs this alternative: {{amount}} {{unit}}",
+    "worth_break_even_over_capacity": "Even a full tank would not recover the extra driving cost.",
+    "worth_net_saved": "Worth it — about €{{amount}} better overall",
+    "worth_net_loss": "Not worth it — about €{{amount}} worse overall",
+    "worth_estimated_distance": "Using an estimated distance while real road routing finishes.",
+    "worth_full_tank_assumption": "Comparison assumes filling up to the configured vehicle capacity.",
+    "worth_full_tank_extra": "Pump price costs €{{cost}} more on a full tank",
+    "worth_net_even": "About the same overall"
   },
   "screen": {
     "price_history": "Price History"
@@ -234,7 +261,10 @@
     "forecast_disclaimer": "Statistical estimate based on the last 80 days. Prices depend on market conditions — not financial advice.",
     "banner_title": "Fill up today!",
     "banner_low30": "Current price is a 30-day low.",
-    "banner_drop": "Prices dropped {{pct}}% this week."
+    "banner_drop": "Prices dropped {{pct}}% this week.",
+    "station_not_found": "Station not found.",
+    "no_fuels": "No fuel price data is available for this station.",
+    "no_history": "No price history is available for this fuel yet."
   },
   "station": {
     "view_price_history": "View Price History",
@@ -276,7 +306,11 @@
     "payment_multibanco": "Card",
     "payment_mbway": "Mobile",
     "payment_outros": "Other",
-    "payment_disclaimer": "Payment info from official registry — may be incomplete"
+    "payment_disclaimer": "Payment info from official registry — may be incomplete",
+    "copy_address": "Copy address",
+    "add_favorite": "Add to favorites",
+    "remove_favorite": "Remove from favorites",
+    "payment_info": "Payment method information"
   },
   "price_chart": {
     "no_data": "No price history available.",

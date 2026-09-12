@@ -5,7 +5,10 @@
     "station": "Station",
     "unknown_station": "Station inconnue",
     "something_went_wrong": "Quelque chose s'est mal passé",
-    "and": "et"
+    "and": "et",
+    "loading": "Chargement…",
+    "retry": "Réessayer",
+    "using_cached_data": "Utilisation des données en cache"
   },
   "tabs": {
     "map": "Carte",
@@ -18,7 +21,8 @@
     "offline_banner": "Utilisation des données en cache — pas de connexion",
     "search_area": "Rechercher cette zone",
     "empty_search": "Aucune station trouvée",
-    "stations_found": "Stations: {{count}}"
+    "stations_found": "Stations: {{count}}",
+    "locate_me": "Me localiser"
   },
   "search": {
     "placeholder": "Rechercher des stations...",
@@ -44,7 +48,14 @@
     "no_sort": "Par défaut",
     "sort_price": "Prix",
     "sort_distance": "Distance",
-    "sort_fuel": "Carburant pour le tri"
+    "sort_fuel": "Carburant pour le tri",
+    "any_country": "Tous les pays",
+    "more_fuels": "Plus de carburants ({{count}})",
+    "fewer_fuels": "Afficher moins de carburants",
+    "sort_recommended": "Recommandé",
+    "sort_cheapest": "Prix le plus bas",
+    "sort_nearest": "La plus proche",
+    "sort_fuel_hint": "Choisissez le carburant dont vous voulez comparer le prix"
   },
   "favorites": {
     "empty_title": "Pas encore de favoris",
@@ -69,14 +80,14 @@
     "spanish": "Espagnol",
     "french": "Français",
     "german": "Allemand",
-    "location_marker": "Location Marker",
+    "location_marker": "Marqueur de position",
     "marker_style": "Style",
-    "marker_icons": "Icons",
-    "marker_svg": "Custom SVG",
-    "marker_image": "Custom Image",
-    "marker_import_image": "Import from Gallery",
-    "marker_change_image": "Change Image",
-    "marker_custom_image": "Custom Image",
+    "marker_icons": "Icônes",
+    "marker_svg": "SVG personnalisé",
+    "marker_image": "Image personnalisée",
+    "marker_import_image": "Importer depuis la galerie",
+    "marker_change_image": "Changer l’image",
+    "marker_custom_image": "Image personnalisée",
     "updates": "Mises à jour",
     "update_status": "État",
     "checking": "Vérification…",
@@ -169,7 +180,7 @@
     "styleset_liquid-glass": "Verre Liquide",
     "styleset_dotted": "Bords Pointillés",
     "styleset_retro": "Rétro",
-"support": "Soutien",
+    "support": "Soutien",
     "support_rewards": "Récompenses",
     "support_rewards_trailing": "{{count}} vues",
     "support_donate": "Soutenir",
@@ -197,7 +208,6 @@
     "watch_ad": "Voir une publicité",
     "rewards_ad_loading": "Chargement de la publicité…",
     "rewards_palettes": "Palettes de Couleurs",
-    "rewards_palettes": "Palettes de Couleurs",
     "rewards_icons": "Ensembles d'icônes",
     "rewards_styles": "Styles",
     "rewards_markers": "Marqueurs de Position",
@@ -206,7 +216,23 @@
     "reward_svg_flame": "Flamme",
     "reward_svg_leaf": "Feuille",
     "reward_svg_crown": "Couronne",
-    "rewards_footnote": "Les publicités sont facultatives et ne vous interrompent jamais. En regarder une débloque la récompense suivante."
+    "rewards_footnote": "Les publicités sont facultatives et ne vous interrompent jamais. En regarder une débloque la récompense suivante.",
+    "worth_round_trip": "{{distance}} aller-retour",
+    "worth_unit_mismatch": "Ce carburant ne peut pas être comparé car le prix de la station et la capacité du véhicule utilisent des unités différentes.",
+    "worth_out_of_range": "Cette station dépasse l’autonomie d’un plein configurée pour ce véhicule.",
+    "worth_no_comparison": "Il n’y a pas assez de stations comparables dans un rayon de {{radius}} km pour évaluer ce trajet.",
+    "worth_reference": "Meilleure alternative à proximité : {{station}} · €{{price}} · à {{distance}}",
+    "worth_full_tank_saving": "Économie sur le prix pour un plein : €{{saving}}",
+    "worth_extra_trip_cost": "Surcoût de conduite par rapport à l’alternative : €{{cost}}",
+    "worth_trip_cost_saved": "Vous économisez environ €{{cost}} de trajet par rapport à l’alternative",
+    "worth_break_even_fill": "Seuil de rentabilité face à cette alternative : {{amount}} {{unit}}",
+    "worth_break_even_over_capacity": "Même un plein ne compenserait pas le surcoût du trajet.",
+    "worth_net_saved": "Ça vaut le coup — environ €{{amount}} de mieux au total",
+    "worth_net_loss": "Pas rentable — environ €{{amount}} de moins au total",
+    "worth_estimated_distance": "Une distance estimée est utilisée pendant le calcul de l’itinéraire réel.",
+    "worth_full_tank_assumption": "La comparaison suppose un plein jusqu’à la capacité configurée du véhicule.",
+    "worth_full_tank_extra": "Le prix du carburant coûte €{{cost}} de plus sur un plein",
+    "worth_net_even": "Coût total pratiquement identique"
   },
   "screen": {
     "price_history": "Historique des Prix"
@@ -235,7 +261,10 @@
     "forecast_disclaimer": "Estimation statistique basée sur les 80 derniers jours. Les prix dépendent des conditions du marché — pas un conseil financier.",
     "banner_title": "Faites le plein aujourd'hui !",
     "banner_low30": "Le prix actuel est un minimum sur 30 jours.",
-    "banner_drop": "Les prix ont baissé de {{pct}}% cette semaine."
+    "banner_drop": "Les prix ont baissé de {{pct}}% cette semaine.",
+    "station_not_found": "Station introuvable.",
+    "no_fuels": "Aucune donnée de prix du carburant n’est disponible pour cette station.",
+    "no_history": "Aucun historique de prix n’est encore disponible pour ce carburant."
   },
   "station": {
     "view_price_history": "Voir l'Historique des Prix",
@@ -277,7 +306,11 @@
     "payment_multibanco": "Carte",
     "payment_mbway": "Mobile",
     "payment_outros": "Autres",
-    "payment_disclaimer": "Infos de paiement du registre officiel — peut être incomplète"
+    "payment_disclaimer": "Infos de paiement du registre officiel — peut être incomplète",
+    "copy_address": "Copier l’adresse",
+    "add_favorite": "Ajouter aux favoris",
+    "remove_favorite": "Retirer des favoris",
+    "payment_info": "Informations sur les moyens de paiement"
   },
   "price_chart": {
     "no_data": "Historique des prix indisponible.",

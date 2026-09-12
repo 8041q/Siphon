@@ -1,40 +1,34 @@
-import { StyleSheet, View, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import {
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewProps,
+  type ViewStyle,
+} from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
-import { useSupport } from '../../hooks/useSupport';
+import { useAppearanceSupport } from '../../hooks/useSupport';
 import { useStyleConfig, isGlass } from '../../hooks/useStyleConfig';
+import { GlassBackdrop, useAppBlurTarget } from './glass';
 
 type SheetBackgroundProps = {
-  pointerEvents?: any;
+  pointerEvents?: ViewProps['pointerEvents'];
 };
 
-// See note in GlassBackdrop: `blurReductionFactor` default 4 silences the blur
-// on Android; `dimezisBlurView` fallback keeps blur on Android < 12.
-function androidBlurMethod() {
-  if (Platform.OS !== 'android') return undefined;
-  return (Platform.Version as number) >= 31 ? 'dimezisBlurViewSdk31Plus' : 'dimezisBlurView';
-}
-
-/**
- * Reusable background for @gorhom/bottom-sheet `backgroundComponent`.
- *
- * - Non-glass style sets (default / dotted / retro): renders the solid sheet
- *   background exactly as the default did (15px top radius), so nothing breaks.
- * - Liquid-glass style set: renders a blur + translucent tint behind the same
- *   content, clipped to the same 15px radius.
- */
+/** Reusable background for @gorhom/bottom-sheet `backgroundComponent`. */
 export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
-  const { scheme, colors } = useThemeTokens();
-  const { styleRules } = useSupport();
+  const { colors } = useThemeTokens();
+  const { styleRules } = useAppearanceSupport();
   const rules = useStyleConfig(styleRules, 'sheet');
   const glass = isGlass(rules);
+  const appBlurTarget = useAppBlurTarget();
+  const radius = rules.borderRadius ?? 15;
 
-  const base: any[] = [
+  const base: StyleProp<ViewStyle> = [
     StyleSheet.absoluteFill,
     {
-      borderTopLeftRadius: 15,
-      borderTopRightRadius: 15,
+      borderTopLeftRadius: radius,
+      borderTopRightRadius: radius,
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
     },
@@ -43,40 +37,14 @@ export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
       : { backgroundColor: colors.sheet },
   ];
 
-  if (!glass) {
-    return (
-      <View
-        pointerEvents={pointerEvents}
-        accessible
-        accessibilityRole="adjustable"
-        accessibilityLabel="Bottom Sheet"
-        style={base}
-      />
-    );
-  }
-
-  const tint =
-    scheme === 'dark' ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight';
-
   return (
     <View
       pointerEvents={pointerEvents ?? 'box-none'}
-      accessible
-      accessibilityRole="adjustable"
-      accessibilityLabel="Bottom Sheet"
+      accessible={false}
+      importantForAccessibility="no"
       style={base}
     >
-      <BlurView
-        style={StyleSheet.absoluteFill}
-        tint={tint}
-        intensity={70}
-        blurReductionFactor={1}
-        blurMethod={androidBlurMethod()}
-      />
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: colors.sheet, opacity: 0.35 }]}
-      />
+      {glass && <GlassBackdrop color={colors.sheet} blurTarget={appBlurTarget} />}
     </View>
   );
 }

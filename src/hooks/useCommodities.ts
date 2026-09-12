@@ -1,47 +1,54 @@
-import { useEffect, useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { client } from './useApp';
-
-import type { CommodityDashboard, RootManifest } from '../api/siphonClient';
-
-function tryParse<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
+import type { CommodityDashboard } from '../api/siphonClient';
 
 export function useCommodities() {
   const [dashboard, setDashboard] = useState<CommodityDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const mountedRef = useRef(false);
+  const requestSeqRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestSeqRef.current += 1;
+    };
+  }, []);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const run = ++requestSeqRef.current;
+    const isActive = () => mountedRef.current && requestSeqRef.current === run;
+
+    if (isActive()) {
+      setLoading(true);
+      setError(false);
+    }
+
     try {
-      const cached = tryParse<CommodityDashboard>(
-        await AsyncStorage.getItem('siphon:data:commodities:dashboard')
-      );
-      if (cached) {
-        setDashboard(cached);
-      }
-      const root = tryParse<RootManifest>(
-        await AsyncStorage.getItem('siphon:manifest:root')
-      );
-      const updated = await client.checkCommodityUpdates(root);
+      // Commodity data lives under the file-backed `siphon:data:` namespace.
+      // Always read it through FuelDataClient/hybridStore rather than directly
+      // from AsyncStorage, otherwise a valid offline cache is invisible here.
+      const cached = await client.getCachedCommodityDashboard();
+      if (!isActive()) return;
+      if (cached) setDashboard(cached);
+
+      const updated = await client.refreshCommodityDashboard();
+      if (!isActive()) return;
       if (updated) setDashboard(updated);
     } catch {
-      // leave whatever was set
+      if (!isActive()) return;
+      setError(true);
     } finally {
-      setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
-  return { dashboard, loading, reload: load };
+  return { dashboard, loading, error, reload: load };
 }

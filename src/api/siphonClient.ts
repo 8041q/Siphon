@@ -94,10 +94,132 @@ export interface PortugalManifest {
   districts: Record<string, PortugalDistrict>;
 }
 
+export const PUBLISHED_FUEL_KEYS = [
+  'gasoline95',
+  'gasoline95Plus',
+  'gasoline95Premium',
+  'gasoline95E10',
+  'gasoline95E25',
+  'gasoline95E85',
+  'gasoline98',
+  'gasoline98Plus',
+  'gasoline98E10',
+  'gasolineMix',
+  'gasolineRenewable',
+  'diesel',
+  'dieselPremium',
+  'dieselAgri',
+  'dieselB',
+  'dieselRenewable',
+  'dieselHeating',
+  'bioDiesel',
+  'biodiesel',
+  'bioethanol',
+  'bioCng',
+  'bioLng',
+  'cng',
+  'cngkg',
+  'cngm3',
+  'lng',
+  'lpg',
+  'hydrogen',
+  'adblue',
+] as const;
+
+export type FuelKey = (typeof PUBLISHED_FUEL_KEYS)[number];
+export type FuelPrices = Partial<Record<FuelKey, number>>;
+
+export type StationMarkerStatus = 'open' | 'closed' | 'unknown';
+
+export interface StationEnrichmentProperties {
+  _status?: StationMarkerStatus;
+  _icon?: string;
+  _price95?: string | null;
+  _priceDiesel?: string | null;
+  _sortLat?: number;
+  _priceLabel?: string;
+}
+
+export interface PortugalStationHours {
+  weekdays: string | null;
+  saturday: string | null;
+  sunday: string | null;
+  holiday: string | null;
+}
+
+export interface PortugalStationExtra {
+  stationType?: 'Outro' | 'Auto-estrada' | 'Área comercial (Hipermercados)';
+  saleType?: never;
+  margin?: never;
+  reportingType?: never;
+  ideess?: never;
+  idMunicipio?: never;
+  idProvincia?: never;
+  idCCAA?: never;
+}
+
+export interface SpainStationExtra {
+  stationType?: never;
+  saleType?: 'P';
+  margin?: 'D' | 'N' | 'I';
+  reportingType?: 'dm' | 'OM';
+  ideess?: string;
+  idMunicipio?: string;
+  idProvincia?: string;
+  idCCAA?: string;
+}
+
+interface CommonStationProperties extends StationEnrichmentProperties {
+  brand: string;
+  address: string;
+  municipality: string;
+  /** Published tiles do not contain a `city` property; kept as `never` so legacy optional reads stay type-safe. */
+  city?: never;
+  fuels: FuelPrices;
+}
+
+export interface PortugalStationProperties extends CommonStationProperties {
+  id: `pt-${number}`;
+  source: 'PT';
+  name: string;
+  district: string;
+  postalCode: string | null;
+  lastUpdated: string;
+  extra: PortugalStationExtra;
+  services: string[];
+  hours: PortugalStationHours | null;
+  paymentMethods: string[];
+  otherServices: string | null;
+  observations: string | null;
+
+  province?: never;
+  schedule?: never;
+}
+
+export interface SpainStationProperties extends CommonStationProperties {
+  id: `es-${number}`;
+  source: 'ES';
+  province: string;
+  postalCode: string;
+  schedule: string;
+  extra: SpainStationExtra;
+
+  name?: never;
+  district?: never;
+  lastUpdated?: never;
+  hours?: never;
+  services?: never;
+  paymentMethods?: never;
+  otherServices?: never;
+  observations?: never;
+}
+
+export type FuelStationProperties = PortugalStationProperties | SpainStationProperties;
+
 export interface FuelStationFeature {
   type: 'Feature';
   geometry: { type: 'Point'; coordinates: [number, number] };
-  properties: Record<string, any>;
+  properties: FuelStationProperties;
 }
 
 export interface GeoJsonFeatureCollection {
@@ -123,13 +245,21 @@ const KEYS = {
   tileHash: (path: string) => `siphon:hash:${path}`,
   tileData: (path: string) => `siphon:data:${path}`,
   historyIndexHash: 'siphon:etag:historyIndex',
+  historyCacheVersion: 'siphon:cache:historyVersion',
   commoditiesHash: 'siphon:etag:commodities',
   commoditiesData: 'siphon:data:commodities:dashboard',
+  allStationsData: 'siphon:data:allStations',
+  allStationsCacheVersion: 'siphon:cache:allStationsVersion',
+  countryManifestCacheVersion: 'siphon:cache:countryManifestVersion',
 };
 
 // How many recent day files the device keeps locally. Older ones are pruned
 // at launch; the server keeps the full history.
 const HISTORY_DAYS_WINDOW = 90;
+const NETWORK_TIMEOUT_MS = 15_000;
+const ALL_STATIONS_CACHE_VERSION = '2';
+const COUNTRY_MANIFEST_CACHE_VERSION = '2';
+const HISTORY_CACHE_VERSION = '2';
 
 // Safe JSON read for cached blobs: corrupt or partial data returns null
 // instead of throwing up into the caller.
@@ -140,6 +270,171 @@ function tryParse<T>(raw: string | null): T | null {
   } catch {
     return null;
   }
+}
+
+
+const PUBLISHED_FUEL_KEY_SET: ReadonlySet<string> = new Set(PUBLISHED_FUEL_KEYS);
+
+export function isFuelKey(value: string): value is FuelKey {
+  return PUBLISHED_FUEL_KEY_SET.has(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isFuelPrices(value: unknown): value is FuelPrices {
+  if (!isRecord(value)) return false;
+  const entries = Object.entries(value);
+  if (entries.length === 0) return false;
+  return entries.every(
+    ([key, price]) =>
+      isFuelKey(key) &&
+      typeof price === 'number' &&
+      Number.isFinite(price),
+  );
+}
+
+function isPortugalHours(value: unknown): value is PortugalStationHours | null {
+  if (value === null) return true;
+  if (!isRecord(value)) return false;
+  return ['weekdays', 'saturday', 'sunday', 'holiday'].every((key) => {
+    const item = value[key];
+    return item === null || typeof item === 'string';
+  });
+}
+
+function isPortugalExtra(value: unknown): value is PortugalStationExtra {
+  if (!isRecord(value)) return false;
+  const stationType = value.stationType;
+  return (
+    stationType === undefined ||
+    stationType === 'Outro' ||
+    stationType === 'Auto-estrada' ||
+    stationType === 'Área comercial (Hipermercados)'
+  );
+}
+
+function isSpainExtra(value: unknown): value is SpainStationExtra {
+  if (!isRecord(value)) return false;
+  const saleType = value.saleType;
+  const margin = value.margin;
+  const reportingType = value.reportingType;
+  const optionalStringKeys = ['ideess', 'idMunicipio', 'idProvincia', 'idCCAA'] as const;
+  return (
+    (saleType === undefined || saleType === 'P') &&
+    (margin === undefined || margin === 'D' || margin === 'N' || margin === 'I') &&
+    (reportingType === undefined || reportingType === 'dm' || reportingType === 'OM') &&
+    optionalStringKeys.every((key) => value[key] === undefined || typeof value[key] === 'string')
+  );
+}
+
+
+function hasValidEnrichment(properties: Record<string, unknown>): boolean {
+  const status = properties._status;
+  if (status !== undefined && status !== 'open' && status !== 'closed' && status !== 'unknown') return false;
+  if (properties._icon !== undefined && typeof properties._icon !== 'string') return false;
+  if (
+    properties._price95 !== undefined &&
+    properties._price95 !== null &&
+    typeof properties._price95 !== 'string'
+  ) return false;
+  if (
+    properties._priceDiesel !== undefined &&
+    properties._priceDiesel !== null &&
+    typeof properties._priceDiesel !== 'string'
+  ) return false;
+  if (
+    properties._sortLat !== undefined &&
+    (typeof properties._sortLat !== 'number' || !Number.isFinite(properties._sortLat))
+  ) return false;
+  if (properties._priceLabel !== undefined && typeof properties._priceLabel !== 'string') return false;
+  return true;
+}
+
+export function isFuelStationFeature(value: unknown): value is FuelStationFeature {
+  if (!isRecord(value) || value.type !== 'Feature') return false;
+
+  const geometry = value.geometry;
+  if (!isRecord(geometry) || geometry.type !== 'Point') return false;
+  const coordinates = geometry.coordinates;
+  if (
+    !Array.isArray(coordinates) ||
+    coordinates.length !== 2 ||
+    typeof coordinates[0] !== 'number' ||
+    typeof coordinates[1] !== 'number' ||
+    !Number.isFinite(coordinates[0]) ||
+    !Number.isFinite(coordinates[1]) ||
+    Math.abs(coordinates[0]) > 180 ||
+    Math.abs(coordinates[1]) > 90
+  ) {
+    return false;
+  }
+
+  const properties = value.properties;
+  if (!isRecord(properties)) return false;
+  if (
+    typeof properties.id !== 'string' ||
+    typeof properties.source !== 'string' ||
+    typeof properties.brand !== 'string' ||
+    typeof properties.address !== 'string' ||
+    typeof properties.municipality !== 'string' ||
+    !isFuelPrices(properties.fuels) ||
+    !hasValidEnrichment(properties)
+  ) {
+    return false;
+  }
+
+  if (properties.source === 'PT') {
+    return (
+      /^pt-\d+$/.test(properties.id) &&
+      typeof properties.name === 'string' &&
+      typeof properties.district === 'string' &&
+      (typeof properties.postalCode === 'string' || properties.postalCode === null) &&
+      typeof properties.lastUpdated === 'string' &&
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(properties.lastUpdated) &&
+      isPortugalExtra(properties.extra) &&
+      isStringArray(properties.services) &&
+      isPortugalHours(properties.hours) &&
+      isStringArray(properties.paymentMethods) &&
+      (typeof properties.otherServices === 'string' || properties.otherServices === null) &&
+      (typeof properties.observations === 'string' || properties.observations === null) &&
+      properties.province === undefined &&
+      properties.schedule === undefined
+    );
+  }
+
+  if (properties.source === 'ES') {
+    return (
+      /^es-\d+$/.test(properties.id) &&
+      typeof properties.province === 'string' &&
+      typeof properties.postalCode === 'string' &&
+      typeof properties.schedule === 'string' &&
+      isSpainExtra(properties.extra) &&
+      properties.name === undefined &&
+      properties.district === undefined &&
+      properties.lastUpdated === undefined &&
+      properties.hours === undefined &&
+      properties.services === undefined &&
+      properties.paymentMethods === undefined &&
+      properties.otherServices === undefined &&
+      properties.observations === undefined
+    );
+  }
+
+  return false;
+}
+
+export function parseGeoJsonFeatureCollection(value: unknown): GeoJsonFeatureCollection | null {
+  if (!isRecord(value) || value.type !== 'FeatureCollection' || !Array.isArray(value.features)) {
+    return null;
+  }
+  if (!value.features.every(isFuelStationFeature)) return null;
+  return { type: 'FeatureCollection', features: value.features };
 }
 
 export class FuelDataClient {
@@ -153,18 +448,24 @@ export class FuelDataClient {
     this.rateLimiter = new RateLimiter(this.store);
   }
 
-  // Single choke point for every GitHub request. Enforces the rate-limit guard
-  // before firing, records the request afterwards, and persists a backoff when
-  // GitHub answers 429/403.
+  // Single choke point for every GitHub request. Reserves an hourly-budget slot
+  // before firing and persists a backoff when GitHub answers 429/403.
   private async fetchRateLimited(
     path: string,
     opts?: { method?: string; headers?: Record<string, string> }
   ): Promise<Response> {
-    await this.rateLimiter.assertCanRequest();
-    const res = await fetch(`${this.baseUrl}/${path}`, opts);
-    this.rateLimiter.recordRequest().catch(() => {});
-    await this.handleRateLimitHeaders(res);
-    return res;
+    // Reserve atomically before starting the request so concurrent tile fetches
+    // cannot all consume the same apparent budget slot.
+    await this.rateLimiter.reserveRequest();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${this.baseUrl}/${path}`, { ...opts, signal: controller.signal });
+      await this.handleRateLimitHeaders(res);
+      return res;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private async handleRateLimitHeaders(res: Response): Promise<void> {
@@ -189,15 +490,19 @@ export class FuelDataClient {
   // Step 1+2: conditional GET the root manifest, diff country hashes.
   // If the network call fails. report offline:true and changedCountries:[]
   // so we fall back to whatever's cached rather than crashing the app.
-  async checkForUpdates(): Promise<{ changedCountries: CountryCode[]; root: RootManifest | null; offline: boolean }> {
+  async checkForUpdates(): Promise<{ changedCountries: CountryCode[]; root: RootManifest | null; etag: string | null; offline: boolean }> {
     try {
-      const etag = await this.store.getItem(KEYS.rootEtag);
+      const cachedRoot = tryParse<RootManifest>(await this.store.getItem(KEYS.rootManifest));
+      // Never send an ETag without the matching committed root. This repairs
+      // older installs where the ETag could have been persisted before a sync
+      // completed or while the root cache was missing/corrupt.
+      const etag = cachedRoot ? await this.store.getItem(KEYS.rootEtag) : null;
       const res = await this.fetchRateLimited('manifest.json', {
         headers: etag ? { 'If-None-Match': etag } : {},
       });
 
       if (res.status === 304) {
-        return { changedCountries: [], root: null, offline: false };
+        return { changedCountries: [], root: null, etag: null, offline: false };
       }
       if (!res.ok) {
         throw new Error(`Root manifest fetch failed: ${res.status}`);
@@ -205,20 +510,31 @@ export class FuelDataClient {
 
       const root: RootManifest = await res.json();
       const newEtag = res.headers.get('etag');
-      if (newEtag) await this.store.setItem(KEYS.rootEtag, newEtag);
-
-      const cachedRootRaw = await this.store.getItem(KEYS.rootManifest);
-      const cachedRoot = tryParse<RootManifest>(cachedRootRaw);
 
       const changedCountries = (Object.keys(root.countries) as CountryCode[]).filter(
         (code) => root.countries[code].hash !== cachedRoot?.countries?.[code]?.hash
       );
 
-      await this.store.setItem(KEYS.rootManifest, JSON.stringify(root));
-      return { changedCountries, root, offline: false };
+      // Do not advance the committed root/ETag yet. If the app is killed while
+      // syncing country tiles, retaining the previous ETag guarantees the next
+      // launch gets this root again and can retry the interrupted sync.
+      return { changedCountries, root, etag: newEtag, offline: false };
     } catch (e) {
       if (e instanceof RateLimitedError) throw e;
-      return { changedCountries: [], root: null, offline: true };
+      return { changedCountries: [], root: null, etag: null, offline: true };
+    }
+  }
+
+  /** Commit a root manifest only after the corresponding data sync succeeds. */
+  async commitRootManifest(root: RootManifest, etag: string | null): Promise<void> {
+    // Root first is deliberate: if the app dies before the ETag write, the old
+    // ETag only causes a harmless 200 next launch. The reverse order could pair
+    // a new ETag with an old root and incorrectly accept a 304.
+    await this.store.setItem(KEYS.rootManifest, JSON.stringify(root));
+    if (etag) {
+      await this.store.setItem(KEYS.rootEtag, etag);
+    } else {
+      await this.store.removeItem?.(KEYS.rootEtag);
     }
   }
 
@@ -231,7 +547,12 @@ export class FuelDataClient {
   // If the network fetch fails and we have a stale cache, we return it
   // rather than crashing — the map isn't useless just because the user
   // briefly lost connectivity.
-  private async getCountryManifest<T>(code: CountryCode, path: string, changed: boolean): Promise<T | null> {
+  private async getCountryManifest<T>(
+    code: CountryCode,
+    path: string,
+    changed: boolean,
+    allowStale = true,
+  ): Promise<T | null> {
     const cached = await this.store.getItem(KEYS.countryManifest(code));
     if (!changed) {
       const parsed = tryParse<T>(cached);
@@ -246,17 +567,26 @@ export class FuelDataClient {
       return manifest;
     } catch (e) {
       if (e instanceof RateLimitedError) throw e;
-      if (cached) return JSON.parse(cached) as T;
-      return null;
+      const stale = tryParse<T>(cached);
+      if (allowStale) return stale;
+      throw e;
     }
   }
 
-  async getSpainManifest(changed: boolean, path = 'data/es/manifest.json'): Promise<SpainManifest | null> {
-    return this.getCountryManifest<SpainManifest>('ES', path, changed);
+  async getSpainManifest(
+    changed: boolean,
+    path = 'data/es/manifest.json',
+    allowStale = true,
+  ): Promise<SpainManifest | null> {
+    return this.getCountryManifest<SpainManifest>('ES', path, changed, allowStale);
   }
 
-  async getPortugalManifest(changed: boolean, path = 'data/pt/manifest.json'): Promise<PortugalManifest | null> {
-    return this.getCountryManifest<PortugalManifest>('PT', path, changed);
+  async getPortugalManifest(
+    changed: boolean,
+    path = 'data/pt/manifest.json',
+    allowStale = true,
+  ): Promise<PortugalManifest | null> {
+    return this.getCountryManifest<PortugalManifest>('PT', path, changed, allowStale);
   }
 
   // Step 4: fetch a tile/district .geojson ONLY if its hash differs from what's already cached. Works for both ES tiles and PT districts since
@@ -267,8 +597,8 @@ export class FuelDataClient {
   async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection | null> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
     if (cachedHash === entry.hash) {
-      const cached = tryParse<GeoJsonFeatureCollection>(
-        await this.store.getItem(KEYS.tileData(entry.path))
+      const cached = parseGeoJsonFeatureCollection(
+        tryParse<unknown>(await this.store.getItem(KEYS.tileData(entry.path))),
       );
       if (cached) return cached;
     }
@@ -276,15 +606,21 @@ export class FuelDataClient {
     try {
       const res = await this.fetchRateLimited(entry.path);
       if (!res.ok) throw new Error(`Tile fetch failed: ${entry.path} (${res.status})`);
-      const geojson: GeoJsonFeatureCollection = await res.json();
-      await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
+      const geojson = parseGeoJsonFeatureCollection(await res.json());
+      if (!geojson) throw new Error(`Invalid station tile: ${entry.path}`);
+      // Commit data before its matching hash. If the process dies between these
+      // writes, the next sync simply fetches the tile again. Writing the hash
+      // first could make stale/partial data look current after a crash.
       await this.store.setItem(KEYS.tileData(entry.path), JSON.stringify(geojson));
+      await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
       return geojson;
     } catch (e) {
-      if (e instanceof RateLimitedError) throw e;
-      return tryParse<GeoJsonFeatureCollection>(
-        await this.store.getItem(KEYS.tileData(entry.path))
+      const cached = parseGeoJsonFeatureCollection(
+        tryParse<unknown>(await this.store.getItem(KEYS.tileData(entry.path))),
       );
+      if (cached) return cached;
+      if (e instanceof RateLimitedError) throw e;
+      return null;
     }
   }
 
@@ -298,9 +634,23 @@ export class FuelDataClient {
     changedCountries: CountryCode[] = [],
     onProgress?: (loaded: number, total: number) => void
   ): Promise<{ tileCount: number }> {
+    // Version 2 forces one manifest refresh for installs upgrading from builds
+    // that could commit the root before country sync completed. This repairs a
+    // potentially stale country manifest even when the server now answers 304.
+    const manifestCacheVersion = await this.store.getItem(KEYS.countryManifestCacheVersion);
+    const forceManifestRefresh = manifestCacheVersion !== COUNTRY_MANIFEST_CACHE_VERSION;
+
     const [es, pt] = await Promise.all([
-      this.getSpainManifest(changedCountries.includes('ES')),
-      this.getPortugalManifest(changedCountries.includes('PT')),
+      this.getSpainManifest(
+        forceManifestRefresh || changedCountries.includes('ES'),
+        'data/es/manifest.json',
+        false,
+      ),
+      this.getPortugalManifest(
+        forceManifestRefresh || changedCountries.includes('PT'),
+        'data/pt/manifest.json',
+        false,
+      ),
     ]);
     const entries = [
       ...(es ? Object.values(es.tiles) : []),
@@ -313,10 +663,21 @@ export class FuelDataClient {
     for (let i = 0; i < entries.length; i += CONCURRENCY) {
       const batch = entries.slice(i, i + CONCURRENCY);
       await Promise.all(batch.map((entry) => this.fetchIfChanged(entry)));
+
+      // A stale cached tile is useful for the map, but it is not enough to mark
+      // a new root manifest as fully synchronized. Verify each expected hash.
+      const hashes = await Promise.all(
+        batch.map((entry) => this.store.getItem(KEYS.tileHash(entry.path))),
+      );
+      if (hashes.some((hash, index) => hash !== batch[index].hash)) {
+        throw new Error('Station tile sync incomplete; keeping previous root manifest.');
+      }
+
       loaded += batch.length;
       onProgress?.(loaded, total);
     }
 
+    await this.store.setItem(KEYS.countryManifestCacheVersion, COUNTRY_MANIFEST_CACHE_VERSION);
     return { tileCount: total };
   }
 
@@ -336,24 +697,39 @@ export class FuelDataClient {
       if (!root) return { changed: false, downloadedDays: 0, offline: false };
       if (!root.history) return { changed: false, downloadedDays: 0, offline: false };
 
-      const cachedHash = await this.store.getItem(KEYS.historyIndexHash);
-      if (cachedHash === root.history.hash) {
+      const [cachedHash, cacheVersion] = await Promise.all([
+        this.store.getItem(KEYS.historyIndexHash),
+        this.store.getItem(KEYS.historyCacheVersion),
+      ]);
+      if (cachedHash === root.history.hash && cacheVersion === HISTORY_CACHE_VERSION) {
         return { changed: false, downloadedDays: 0, offline: false };
       }
 
       const res = await this.fetchRateLimited(root.history.path);
       if (!res.ok) throw new Error(`History index fetch failed: ${res.status}`);
       const index: HistoryIndex = await res.json();
-      await this.store.setItem(KEYS.historyIndexHash, root.history.hash);
 
       let downloadedDays = 0;
+      let incomplete = false;
       for (const day of index.days) {
         const outcome = await this.fetchHistoryDay(day);
         if (outcome === 'fetched') downloadedDays++;
+        if (outcome === 'failed') incomplete = true;
       }
 
       await this.pruneOldHistoryDays();
       this.historyMemo.clear();
+
+      if (incomplete) {
+        // Keep the previous index hash so the next launch retries missing days.
+        return { changed: downloadedDays > 0, downloadedDays, offline: true };
+      }
+
+      // Commit the index only after every referenced day is present. The cache
+      // version forces one repair pass for installs that used the older
+      // hash-before-data ordering.
+      await this.store.setItem(KEYS.historyIndexHash, root.history.hash);
+      await this.store.setItem(KEYS.historyCacheVersion, HISTORY_CACHE_VERSION);
       return { changed: true, downloadedDays, offline: false };
     } catch (e) {
       if (e instanceof RateLimitedError) throw e;
@@ -385,8 +761,10 @@ export class FuelDataClient {
       const res = await this.fetchRateLimited(entry.path);
       if (!res.ok) throw new Error(`History day fetch failed: ${entry.path} (${res.status})`);
       const data = await res.text();
-      await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
+      // Body first, hash last: a crash can cause a harmless re-download, never
+      // a false cache hit against missing/stale history data.
       await this.store.setItem(key, data);
+      await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
       return 'fetched';
     } catch (e) {
       if (e instanceof RateLimitedError) throw e;
@@ -462,6 +840,7 @@ export class FuelDataClient {
       }
     }
     await this.store.removeItem?.(KEYS.historyIndexHash);
+    await this.store.removeItem?.(KEYS.historyCacheVersion);
     this.historyMemo.clear();
     return { deleted };
   }
@@ -473,7 +852,7 @@ export class FuelDataClient {
   // optional — only runs when root.commodities exists).
   //
   // On success returns the parsed dashboard; on hash-match returns null;
-  // on failure falls back to stale cache. Never throws.
+  // on ordinary network failure falls back to stale cache; RateLimitedError propagates.
   async checkCommodityUpdates(root: RootManifest | null): Promise<CommodityDashboard | null> {
     if (!root?.commodities) return null;
 
@@ -481,14 +860,16 @@ export class FuelDataClient {
       const cachedHash = await this.store.getItem(KEYS.commoditiesHash);
       if (cachedHash === root.commodities.hash) {
         const cached = tryParse<CommodityDashboard>(await this.store.getItem(KEYS.commoditiesData));
-        return cached;
+        if (cached) return cached;
+        // A hash without a readable body can be left behind by an older build
+        // that committed metadata first. Fall through and repair it.
       }
 
       const res = await this.fetchRateLimited(root.commodities.path);
       if (!res.ok) throw new Error(`Commodity fetch failed: ${res.status}`);
       const data: CommodityDashboard = await res.json();
-      await this.store.setItem(KEYS.commoditiesHash, root.commodities.hash);
       await this.store.setItem(KEYS.commoditiesData, JSON.stringify(data));
+      await this.store.setItem(KEYS.commoditiesHash, root.commodities.hash);
       return data;
     } catch (e) {
       if (e instanceof RateLimitedError) throw e;
@@ -497,64 +878,79 @@ export class FuelDataClient {
     }
   }
 
+  /** Read the commodity dashboard from the same file-backed store used by sync. */
+  async getCachedCommodityDashboard(): Promise<CommodityDashboard | null> {
+    return tryParse<CommodityDashboard>(await this.store.getItem(KEYS.commoditiesData));
+  }
+
   // Convenience: reads the cached root manifest, then runs the commodities
-  // hash-gated update. Call once per launch (after checkForUpdates).
-  async refreshCommodityDashboard(): Promise<void> {
+  // hash-gated update. Call once per launch (after checkForUpdates). Returning
+  // the resolved dashboard lets UI hooks use the same storage abstraction.
+  async refreshCommodityDashboard(): Promise<CommodityDashboard | null> {
     try {
       const root = tryParse<RootManifest>(await this.store.getItem(KEYS.rootManifest));
-      await this.checkCommodityUpdates(root);
+      const updated = await this.checkCommodityUpdates(root);
+      return updated ?? this.getCachedCommodityDashboard();
     } catch {
-      // silent
+      return this.getCachedCommodityDashboard();
     }
   }
 
   // ---------- All-stations cache ----------
 
   async getAllCachedStations(): Promise<FuelStationFeature[]> {
-    const es = await this.getSpainManifest(false);
-    const pt = await this.getPortugalManifest(false);
+    // This method is deliberately cache-only. It is used while offline or rate
+    // limited, so it must never call fetchIfChanged()/country manifest fetches.
+    const es = tryParse<SpainManifest>(await this.store.getItem(KEYS.countryManifest('ES')));
+    const pt = tryParse<PortugalManifest>(await this.store.getItem(KEYS.countryManifest('PT')));
 
     const seen = new Set<string>();
     const features: FuelStationFeature[] = [];
 
-    if (es) {
-      const entries = Object.values(es.tiles);
-      const geojsons = await Promise.all(entries.map((e) => this.fetchIfChanged(e)));
-      for (const geojson of geojsons) {
-        if (!geojson) continue;
-        for (const f of geojson.features) {
-          if (f.properties.id && seen.has(f.properties.id)) continue;
-          if (f.properties.id) seen.add(f.properties.id);
-          features.push(f);
-        }
+    const appendEntry = async (entry: { path: string }) => {
+      const geojson = parseGeoJsonFeatureCollection(
+        tryParse<unknown>(await this.store.getItem(KEYS.tileData(entry.path))),
+      );
+      if (!geojson) return;
+      for (const feature of geojson.features) {
+        const id = feature.properties?.id;
+        if (id && seen.has(id)) continue;
+        if (id) seen.add(id);
+        features.push(feature);
       }
-    }
+    };
 
-    if (pt) {
-      const entries = Object.values(pt.districts);
-      const geojsons = await Promise.all(entries.map((e) => this.fetchIfChanged(e)));
-      for (const geojson of geojsons) {
-        if (!geojson) continue;
-        for (const f of geojson.features) {
-          if (f.properties.id && seen.has(f.properties.id)) continue;
-          if (f.properties.id) seen.add(f.properties.id);
-          features.push(f);
-        }
-      }
+    const entries = [
+      ...(es ? Object.values(es.tiles) : []),
+      ...(pt ? Object.values(pt.districts) : []),
+    ];
+
+    // Cache rebuilds are uncommon, but a cold/offline fallback can touch a few
+    // hundred files. Bounded parallel reads avoid a long serial startup without
+    // opening every file at once.
+    const READ_CONCURRENCY = 16;
+    for (let index = 0; index < entries.length; index += READ_CONCURRENCY) {
+      await Promise.all(entries.slice(index, index + READ_CONCURRENCY).map(appendEntry));
     }
 
     return features;
   }
 
   async saveAllStationsCache(stations: FuelStationFeature[]): Promise<void> {
-    await this.store.setItem('siphon:data:allStations', JSON.stringify(stations));
+    await this.store.setItem(KEYS.allStationsData, JSON.stringify(stations));
+    await this.store.setItem(KEYS.allStationsCacheVersion, ALL_STATIONS_CACHE_VERSION);
   }
 
   async loadAllStationsCache(): Promise<FuelStationFeature[] | null> {
-    const raw = await this.store.getItem('siphon:data:allStations');
+    const version = await this.store.getItem(KEYS.allStationsCacheVersion);
+    if (version !== ALL_STATIONS_CACHE_VERSION) return null;
+    const raw = await this.store.getItem(KEYS.allStationsData);
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as FuelStationFeature[];
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return null;
+      const stations = parsed.filter(isFuelStationFeature);
+      return stations.length === parsed.length ? stations : null;
     } catch {
       return null;
     }

@@ -1,12 +1,14 @@
+import { useRef } from 'react';
 import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../src/components/ui/icon';
 import { GlassBackdrop } from '../../src/components/ui/glass';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
-import { useSupport } from '../../src/hooks/useSupport';
+import { useAppearanceSupport } from '../../src/hooks/useSupport';
 import { useStyleConfig, applyComponentRules, isGlass } from '../../src/hooks/useStyleConfig';
 import { TAB_BAR_HEIGHT, TAB_BAR_H_MARGIN, TAB_BAR_FLOAT_GAP } from '../../src/theme/layout';
 
@@ -16,14 +18,16 @@ const TABS = [
   { name: 'market', href: '/market', labelKey: 'tabs.market', icon: 'oilcan.fill' },
   { name: 'favorites', href: '/favorites', labelKey: 'tabs.favorites', icon: 'star.fill' },
   { name: 'settings', href: '/settings', labelKey: 'tabs.settings', icon: 'gearshape.fill' },
-];
+] as const;
+
+type TabColors = ReturnType<typeof useThemeTokens>['colors'];
 
 type TabItemProps = {
   icon: string;
   label: string;
   isFocused?: boolean;
   onPress?: () => void;
-  colors: Record<string, string>;
+  colors: TabColors;
 };
 
 function TabItem({ icon: iconName, label, isFocused, onPress, colors }: TabItemProps) {
@@ -51,20 +55,20 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
-  const { styleRules } = useSupport();
+  const { styleRules } = useAppearanceSupport();
   const rules = useStyleConfig(styleRules, 'tabBar');
   const glass = isGlass(rules);
   const pillRadius = rules.borderRadius ?? TAB_BAR_HEIGHT / 2;
+  const blurTargetRef = useRef<View | null>(null);
 
-  // Shape/border overrides from the active style set. `applyComponentRules`
-  // forces `overflow: 'hidden'` for glass — that would clip the drop shadow,
-  // so only the inner backdrop clips the blur instead.
   const shapeStyle = applyComponentRules(rules, colors.label);
   if (glass) delete shapeStyle.overflow;
 
   return (
     <Tabs>
-      <TabSlot />
+      <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
+        <TabSlot />
+      </BlurTargetView>
       <TabList
         style={[
           {
@@ -89,11 +93,11 @@ export default function TabLayout() {
             style={[StyleSheet.absoluteFill, { borderRadius: pillRadius, overflow: 'hidden' }]}
             pointerEvents="none"
           >
-            <GlassBackdrop />
+            <GlassBackdrop blurTarget={blurTargetRef} />
           </View>
         )}
         {TABS.map((tab) => (
-          <TabTrigger key={tab.name} name={tab.name} href={tab.href as any} asChild>
+          <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
             <TabItem icon={tab.icon} label={t(tab.labelKey)} colors={colors} />
           </TabTrigger>
         ))}

@@ -1,64 +1,94 @@
 import '../global.css';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Appearance, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { BlurTargetView } from 'expo-blur';
 import { colorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setBackgroundColorAsync } from 'expo-system-ui';
 
 import { StationDetailSheet } from '../src/components/StationDetailSheet';
 import { AppProvider } from '../src/hooks/useApp';
-import { SupportProvider, useSupport } from '../src/hooks/useSupport';
-import { useAdConsent } from '../src/hooks/useAdConsent';
+import { SupportProvider, useAppearanceSupport } from '../src/hooks/useSupport';
 import { useAppUpdate } from '../src/hooks/useAppUpdate';
-import { getPalette } from '../src/theme/palettes';
-import '../src/i18n';
+import { useThemeTokens } from '../src/hooks/useThemeTokens';
+import { AppBlurTargetProvider } from '../src/components/ui/glass';
+import i18n from '../src/i18n';
 
-function ThemeInit() {
+const LANGUAGE_KEY = 'siphon:language';
+const THEME_KEY = 'siphon:theme';
+const SUPPORTED_LANGUAGES = new Set(['en', 'pt', 'es', 'fr', 'de']);
+
+function PreferencesInit() {
   useEffect(() => {
-    // Set a sane default immediately so Android's root view is never left
-    // uncolored on first launch, before AsyncStorage even resolves.
-    const systemScheme = Appearance.getColorScheme() ?? 'light';
-    setBackgroundColorAsync(getPalette('default')[systemScheme].background);
+    let cancelled = false;
 
-    AsyncStorage.getItem('siphon:theme').then(async (val) => {
-      const scheme = (val === 'light' || val === 'dark') ? val : systemScheme;
-      if (val === 'light' || val === 'dark') colorScheme.set(val);
-      const paletteVal = await AsyncStorage.getItem('siphon:palette');
-      const palette = getPalette(paletteVal ?? 'default');
-      setBackgroundColorAsync(palette[scheme].background);
+    void Promise.all([
+      AsyncStorage.getItem(THEME_KEY).catch(() => null),
+      AsyncStorage.getItem(LANGUAGE_KEY).catch(() => null),
+    ]).then(async ([theme, language]) => {
+      if (cancelled) return;
+
+      if (theme === 'light' || theme === 'dark' || theme === 'system') {
+        colorScheme.set(theme);
+      }
+
+      if (language && SUPPORTED_LANGUAGES.has(language) && i18n.language !== language) {
+        try {
+          await i18n.changeLanguage(language);
+        } catch {
+          // Device-language fallback remains active.
+        }
+      }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
   return null;
 }
 
-// Verifies on launch whether a new version is available (no download).
+function SystemBackgroundSync() {
+  const { colors } = useThemeTokens();
+
+  useEffect(() => {
+    void setBackgroundColorAsync(colors.background).catch(() => undefined);
+  }, [colors.background]);
+
+  return null;
+}
+
 function UpdateWatcher() {
   useAppUpdate();
   return null;
 }
 
-// Gathers EU (GDPR) consent and requests iOS tracking permission on launch - now deferred to rewards page
-const ConsentInit = () => null;
-
 function AppContent() {
-  const { paletteVariables } = useSupport();
+  const { paletteVariables } = useAppearanceSupport();
+  const blurTargetRef = useRef<View | null>(null);
+
   return (
     <View className="flex-1" style={paletteVariables}>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="price-trends/[id]"
-          options={{ headerShown: true, presentation: 'modal' }}
-        />
-      </Stack>
-      <StationDetailSheet />
+      <AppBlurTargetProvider target={blurTargetRef}>
+        <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="price-trends/[id]"
+              options={{ headerShown: true, presentation: 'modal' }}
+            />
+          </Stack>
+        </BlurTargetView>
+        <StationDetailSheet />
+      </AppBlurTargetProvider>
     </View>
   );
 }
@@ -70,9 +100,9 @@ export default function RootLayout() {
         <AppProvider>
           <SupportProvider>
             <BottomSheetModalProvider>
-              <ThemeInit />
+              <PreferencesInit />
+              <SystemBackgroundSync />
               <UpdateWatcher />
-              <ConsentInit />
               <AppContent />
             </BottomSheetModalProvider>
           </SupportProvider>

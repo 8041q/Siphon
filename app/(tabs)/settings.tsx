@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Appearance, Linking, ScrollView, Switch, Text, View } from 'react-native';
+import { I18nManager, Linking, ScrollView, Switch, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setBackgroundColorAsync } from 'expo-system-ui';
 import { useTranslation } from 'react-i18next';
 
 import { client, useUI } from '../../src/hooks/useApp';
-import { useSupport } from '../../src/hooks/useSupport';
+import { useAppearanceSupport, useSupport } from '../../src/hooks/useSupport';
 import { useAppUpdate, getUpdateUrl } from '../../src/hooks/useAppUpdate';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
-import { getPalette } from '../../src/theme/palettes';
 import { tabBarClearance } from '../../src/theme/layout';
 import { Button } from '../../src/components/ui/button';
 import { ListItem } from '../../src/components/ui/list-item';
@@ -34,13 +32,32 @@ type ThemePref = 'system' | 'light' | 'dark';
 const LANGUAGE_KEY = 'siphon:language';
 const THEME_STORAGE_KEY = 'siphon:theme';
 
+type SupportedLanguage = 'en' | 'pt' | 'es' | 'fr' | 'de';
+
+const LANGUAGE_LABEL_KEYS: Record<SupportedLanguage, string> = {
+  en: 'settings.english',
+  pt: 'settings.portuguese',
+  es: 'settings.spanish',
+  fr: 'settings.french',
+  de: 'settings.german',
+};
+
+function isSupportedLanguage(value: string): value is SupportedLanguage {
+  return value === 'en' || value === 'pt' || value === 'es' || value === 'fr' || value === 'de';
+}
+
+function normalizeLanguage(value: string): SupportedLanguage {
+  const base = value.split('-')[0];
+  return isSupportedLanguage(base) ? base : 'en';
+}
+
 export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
   const { historyEnabled, setHistoryEnabled } = useUI();
   const { updateAvailable, latestVersion, installedVersion, checking, error, check } = useAppUpdate();
   const insets = useSafeAreaInsets();
   const [themePref, setThemePref] = useState<ThemePref>('system');
-  const [currentLang, setCurrentLang] = useState(i18nInstance.language);
+  const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => normalizeLanguage(i18nInstance.language));
   const languageSheetRef = useRef<LanguageSheetHandle>(null);
   const themeSheetRef = useRef<ThemeSheetHandle>(null);
   const locationMarkerSheetRef = useRef<LocationMarkerSheetHandle>(null);
@@ -48,8 +65,11 @@ export default function SettingsScreen() {
   const evSheetRef = useRef<EvBreakevenSheetHandle>(null);
   const rewardsSheetRef = useRef<RewardsSheetHandle>(null);
   const donationSheetRef = useRef<DonationSheetHandle>(null);
+  const themeChangeVersionRef = useRef(0);
+  const languageChangeVersionRef = useRef(0);
 
-  const { watchedCount, paletteId, iconSetId, styleSetId, styleRules, marker: currentMarker } = useSupport();
+  const { watchedCount } = useSupport();
+  const { paletteId, iconSetId, styleSetId, styleRules, marker: currentMarker } = useAppearanceSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const evResult = evBreakeven(evConfig);
@@ -62,40 +82,56 @@ export default function SettingsScreen() {
   };
 
   const persistLanguage = useCallback(async (lng: string) => {
-    await i18nInstance.changeLanguage(lng);
-    setCurrentLang(lng);
-    await AsyncStorage.setItem(LANGUAGE_KEY, lng);
+    if (!isSupportedLanguage(lng)) return;
+    languageChangeVersionRef.current += 1;
+    try {
+      await i18nInstance.changeLanguage(lng);
+      setCurrentLang(lng);
+      await AsyncStorage.setItem(LANGUAGE_KEY, lng);
+    } catch {
+      // Keep the currently active language if persistence fails.
+    }
   }, [i18nInstance]);
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_STORAGE_KEY).then((val) => {
-      if (val === 'light' || val === 'dark' || val === 'system') {
-        setThemePref(val);
+    let cancelled = false;
+    const themeVersion = themeChangeVersionRef.current;
+    const languageVersion = languageChangeVersionRef.current;
+
+    void Promise.all([
+      AsyncStorage.getItem(THEME_STORAGE_KEY).catch(() => null),
+      AsyncStorage.getItem(LANGUAGE_KEY).catch(() => null),
+    ]).then(([theme, language]) => {
+      if (cancelled) return;
+      if (
+        themeChangeVersionRef.current === themeVersion &&
+        (theme === 'light' || theme === 'dark' || theme === 'system')
+      ) {
+        setThemePref(theme);
+      }
+      if (
+        languageChangeVersionRef.current === languageVersion &&
+        language &&
+        isSupportedLanguage(language)
+      ) {
+        setCurrentLang(language);
       }
     });
-    AsyncStorage.getItem(LANGUAGE_KEY).then((val) => {
-      if (val === 'en' || val === 'pt' || val === 'es' || val === 'fr' || val === 'de') {
-        i18nInstance.changeLanguage(val);
-        setCurrentLang(val);
-      }
-    });
-  }, [i18nInstance]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleThemeChange = (pref: ThemePref) => {
+    themeChangeVersionRef.current += 1;
     setThemePref(pref);
-    let scheme: 'light' | 'dark';
-    if (pref === 'system') {
-      scheme = Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
-    } else {
-      scheme = pref;
-    }
-    nativewindColorScheme.set(scheme);
-    setBackgroundColorAsync(getPalette(paletteId)[scheme].background);
-    AsyncStorage.setItem(THEME_STORAGE_KEY, pref);
+    nativewindColorScheme.set(pref);
+    void AsyncStorage.setItem(THEME_STORAGE_KEY, pref).catch(() => undefined);
   };
 
   const handleToggleHistory = async (value: boolean) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     if (!value) {
       try {
         await client.clearHistoryCache();
@@ -109,7 +145,7 @@ export default function SettingsScreen() {
     else addVehicle(data);
   };
 
-  const langLabel = t(`settings.${currentLang}`, { defaultValue: currentLang });
+  const langLabel = t(LANGUAGE_LABEL_KEYS[currentLang]);
   const themeLabel = t(`settings.theme_${themePref}`);
   const markerLabel = currentMarker.type === 'svg'
     ? currentMarker.value
@@ -180,8 +216,8 @@ export default function SettingsScreen() {
                       {vehicle.fuels.map((f) => (
                         <Text
                           key={f.fuelType}
-                          style={{ color: colors.secondaryLabel }}
-                          className="text-body text-right"
+                          style={{ color: colors.secondaryLabel, textAlign: I18nManager.isRTL ? 'left' : 'right' }}
+                          className="text-body"
                         >
                           {fuelLabel(f.fuelType)} · {f.consumption} {consumptionUnit(f.fuelType)} · {f.capacity} {capacityUnit(f.fuelType)}
                         </Text>
@@ -211,10 +247,14 @@ export default function SettingsScreen() {
             {t('settings.price_history')}
           </Text>
           <View style={{ backgroundColor: colors.surface }} className="flex-row items-center justify-between px-lg py-md">
-            <Text style={{ color: colors.label }} className="text-callout flex-1 mr-2">
+            <Text style={{ color: colors.label, marginEnd: 8 }} className="text-callout flex-1">
               {t('settings.save_history')}
             </Text>
-            <Switch value={historyEnabled} onValueChange={handleToggleHistory} />
+            <Switch
+              value={historyEnabled}
+              onValueChange={handleToggleHistory}
+              accessibilityLabel={t('settings.save_history')}
+            />
           </View>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
