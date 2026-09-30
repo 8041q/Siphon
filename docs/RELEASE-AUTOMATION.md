@@ -60,6 +60,15 @@ OTA publishing is intentionally unavailable until the first tagged binary releas
 
 - Install the Play internal-track AAB and review the pre-launch report.
 - Confirm the final manifest has target SDK 36 and lacks `RECORD_AUDIO`, `WRITE_EXTERNAL_STORAGE`, `SYSTEM_ALERT_WINDOW`, `AD_ID` and `com.android.vending.BILLING`.
-- Record the AAB/APK signing certificate fingerprints.
+- Compare the AAB/APK upload-signing certificate with the EAS credential recorded below. Google Play App Signing may use a separate distribution certificate; record that certificate from Play Console after enrollment.
 - Confirm release network traffic contains no ad or Billing requests.
 - Exercise the location disclosure and verify OSRM receives coordinates only after the user accepts and invokes location.
+
+## Android upload signing certificate
+
+EAS generated the default JKS keystore for `com.ctr_8041q.siphon` on 30 September 2026. The public certificate fingerprints shown by `eas credentials -p android` for the `preview` profile are:
+
+- SHA-1: `69:84:06:C7:C8:28:EC:23:CB:CE:EB:23:06:B2:D8:3E:3F:5A:39:10`
+- SHA-256: `13:15:BF:12:D9:7E:9C:B5:2E:AB:3C:42:09:A0:4F:56:B1:36:56:E4:0F:3E:0B:65:A4:59:4D:91:20:60:9B:A2`
+
+Keep the private keystore on EAS; do not commit exported credentials. Verify that the production profiles use this same EAS keystore before the first Play upload. Once enrolled in Play App Signing, also record Google's app-signing certificate separately.
