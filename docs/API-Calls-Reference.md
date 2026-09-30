@@ -158,7 +158,7 @@ Spain (`source: 'ES'`) additionally publishes:
 
 Spain does not publish the PT-only `name`, `district`, `lastUpdated`, `hours`, `services`, `paymentMethods`, `otherServices`, or `observations` fields.
 
-The app may add marker-enrichment fields (`_status`, `_icon`, `_price95`, `_priceDiesel`, `_sortLat`, `_priceLabel`) in memory; they are not part of the raw government tile payload.
+The app may add marker-enrichment fields (`_status`, `_icon`, `_price95`, `_priceDiesel`, `_priceLabel`) in memory; they are not part of the raw government tile payload. Older cached features may also contain `_sortLat`.
 
 ### `fuels` keys you'll encounter
 

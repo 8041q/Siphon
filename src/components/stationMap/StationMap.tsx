@@ -1,73 +1,76 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
-import { Image, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
-import { Map as MapComponent, Camera, Marker, GeoJSONSource, Layer, Images, type CameraRef } from '@maplibre/maplibre-react-native';
-import type { SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
+import { Map as MapComponent, Camera, Marker, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
 
 import type { MapCameraRequest, StationMapProps } from './types';
+import type { FuelStationFeature } from '../../api/siphonClient';
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useAppearanceSupport } from '../../hooks/useSupport';
 import { svgMarkers } from '../userLocationMarkers';
-import { BRAND_ICONS, BRAND_LOGO_IMAGES, MARKER_SHAPE_ICON, buildLogoImageExpression } from './brandIcons';
+import { getStationMarkerImage } from './brandIcons';
+import { MARKER_WIDTH, MARKER_HEIGHT, PRICE_TEXT_SIZE, PRICE_TOP, getMarkerStackOrders } from './markerLayout';
 import { measureSync } from '../../utils/perf';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
-const STATION_IMAGES = { ...BRAND_ICONS, ...BRAND_LOGO_IMAGES };
-const LOGO_IMAGE_EXPRESSION = buildLogoImageExpression();
-
-const PRICE_MARKER_LAYOUT: NonNullable<SymbolLayerSpecification['layout']> = {
-  'icon-image': MARKER_SHAPE_ICON,
-  'icon-anchor': 'bottom',
-  'icon-size': 0.098,
-  'icon-rotate': 180,
-  'icon-allow-overlap': true,
-  'icon-ignore-placement': true,
-  'text-field': ['get', '_priceLabel'],
-  'text-anchor': 'top',
-  'text-offset': [0, -5.1],
-  'text-size': 11,
-  'text-font': ['Noto Sans Bold'],
-  // Let MapLibre cull colliding price labels in dense areas. Pins still remain
-  // visible, but we avoid drawing piles of overlapping glyphs on Android.
-  'text-allow-overlap': false,
-  'text-ignore-placement': false,
-  'text-transform': 'uppercase',
-  'symbol-sort-key': ['*', -1, ['get', '_sortLat']],
-};
-
-const LOGO_MARKER_LAYOUT: NonNullable<SymbolLayerSpecification['layout']> = {
-  'icon-image': LOGO_IMAGE_EXPRESSION,
-  'icon-anchor': 'center',
-  'icon-size': 0.5,
-  'icon-offset': [0, -144],
-  'icon-allow-overlap': true,
-  'icon-ignore-placement': true,
-  'symbol-sort-key': ['*', -1, ['get', '_sortLat']],
-};
-
-
-// Keep marker prices high-contrast and independent from app palettes. This is
-// the original visual: white glyphs with a dark halo, which reads better over
-// mixed map imagery than theme-derived text/halo colors.
-const SYMBOL_PAINT = {
-  'icon-halo-color': '#111111',
-  'icon-halo-width': 1,
-  'text-color': '#FFFFFF',
-  'text-halo-color': '#111111',
-  'text-halo-width': 2,
-} as const;
-
-const LOGO_PAINT = {
-  'icon-halo-color': '#111111',
-  'icon-halo-width': 1,
-} as const;
 
 // Below this zoom we fall back to the lightweight circle dots so the whole
 // country is never rendered as individual markers.
 export const STATION_MARKER_MIN_ZOOM = 13;
+
+const StationPriceMarker = memo(function StationPriceMarker({ station, zIndex, onPress }: {
+  station: FuelStationFeature;
+  zIndex: number;
+  onPress: (station: FuelStationFeature) => void;
+}) {
+  const [longitude, latitude] = station.geometry.coordinates;
+  const handlePress = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    onPress(station);
+  }, [onPress, station]);
+
+  return (
+    <Marker
+      id={`station-${station.properties.id}`}
+      lngLat={[longitude, latitude]}
+      anchor="bottom"
+      // The native marker view treats its image and price as one z-indexed unit.
+      style={{ zIndex }}
+      onPress={handlePress}
+    >
+      <View style={{ width: MARKER_WIDTH, height: MARKER_HEIGHT }}>
+        <Image
+          source={getStationMarkerImage(station.properties._icon)}
+          style={{ width: MARKER_WIDTH, height: MARKER_HEIGHT }}
+          resizeMode="stretch"
+        />
+        <Text
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: PRICE_TOP,
+            left: 0,
+            width: MARKER_WIDTH,
+            color: '#FFFFFF',
+            fontSize: PRICE_TEXT_SIZE,
+            fontWeight: '700',
+            lineHeight: PRICE_TEXT_SIZE * 1.2,
+            includeFontPadding: false,
+            textAlign: 'center',
+            textShadowColor: '#111111',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 2,
+          }}
+        >
+          {station.properties._priceLabel}
+        </Text>
+      </View>
+    </Marker>
+  );
+});
 
 function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, cameraRequest, onCameraRequestConsumed, userLocation }: StationMapProps) {
   const { colors } = useThemeTokens();
@@ -82,6 +85,8 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const cameraMoveFrameRef = useRef<number | null>(null);
   const lastAppliedCameraRequestIdRef = useRef<number | null>(null);
   const [cameraMounted, setCameraMounted] = useState(false);
+  const [showDetailedMarkers, setShowDetailedMarkers] = useState(true);
+  const [mapBearing, setMapBearing] = useState(0);
 
   // Stable camera center - written once on first render so the native map never
   // receives a mid-init reposition via the Camera prop. All subsequent moves
@@ -202,10 +207,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     flushPendingCameraMove();
   }, [flushPendingCameraMove, onMapReady]);
 
-  const { stationsById, stationsSourceData } = useMemo(
+  const { stationsById, stationsSourceData, validStations } = useMemo(
     () => measureSync('siphon.map.build_source', () => {
       const index = new Map<string, (typeof stations)[number]>();
       const features: GeoJSON.Feature[] = [];
+      const validStations: FuelStationFeature[] = [];
 
       for (const station of stations) {
         const [lng, lat] = station.geometry.coordinates;
@@ -229,11 +235,17 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         // the feature directly instead of cloning every station + properties
         // again on each region/source update.
         features.push(station);
+        validStations.push(station);
       }
+
+      // Android's marker hit-testing uses insertion order. Start with the
+      // frontmost (southern) pin first for the default north-up orientation.
+      validStations.sort((a, b) => a.geometry.coordinates[1] - b.geometry.coordinates[1]);
 
       return {
         stationsById: index,
         stationsSourceData: { type: 'FeatureCollection', features } as GeoJSON.FeatureCollection,
+        validStations,
       };
     }, 2),
     [stations],
@@ -249,6 +261,10 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     [colors.pin, colors.pinStroke],
   );
 
+  const markerStackOrders = useMemo(() => {
+    return getMarkerStackOrders(validStations, mapBearing);
+  }, [validStations, mapBearing]);
+
   const validUserLocation =
     userLocation != null &&
     Number.isFinite(userLocation.latitude) &&
@@ -258,6 +274,10 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
   const handleRegionDidChange = useCallback(
     (event: Parameters<NonNullable<ComponentProps<typeof MapComponent>['onRegionDidChange']>>[0]) => {
+      const zoom = event.nativeEvent.zoom;
+      if (Number.isFinite(zoom)) setShowDetailedMarkers(zoom >= STATION_MARKER_MIN_ZOOM);
+      const bearing = event.nativeEvent.bearing;
+      if (Number.isFinite(bearing)) setMapBearing(Math.round(bearing));
       if (!onRegionChange) return;
 
       const nativeEvent = event.nativeEvent as unknown as { center?: unknown; bounds?: unknown };
@@ -299,6 +319,16 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     [onRegionChange],
   );
 
+  const handleRegionIsChanging = useCallback(
+    (event: Parameters<NonNullable<ComponentProps<typeof MapComponent>['onRegionIsChanging']>>[0]) => {
+      const zoom = event.nativeEvent.zoom;
+      if (Number.isFinite(zoom)) setShowDetailedMarkers(zoom >= STATION_MARKER_MIN_ZOOM);
+      const bearing = event.nativeEvent.bearing;
+      if (Number.isFinite(bearing)) setMapBearing(Math.round(bearing));
+    },
+    [],
+  );
+
   const handleStationSourcePress = useCallback(
     (event: Parameters<NonNullable<ComponentProps<typeof GeoJSONSource>['onPress']>>[0]) => {
       const feature = event.nativeEvent.features?.[0];
@@ -323,6 +353,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         logo={false}
         touchZoom
         doubleTapZoom
+        onRegionIsChanging={handleRegionIsChanging}
         onRegionDidChange={handleRegionDidChange}
         onDidFinishRenderingMapFully={handleMapFullyRendered}
       >
@@ -339,6 +370,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           id="mlrn-user-location"
           lngLat={[userLocation.longitude, userLocation.latitude]}
           anchor="center"
+          style={{ zIndex: validStations.length + 1 }}
         >
           {markerConfig.type === 'image' ? (
             <View
@@ -392,8 +424,6 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         </Marker>
       )}
 
-      <Images images={STATION_IMAGES} />
-
       <GeoJSONSource
         id="station-points"
         data={stationsSourceData}
@@ -406,23 +436,15 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           maxzoom={STATION_MARKER_MIN_ZOOM}
           paint={dotPaint}
         />
-        <Layer
-          id="station-markers-with-prices"
-          type="symbol"
-          source="station-points"
-          minzoom={STATION_MARKER_MIN_ZOOM}
-          layout={PRICE_MARKER_LAYOUT}
-          paint={SYMBOL_PAINT}
-        />
-        <Layer
-          id="station-marker-logo"
-          type="symbol"
-          source="station-points"
-          minzoom={STATION_MARKER_MIN_ZOOM}
-          layout={LOGO_MARKER_LAYOUT}
-          paint={LOGO_PAINT}
-        />
         </GeoJSONSource>
+        {showDetailedMarkers && validStations.map((station) => (
+          <StationPriceMarker
+            key={station.properties.id}
+            station={station}
+            zIndex={markerStackOrders.get(station.properties.id) ?? 0}
+            onPress={onMarkerPress}
+          />
+        ))}
       </MapComponent>
     </View>
   );

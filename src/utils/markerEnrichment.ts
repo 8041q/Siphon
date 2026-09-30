@@ -182,7 +182,6 @@ function brandToIconKey(brand: string | undefined | null): string {
 /** Extend a station feature with precomputed marker properties. */
 export function enrichStation(station: FuelStationFeature, now = new Date()): FuelStationFeature {
   const { status, icon, price95, priceDiesel } = computeMarkerData(station, now);
-  const sortLat = station.geometry.coordinates[1];
   return {
     ...station,
     properties: {
@@ -192,7 +191,6 @@ export function enrichStation(station: FuelStationFeature, now = new Date()): Fu
       _price95: price95,
       _priceDiesel: priceDiesel,
       _priceLabel: `95 ${price95 ?? '-'}\nD ${priceDiesel ?? '-'}`,
-      _sortLat: sortLat,
     },
   };
 }

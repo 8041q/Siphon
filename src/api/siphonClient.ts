@@ -136,7 +136,7 @@ export interface StationEnrichmentProperties {
   _icon?: string;
   _price95?: string | null;
   _priceDiesel?: string | null;
-  _sortLat?: number;
+  _sortLat?: number; // Legacy cached enrichment; native markers now stack by viewport position.
   _priceLabel?: string;
 }
 
