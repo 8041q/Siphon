@@ -19,7 +19,7 @@
 
 ## App content answers for the monetization-disabled build
 
-- Ads: **No**, after release network inspection confirms no ad requests and the final manifest lacks `AD_ID`.
+- Ads: **No**, only after release network inspection confirms no ad requests and the final manifest lacks Google `AD_ID` and Android `ACCESS_ADSERVICES_*` permissions.
 - App access: unrestricted; no login.
 - Target audience: 13 and above.
 - Account deletion: not applicable; the app has no accounts.

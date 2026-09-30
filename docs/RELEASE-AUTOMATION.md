@@ -59,7 +59,7 @@ OTA publishing is intentionally unavailable until the first tagged binary releas
 ## Required manual verification
 
 - Install the Play internal-track AAB and review the pre-launch report.
-- Confirm the final manifest has target SDK 36 and lacks `RECORD_AUDIO`, `WRITE_EXTERNAL_STORAGE`, `SYSTEM_ALERT_WINDOW`, `AD_ID` and `com.android.vending.BILLING`.
+- Confirm the final manifest has target SDK 36 and lacks `RECORD_AUDIO`, unrestricted `WRITE_EXTERNAL_STORAGE`, `SYSTEM_ALERT_WINDOW`, Google `AD_ID`, all three `ACCESS_ADSERVICES_*` permissions, Install Referrer, and `com.android.vending.BILLING`.
 - Compare the AAB/APK upload-signing certificate with the EAS credential recorded below. Google Play App Signing may use a separate distribution certificate; record that certificate from Play Console after enrollment.
 - Confirm release network traffic contains no ad or Billing requests.
 - Exercise the location disclosure and verify OSRM receives coordinates only after the user accepts and invokes location.

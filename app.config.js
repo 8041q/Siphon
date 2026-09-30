@@ -1,8 +1,14 @@
 const RECORD_AUDIO = 'android.permission.RECORD_AUDIO';
 const WRITE_EXTERNAL_STORAGE = 'android.permission.WRITE_EXTERNAL_STORAGE';
 const SYSTEM_ALERT_WINDOW = 'android.permission.SYSTEM_ALERT_WINDOW';
-const AD_ID = 'com.google.android.gms.permission.AD_ID';
-const PLAY_BILLING = 'com.android.vending.BILLING';
+const MONETIZATION_PERMISSIONS = [
+  'com.google.android.gms.permission.AD_ID',
+  'android.permission.ACCESS_ADSERVICES_AD_ID',
+  'android.permission.ACCESS_ADSERVICES_ATTRIBUTION',
+  'android.permission.ACCESS_ADSERVICES_TOPICS',
+  'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE',
+  'com.android.vending.BILLING',
+];
 const { supportEmail } = require('./release-contact.json');
 
 /** @type {import('expo/config').ConfigContext['config']} */
@@ -14,11 +20,9 @@ module.exports = ({ config }) => {
   blockedPermissions.add(WRITE_EXTERNAL_STORAGE);
   blockedPermissions.add(SYSTEM_ALERT_WINDOW);
   if (!monetizationEnabled) {
-    blockedPermissions.add(AD_ID);
-    blockedPermissions.add(PLAY_BILLING);
+    for (const permission of MONETIZATION_PERMISSIONS) blockedPermissions.add(permission);
   } else {
-    blockedPermissions.delete(AD_ID);
-    blockedPermissions.delete(PLAY_BILLING);
+    for (const permission of MONETIZATION_PERMISSIONS) blockedPermissions.delete(permission);
   }
 
   return {

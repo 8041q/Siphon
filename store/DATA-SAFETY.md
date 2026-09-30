@@ -9,7 +9,7 @@ This document is a release checklist, not a substitute for inspecting the final 
 | Custom marker image | Selected using the system picker and stored locally | Not collected or shared |
 | Favorites, vehicles, preferences, history | Stored locally | Not collected or shared |
 | Advertising ID | Blocked from the Android manifest while monetization is disabled | Not collected |
-| Ads and Play Billing | Code retained but initialization/UI disabled; `AD_ID` and `BILLING` permissions blocked | Ads declaration: No; no purchase data collected |
+| Ads and Play Billing | Code retained but initialization/UI disabled; Google `AD_ID`, Android `ACCESS_ADSERVICES_*`, Install Referrer, and `BILLING` permissions blocked | Ads declaration: No, subject to release-build network inspection; no purchase data collected |
 | Accounts | None | Account deletion requirement not applicable |
 
 Before answering the form, inspect release-build traffic and the merged manifest. Treat OSRM as a third-party recipient unless current Play guidance clearly classifies it otherwise for this integration.
