@@ -13,6 +13,8 @@
     "doctor": "expo-doctor",
     "export:android": "expo export --platform android",
     "validate:config": "node scripts/validate-release.mjs",
+    "prepare:store": "node scripts/prepare-play-store-assets.mjs",
+    "validate:store": "node scripts/prepare-play-store-assets.mjs --check",
     "validate:release": "node scripts/validate-release.mjs --release",
     "smoke:api": "node scripts/smoke-api.mjs",
     "build:preview": "eas build --profile preview --platform all",

@@ -1,5 +1,12 @@
 # Google Play release checklist
 
+## Store listing
+
+- Set `en-US` as the default listing and add `pt-PT` as the only localized listing. Use the text in `store/listings/` and the matching assets in `store/play-upload/`.
+- Upload the three phone screenshots in numbered order and the 1024×500 feature graphic for each listing. The app icon is `store/graphics/store-icon.png`.
+- Run `npm run prepare:store` after replacing source images, then `npm run validate:store` before upload.
+- Keep English, Portuguese, Spanish, French, and German available inside the app. A two-language store listing does not restrict in-app language support.
+
 ## Account and package gates
 
 - Complete developer identity, contact, payment-profile, and physical-device verification.

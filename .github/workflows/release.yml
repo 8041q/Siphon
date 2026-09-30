@@ -38,6 +38,9 @@ jobs:
       - name: Validate committed release metadata
         run: node scripts/validate-release.mjs --release --tag "$GITHUB_REF_NAME"
 
+      - name: Validate Google Play listing assets
+        run: npm run validate:store
+
       - name: Run release quality gates
         run: |
           npm run typecheck

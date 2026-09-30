@@ -50,7 +50,7 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "cmakeVersion": "4.1.2",
+            "cmakeVersion": "3.22.1", //do not change this, or it will break the build
             "kotlinVersion": "2.3.0",
             "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
           }
