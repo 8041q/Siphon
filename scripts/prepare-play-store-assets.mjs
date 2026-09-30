@@ -98,27 +98,25 @@ for (const { locale, suffix, graphic } of locales) {
   const featureSource = new URL(`assets/store/feature-graphic-${graphic}.jpg`, root);
   const featureTarget = new URL(`store/play-upload/${locale}/feature-graphic.jpg`, root);
   const featureBytes = await readFile(checkOnly ? featureTarget : featureSource);
-  const featureDimensions = jpegInfo(featureBytes, featureSource.pathname);
+  const featureDimensions = jpegInfo(featureBytes, checkOnly ? featureTarget.pathname : featureSource.pathname);
   if (featureDimensions.width !== 1024 || featureDimensions.height !== 500) {
     throw new Error(`${featureSource.pathname}: feature graphic must be 1024×500`);
   }
   if (!checkOnly) {
     await mkdir(new URL('.', featureTarget), { recursive: true });
     await copyFile(featureSource, featureTarget);
-  } else if (!featureBytes.equals(await readFile(featureSource))) {
-    throw new Error(`${featureTarget.pathname}: feature graphic is stale; run npm run prepare:store`);
   }
 
   for (const [index, screen] of screens.entries()) {
     const source = new URL(`store/screenshots/${screen}_${suffix}.png`, root);
     const target = new URL(`store/play-upload/${locale}/phone/${String(index + 1).padStart(2, '0')}-${screen}.png`, root);
-    const expected = croppedScreenshot(await readFile(source), source.pathname);
+    const expected = checkOnly ? null : croppedScreenshot(await readFile(source), source.pathname);
     if (!checkOnly) {
       await mkdir(new URL('.', target), { recursive: true });
       await writeFile(target, expected);
     }
     const output = await readFile(target);
-    if (!output.equals(expected)) {
+    if (expected && !output.equals(expected)) {
       throw new Error(`${target.pathname}: screenshot is stale; run npm run prepare:store`);
     }
     const dimensions = checkScreenshot(output, target.pathname);

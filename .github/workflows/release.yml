@@ -14,7 +14,6 @@ permissions:
 
 env:
   EXPO_PUBLIC_MONETIZATION_ENABLED: 'false'
-  EXPO_PUBLIC_SUPPORT_EMAIL: ${{ secrets.PUBLIC_SUPPORT_EMAIL }}
 
 jobs:
   build-test-and-publish-candidates:

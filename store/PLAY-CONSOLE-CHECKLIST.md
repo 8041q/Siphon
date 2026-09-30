@@ -4,7 +4,7 @@
 
 - Set `en-US` as the default listing and add `pt-PT` as the only localized listing. Use the text in `store/listings/` and the matching assets in `store/play-upload/`.
 - Upload the three phone screenshots in numbered order and the 1024×500 feature graphic for each listing. The app icon is `store/graphics/store-icon.png`.
-- Run `npm run prepare:store` after replacing source images, then `npm run validate:store` before upload.
+- Use the committed files in `store/play-upload/` and run `npm run validate:store` before upload. If you add new source images under `store/screenshots/` and `assets/store/`, run `npm run prepare:store` to regenerate the upload files first.
 - Keep English, Portuguese, Spanish, French, and German available inside the app. A two-language store listing does not restrict in-app language support.
 
 ## Account and package gates
@@ -13,9 +13,8 @@
 - Confirm whether Play Console requires the new-personal-account closed test. If shown, keep at least 12 testers continuously opted in for 14 days before applying for production access.
 - Enrol `com.ctr_8041q.siphon` in Android developer verification and register the Play App Signing certificate plus any distinct GitHub APK signing certificate.
 - Enable Play App Signing and configure the Google Play service account in EAS credentials.
-- Add `EXPO_TOKEN` and `PUBLIC_SUPPORT_EMAIL` as GitHub Actions secrets.
-- Upload the first AAB manually in Play Console if the Developer API has not yet been initialized for this app. Then set the `PLAY_SUBMIT_ENABLED` repository variable to `true`.
-- Add `EXPO_PUBLIC_SUPPORT_EMAIL` to the EAS `preview` and `production` environments.
+- Add `EXPO_TOKEN` as a GitHub Actions secret. The public contact is committed in `release-contact.json`.
+- Test the first internal Play upload manually or with EAS Submit, then set the `PLAY_SUBMIT_ENABLED` repository variable to `true` once the service-account path works.
 - Enable GitHub Pages with GitHub Actions as its source, run **Publish privacy policy**, and confirm <https://8041q.github.io/Siphon/privacy/> is public before submission.
 
 ## App content answers for the monetization-disabled build

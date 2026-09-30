@@ -2,17 +2,19 @@
 
 ## One-time setup
 
+The app is linked to the `@ctr_8041q/siphon` EAS project. Sign in to the `8041q` Expo account with access to that team before building.
+
 1. Complete the Play account and package gates in `store/PLAY-CONSOLE-CHECKLIST.md`.
 2. Establish Android credentials with one manual `eas build --platform android --profile preview` run.
 3. Upload/configure the Google Play service-account credential through EAS; never commit its JSON key.
-4. Add these GitHub Actions secrets:
-   - `EXPO_TOKEN`: Expo personal access token.
-   - `PUBLIC_SUPPORT_EMAIL`: dedicated public support/privacy mailbox.
-5. Add `EXPO_PUBLIC_SUPPORT_EMAIL` to the EAS `preview` and `production` environments.
-6. Google requires the first AAB for a new Play app to be uploaded manually. After that succeeds and Developer API access works, set the GitHub repository variable `PLAY_SUBMIT_ENABLED` to `true`.
-7. Enable GitHub Pages from GitHub Actions and deploy the privacy policy once.
+4. Add `EXPO_TOKEN` as a GitHub Actions secret. The public developer name and support email are committed in `release-contact.json` and used by both the app and policy.
+5. Confirm the contact mailbox receives messages.
+6. Set the GitHub repository variable `PLAY_SUBMIT_ENABLED` to `true` only after EAS Submit is configured and the first internal upload path has been tested. Until then, the tag workflow still creates the AAB and APK as a GitHub prerelease.
+7. Enable GitHub Pages from GitHub Actions, run **Publish privacy policy**, and confirm the public URL loads.
 
 Monetization is explicitly disabled in every EAS build profile. Do not change that flag until the DGEG commercial-use gate and the related privacy/ad review are complete.
+
+The Android CMake version is pinned to `3.22.1` in `app.json` because the current native build depends on it. Keep that version when changing other Expo build properties.
 
 ## Binary release
 

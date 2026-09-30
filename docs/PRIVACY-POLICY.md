@@ -1,6 +1,6 @@
 # Siphon Privacy Policy
 
-Effective: 18 September 2026
+Effective: 30 September 2026
 
 Siphon is an open-source fuel-station information app developed and maintained by 8041q. It has no user accounts and does not sell personal data.
 
@@ -30,4 +30,4 @@ Network requests use HTTPS. Siphon is intended for people aged 13 and above and 
 
 ## Contact
 
-The deployed policy injects the dedicated support address from the `PUBLIC_SUPPORT_EMAIL` repository secret. Release validation fails until that secret and the corresponding EAS `EXPO_PUBLIC_SUPPORT_EMAIL` variable are configured. Issues may also be reported through <https://github.com/8041q/Siphon/issues>.
+For privacy and support questions, contact 8041q at <8041q@proton.me>. Issues may also be reported through <https://github.com/8041q/Siphon/issues>. The public policy is generated from `release-contact.json` and published at <https://8041q.github.io/Siphon/privacy/>.

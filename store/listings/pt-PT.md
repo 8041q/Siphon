@@ -22,4 +22,4 @@ O Siphon é gratuito, de código aberto e sem anúncios nesta versão.
 
 **Política de privacidade:** https://8041q.github.io/Siphon/privacy/
 
-**Email de suporte:** Configurar através de `PUBLIC_SUPPORT_EMAIL` antes da submissão.
+**Email de suporte:** 8041q@proton.me

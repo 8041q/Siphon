@@ -3,6 +3,7 @@ const WRITE_EXTERNAL_STORAGE = 'android.permission.WRITE_EXTERNAL_STORAGE';
 const SYSTEM_ALERT_WINDOW = 'android.permission.SYSTEM_ALERT_WINDOW';
 const AD_ID = 'com.google.android.gms.permission.AD_ID';
 const PLAY_BILLING = 'com.android.vending.BILLING';
+const { supportEmail } = require('./release-contact.json');
 
 /** @type {import('expo/config').ConfigContext['config']} */
 module.exports = ({ config }) => {
@@ -29,7 +30,7 @@ module.exports = ({ config }) => {
     extra: {
       ...config.extra,
       monetizationEnabled,
-      supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim() ?? '',
+      supportEmail,
     },
   };
 };

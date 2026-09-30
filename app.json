@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Siphon",
-    "slug": "Siphon",
+    "slug": "siphon",
+    "owner": "ctr_8041q",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,7 +29,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "6dc8678e-8eb9-4113-a0c5-c1d8bf7a0146"
+        "projectId": "cdd86590-0b96-4279-a80a-a6c0c2a51707"
       }
     },
     "plugins": [
@@ -50,7 +51,7 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "cmakeVersion": "3.22.1", //do not change this, or it will break the build
+            "cmakeVersion": "3.22.1",
             "kotlinVersion": "2.3.0",
             "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
           }
@@ -104,7 +105,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/6dc8678e-8eb9-4113-a0c5-c1d8bf7a0146",
+      "url": "https://u.expo.dev/cdd86590-0b96-4279-a80a-a6c0c2a51707",
       "checkAutomatically": "NEVER"
     }
   }

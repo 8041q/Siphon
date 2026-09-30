@@ -17,7 +17,6 @@ import {
   SIPHON_API_URL,
   SOURCE_REPOSITORY_URL,
   SUPPORT_EMAIL,
-  SUPPORT_EMAIL_CONFIGURED,
 } from '../src/config/legal';
 
 export default function LegalScreen() {
@@ -83,11 +82,9 @@ export default function LegalScreen() {
           <Text style={{ color: colors.label }} className="text-title-3 font-semibold px-lg pt-lg">
             {t('legal.contact_title')}
           </Text>
-          {SUPPORT_EMAIL_CONFIGURED && (
-            <ListItem onPress={() => open(`mailto:${SUPPORT_EMAIL}`)} trailing={SUPPORT_EMAIL}>
-              {t('legal.email_support')}
-            </ListItem>
-          )}
+          <ListItem onPress={() => open(`mailto:${SUPPORT_EMAIL}`)} trailing={SUPPORT_EMAIL}>
+            {t('legal.email_support')}
+          </ListItem>
           <ListItem onPress={() => open(ISSUES_URL)}>{t('legal.report_issue')}</ListItem>
           <ListItem onPress={() => open(SOURCE_REPOSITORY_URL)}>{t('legal.source_code')}</ListItem>
         </View>

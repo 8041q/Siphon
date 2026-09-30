@@ -22,4 +22,4 @@ Siphon is free, open source and ad-free in this release.
 
 **Privacy policy:** https://8041q.github.io/Siphon/privacy/
 
-**Support email:** Configure from `PUBLIC_SUPPORT_EMAIL` before submission.
+**Support email:** 8041q@proton.me
