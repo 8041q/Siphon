@@ -72,3 +72,9 @@ EAS generated the default JKS keystore for `com.ctr_8041q.siphon` on 30 Septembe
 - SHA-256: `13:15:BF:12:D9:7E:9C:B5:2E:AB:3C:42:09:A0:4F:56:B1:36:56:E4:0F:3E:0B:65:A4:59:4D:91:20:60:9B:A2`
 
 Keep the private keystore on EAS; do not commit exported credentials. Verify that the production profiles use this same EAS keystore before the first Play upload. Once enrolled in Play App Signing, also record Google's app-signing certificate separately.
+
+## First Android cloud-build check
+
+On 1 October 2026, preview build `11d65898-c9f1-4f42-803e-6e6d489082f3` completed from commit `1cde588` using the EAS keystore above. Its APK SHA-256 is `f88208aef71186768c5f6715757b516045e6786724dda0b1c1549b4189d6301e`. Inspection with Google's `aapt2 dump badging` confirmed package `com.ctr_8041q.siphon`, version `1.0.0`/code `1`, target SDK 36, and no `RECORD_AUDIO`, Google `AD_ID`, `ACCESS_ADSERVICES_*`, Install Referrer, or Play Billing permission.
+
+This is a preview APK, not a Play AAB or a completed policy audit. The compiled app still contains AdMob and Billing SDK components, including `MobileAdsInitProvider`; verify on-device that monetization stays inactive and no ad or billing network traffic occurs before making the Play Ads/Data Safety declarations. Inspect the final production AAB separately.
