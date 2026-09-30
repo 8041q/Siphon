@@ -1,71 +1,63 @@
 # Siphon Android release automation
 
-## Release trigger
+## One-time setup
 
-A pushed semantic version tag (`v1.2.3`) starts `.github/workflows/release-android.yml`.
-The tag must match both `expo.version` in `app.json` and `version` in `package.json`.
+1. Complete the Play account and package gates in `store/PLAY-CONSOLE-CHECKLIST.md`.
+2. Establish Android credentials with one manual `eas build --platform android --profile preview` run.
+3. Upload/configure the Google Play service-account credential through EAS; never commit its JSON key.
+4. Add these GitHub Actions secrets:
+   - `EXPO_TOKEN`: Expo personal access token.
+   - `PUBLIC_SUPPORT_EMAIL`: dedicated public support/privacy mailbox.
+5. Add `EXPO_PUBLIC_SUPPORT_EMAIL` to the EAS `preview` and `production` environments.
+6. Google requires the first AAB for a new Play app to be uploaded manually. After that succeeds and Developer API access works, set the GitHub repository variable `PLAY_SUBMIT_ENABLED` to `true`.
+7. Enable GitHub Pages from GitHub Actions and deploy the privacy policy once.
 
-Example:
+Monetization is explicitly disabled in every EAS build profile. Do not change that flag until the DGEG commercial-use gate and the related privacy/ad review are complete.
+
+## Binary release
+
+The committed version is the source of truth. Update `expo.version` in `app.json` and `version` in `package.json` to the same `X.Y.Z`, commit, then tag that commit:
 
 ```bash
+npm run validate:config
+git add app.json package.json package-lock.json
+git commit -m "release: v1.2.3"
 git tag v1.2.3
-git push origin v1.2.3
+git push origin main v1.2.3
 ```
 
-## What the tag workflow does
+`.github/workflows/release.yml` then:
 
-1. Validates the tag/version pair.
-2. Builds the Google Play AAB with the EAS `production` profile.
-3. Builds the sideload APK with `production-github` after the Play build, so both use the same current remote Android version code when remote versioning is enabled.
-4. Creates/updates the matching GitHub Release and uploads the APK.
-5. Optionally submits the AAB to Google Play when the GitHub repository variable `PLAY_SUBMIT_ENABLED` is set to `true`.
+1. Rejects version/tag mismatches and missing release configuration.
+2. Runs TypeScript, tests, Expo Doctor and an Android export.
+3. Builds the `production` AAB first, allowing EAS remote versioning to increment `versionCode`.
+4. Builds the `production-github` APK second and verifies its version code matches the AAB.
+5. Downloads both exact artifacts and produces SHA-256 checksums.
+6. Creates a GitHub prerelease containing the APK, AAB and checksums, so the artifacts remain available even if Play submission fails.
+7. Submits the exact AAB build to the Play internal-test track when `PLAY_SUBMIT_ENABLED` is `true`.
 
-## Required GitHub configuration
+After testing, promote the same AAB manually in Play Console. Publish the matching GitHub prerelease only after the Play production version is available; `/releases/latest` ignores prereleases, which prevents Play users being prompted for a version their store cannot install yet.
 
-### Secret
+## Update channels
 
-- `EXPO_TOKEN`: Expo personal access token used by GitHub Actions to call EAS.
-
-### Repository variable
-
-- `PLAY_SUBMIT_ENABLED`: leave unset/`false` while Play identity/service-account setup is pending. Set it to `true` when automated submission is ready.
-
-## Required EAS / Google Play setup before enabling Play submission
-
-Upload the Google Play service-account JSON to the Android service credentials for this EAS project. Do not commit the JSON key to GitHub.
-The `submit.production.android` profile targets the production track with a completed release.
-
-## App update channels
-
-- Google Play build: `production`
-- GitHub APK build: `production-github`
+- Play binary: `production`
+- GitHub APK: `production-github`
 - Internal preview: `preview`
 - Development client: `development`
 
-The app reads the native `expo-updates` channel to decide which binary updater to use. This value is embedded in the binary and remains reliable after OTA updates.
+The app checks EAS Update for its embedded channel. Public Android builds also use the latest published GitHub Release as the binary-version feed: Play builds open Google Play, while GitHub builds open the APK/release page.
 
-## User-facing update behavior
+## OTA updates
 
-`Check for updates` performs two compatible checks:
+Run the `Publish EAS update` workflow manually. Preview publishes only to `preview`. Production uses the protected `production-ota` GitHub environment and publishes the same source to both public channels.
 
-1. EAS Update checks for a JS/assets update compatible with the installed runtime.
-2. Public Android builds also compare the installed app version with the latest GitHub Release tag.
+The workflow compares the selected commit with the latest tag and rejects changes to native/runtime-affecting configuration, packages, plugins or app identity assets. Such changes require a new binary version and tag.
+OTA publishing is intentionally unavailable until the first tagged binary release establishes a comparison baseline.
 
-If a newer binary exists:
+## Required manual verification
 
-- Play build opens the app listing in Google Play.
-- GitHub build opens the direct APK asset from the latest GitHub Release (or the release page if the APK asset is missing).
-
-If only an EAS update exists, Siphon downloads it and reloads the app after the user taps Install update.
-
-Siphon does not request `REQUEST_INSTALL_PACKAGES` and does not attempt to silently/self-install APK files.
-
-## OTA-only hotfixes
-
-Use the `Publish Production OTA Update` GitHub Action manually for changes that do not require a native rebuild. Choose the exact Git ref to publish. The workflow publishes the same source ref to both production channels.
-
-Because `runtimeVersion` uses the `appVersion` policy, the selected ref's `app.json` version must match the binary version you intend to update.
-
-## Ads
-
-Rewarded ads use Google test IDs in development/preview builds. Public `production` and `production-github` binaries use the production rewarded unit IDs.
+- Install the Play internal-track AAB and review the pre-launch report.
+- Confirm the final manifest has target SDK 36 and lacks `RECORD_AUDIO`, `WRITE_EXTERNAL_STORAGE`, `SYSTEM_ALERT_WINDOW`, `AD_ID` and `com.android.vending.BILLING`.
+- Record the AAB/APK signing certificate fingerprints.
+- Confirm release network traffic contains no ad or Billing requests.
+- Exercise the location disclosure and verify OSRM receives coordinates only after the user accepts and invokes location.

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Siphon Privacy Policy</title>
+    <style>
+      :root { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: #171717; background: #faf8f2; }
+      body { margin: 0; }
+      main { box-sizing: border-box; width: min(760px, 100%); margin: 0 auto; padding: 48px 22px 80px; line-height: 1.65; }
+      h1 { color: #d5001c; line-height: 1.1; }
+      h2 { margin-top: 2rem; line-height: 1.25; }
+      a { color: #b50018; }
+      .meta { color: #666; }
+      @media (prefers-color-scheme: dark) {
+        :root { color: #f5f5f5; background: #111; }
+        a { color: #ff6b78; }
+        .meta { color: #aaa; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Siphon Privacy Policy</h1>
+      <p class="meta">Effective: 18 September 2026</p>
+      <p>Siphon is an open-source fuel-station information app developed and maintained by 8041q. It has no user accounts and does not sell personal data.</p>
+      <h2>Information handled by Siphon</h2>
+      <p>Favorites, vehicle details, preferences, your last location, custom location-marker images, cached prices, price history, and cached route distances are stored locally on your device. A custom image is selected through the operating system picker and is not uploaded by Siphon.</p>
+      <p>When you explicitly ask Siphon to locate you, the app requests foreground location permission. Your coordinates are used to show nearby stations and are sent over HTTPS to the public OSRM routing service to calculate road distances. Siphon does not operate OSRM and does not store your location on Siphon servers.</p>
+      <h2>Online services and data sources</h2>
+      <p>Siphon downloads public fuel-station and market datasets from the SiphonAPI repository hosted by GitHub. Portuguese station data is derived from DGEG public information; Spanish station data is derived from the Spanish government's open-data service.</p>
+      <p>Maps use OpenFreeMap and OpenStreetMap data. Routing uses the public OSRM service and OpenStreetMap data. App updates may be delivered through EAS Update, Google Play, or GitHub Releases. These services necessarily receive network information such as an IP address and user agent when your device connects to them, under their respective privacy terms.</p>
+      <h2>Advertising, purchases, and analytics</h2>
+      <p>The current release has monetization disabled. It does not request advertising identifiers, load ads, offer in-app purchases, or use an analytics service. If this changes, this policy and the in-app disclosures will be updated before those features are enabled.</p>
+      <h2>Retention and deletion</h2>
+      <p>Siphon has no account or developer-operated user database. Locally stored information remains until you clear it in the app where that option is available, clear the app's storage in system settings, or uninstall the app. Requests sent to external services are subject to those services' retention practices.</p>
+      <h2>Security</h2>
+      <p>Network requests use HTTPS. No method of transmission is completely secure, but Siphon minimizes data collection and does not maintain a central store of user profiles or precise locations.</p>
+      <h2>Children</h2>
+      <p>Siphon is intended for people aged 13 and above and is not directed to children under 13.</p>
+      <h2>Changes</h2>
+      <p>Material policy changes will be published on this page with an updated effective date.</p>
+      <h2>Contact</h2>
+      <p>For privacy or support questions, email <a href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a> or use the <a href="https://github.com/8041q/Siphon/issues">public issue tracker</a>.</p>
+    </main>
+  </body>
+</html>

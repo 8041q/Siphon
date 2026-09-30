@@ -1,0 +1,58 @@
+name: Publish EAS update
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Destination channels
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+      message:
+        description: Update message
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ota-${{ inputs.release }}
+  cancel-in-progress: false
+
+env:
+  EXPO_PUBLIC_MONETIZATION_ENABLED: 'false'
+  EXPO_PUBLIC_SUPPORT_EMAIL: ${{ secrets.PUBLIC_SUPPORT_EMAIL }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.release == 'production' && 'production-ota' || 'preview' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:release
+      - name: Reject native changes since the current binary tag
+        run: node scripts/validate-ota.mjs
+      - run: npm run typecheck
+      - run: npm test
+      - uses: expo/expo-github-action@9.0.0
+        with:
+          eas-version: 24.7.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish preview update
+        if: inputs.release == 'preview'
+        run: eas update --channel preview --environment preview --message "${{ inputs.message }}" --non-interactive
+      - name: Publish production updates
+        if: inputs.release == 'production'
+        run: |
+          eas update --channel production --environment production --message "${{ inputs.message }}" --non-interactive
+          eas update --channel production-github --environment production --message "${{ inputs.message }}" --non-interactive

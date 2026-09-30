@@ -1,0 +1,40 @@
+name: Publish privacy policy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/privacy/**'
+      - 'scripts/build-privacy-site.mjs'
+      - '.github/workflows/privacy-pages.yml'
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/configure-pages@v6.0.0
+      - name: Build policy with public contact
+        env:
+          EXPO_PUBLIC_SUPPORT_EMAIL: ${{ secrets.PUBLIC_SUPPORT_EMAIL }}
+        run: node scripts/build-privacy-site.mjs "$RUNNER_TEMP/privacy-site"
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: ${{ runner.temp }}/privacy-site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5.0.1

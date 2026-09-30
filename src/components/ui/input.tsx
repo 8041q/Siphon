@@ -1,4 +1,5 @@
 import { TextInput } from 'react-native';
+import type { TextStyle } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useSupport } from '../../hooks/useSupport';
@@ -23,7 +24,7 @@ export function Input({ value, onChangeText, placeholder, className = '' }: Inpu
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={colors.placeholder}
-      style={[{ backgroundColor: glass ? 'transparent' : undefined }, applyComponentRules(rules, colors.label)]}
+      style={[{ backgroundColor: glass ? 'transparent' : undefined }, applyComponentRules(rules, colors.label) as TextStyle]}
       className={`flex-1 px-1 ${className}`}
     />
   );

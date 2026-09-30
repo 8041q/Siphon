@@ -1,63 +1,98 @@
-name: Release APK and Submit to Play Store
+name: Build Android release candidates
 
 on:
   push:
     tags:
       - 'v*'
 
-jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # needed for GitHub Release
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
 
-      - name: Setup Expo and EAS CLI
-        uses: expo/expo-github-action@v8
+permissions:
+  contents: write
+
+env:
+  EXPO_PUBLIC_MONETIZATION_ENABLED: 'false'
+  EXPO_PUBLIC_SUPPORT_EMAIL: ${{ secrets.PUBLIC_SUPPORT_EMAIL }}
+
+jobs:
+  build-test-and-publish-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v7.0.1
         with:
-          eas-cli-version: latest
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate committed release metadata
+        run: node scripts/validate-release.mjs --release --tag "$GITHUB_REF_NAME"
+
+      - name: Run release quality gates
+        run: |
+          npm run typecheck
+          npm test
+          npm run doctor
+          npm run smoke:api
+          npx expo export --platform android --output-dir "$RUNNER_TEMP/android-export"
+
+      - name: Set up Expo and pinned EAS CLI
+        uses: expo/expo-github-action@9.0.0
+        with:
+          eas-version: 24.7.0
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Derive version from tag
-        id: version
+      - name: Build Play App Bundle
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Tag must be vX.Y.Z"; exit 1; }
-          MAJOR="${VERSION%%.*}"
-          MINOR="${VERSION#*.}"; MINOR="${MINOR%%.*}"
-          PATCH="${VERSION##*.}"
-          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          jq --arg v "$VERSION" --argjson vc "$VERSION_CODE" --arg bn "$VERSION" \
-            '.version=$v | .android.versionCode=$vc | .ios.buildNumber=$bn' \
-            app.json > app.json.tmp && mv app.json.tmp app.json
+          eas build --platform android --profile production --non-interactive --wait --json > "$RUNNER_TEMP/aab-build.json"
+          jq -e 'type == "array" and length == 1 and .[0].status == "FINISHED"' "$RUNNER_TEMP/aab-build.json"
+          echo "AAB_BUILD_ID=$(jq -r '.[0].id' "$RUNNER_TEMP/aab-build.json")" >> "$GITHUB_ENV"
+          echo "AAB_URL=$(jq -r '.[0].artifacts.buildUrl' "$RUNNER_TEMP/aab-build.json")" >> "$GITHUB_ENV"
+          echo "AAB_VERSION_CODE=$(jq -r '.[0].appBuildVersion' "$RUNNER_TEMP/aab-build.json")" >> "$GITHUB_ENV"
 
-      - name: Build Android APK (for GitHub Release)
-        run: eas build --platform android --profile preview --non-interactive --output "$RUNNER_TEMP/siphon.apk"
+      - name: Download Play App Bundle
+        run: curl --fail --location --retry 3 "$AAB_URL" --output "$RUNNER_TEMP/siphon-${GITHUB_REF_NAME}.aab"
 
-      - name: Upload APK to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Build GitHub APK with matching remote version
+        run: |
+          eas build --platform android --profile production-github --non-interactive --wait --json > "$RUNNER_TEMP/apk-build.json"
+          jq -e 'type == "array" and length == 1 and .[0].status == "FINISHED"' "$RUNNER_TEMP/apk-build.json"
+          echo "APK_BUILD_ID=$(jq -r '.[0].id' "$RUNNER_TEMP/apk-build.json")" >> "$GITHUB_ENV"
+          echo "APK_URL=$(jq -r '.[0].artifacts.buildUrl' "$RUNNER_TEMP/apk-build.json")" >> "$GITHUB_ENV"
+          echo "APK_VERSION_CODE=$(jq -r '.[0].appBuildVersion' "$RUNNER_TEMP/apk-build.json")" >> "$GITHUB_ENV"
+
+      - name: Download and verify GitHub APK
+        run: |
+          curl --fail --location --retry 3 "$APK_URL" --output "$RUNNER_TEMP/siphon-${GITHUB_REF_NAME}.apk"
+          test "$AAB_VERSION_CODE" = "$APK_VERSION_CODE" || {
+            echo "AAB versionCode $AAB_VERSION_CODE does not match APK versionCode $APK_VERSION_CODE"
+            exit 1
+          }
+          cd "$RUNNER_TEMP"
+          sha256sum "siphon-${GITHUB_REF_NAME}.apk" "siphon-${GITHUB_REF_NAME}.aab" > "siphon-${GITHUB_REF_NAME}-SHA256SUMS.txt"
+
+      - name: Create GitHub prerelease
+        uses: softprops/action-gh-release@v3.0.3
         with:
           tag_name: ${{ github.ref_name }}
-          files: ${{ runner.temp }}/siphon.apk
+          prerelease: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ runner.temp }}/siphon-${{ github.ref_name }}.apk
+            ${{ runner.temp }}/siphon-${{ github.ref_name }}.aab
+            ${{ runner.temp }}/siphon-${{ github.ref_name }}-SHA256SUMS.txt
 
-      - name: Build Android AAB (for Play Store)
-        # Temporarily modify app.json to mark this as a store build
-        # This will gate the GitHub update check in useAppUpdate.ts
-        run: |
-          jq '.expo.extra.distribution = "playstore"' app.json > app.json.tmp && mv app.json.tmp app.json
-          eas build --platform android --profile production --non-interactive --output "$RUNNER_TEMP/siphon.aab"
-
-      - name: Submit to Play Store
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        run: |
-          eas submit --platform android --non-interactive
-
-      - name: Restore app.json (optional, for cleanliness)
-        run: |
-          jq '.expo.extra.distribution = "github"' app.json > app.json.tmp && mv app.json.tmp app.json
+      - name: Submit exact AAB to Play internal testing
+        if: vars.PLAY_SUBMIT_ENABLED == 'true'
+        run: eas submit --platform android --profile internal --id "$AAB_BUILD_ID" --non-interactive --wait

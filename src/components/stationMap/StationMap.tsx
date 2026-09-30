@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import { Image, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
 import { Map as MapComponent, Camera, Marker, GeoJSONSource, Layer, Images, type CameraRef } from '@maplibre/maplibre-react-native';
+import type { SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 import * as Haptics from 'expo-haptics';
 
 import type { MapCameraRequest, StationMapProps } from './types';
@@ -17,7 +18,7 @@ const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const STATION_IMAGES = { ...BRAND_ICONS, ...BRAND_LOGO_IMAGES };
 const LOGO_IMAGE_EXPRESSION = buildLogoImageExpression();
 
-const PRICE_MARKER_LAYOUT = {
+const PRICE_MARKER_LAYOUT: NonNullable<SymbolLayerSpecification['layout']> = {
   'icon-image': MARKER_SHAPE_ICON,
   'icon-anchor': 'bottom',
   'icon-size': 0.098,
@@ -35,9 +36,9 @@ const PRICE_MARKER_LAYOUT = {
   'text-ignore-placement': false,
   'text-transform': 'uppercase',
   'symbol-sort-key': ['*', -1, ['get', '_sortLat']],
-} as const;
+};
 
-const LOGO_MARKER_LAYOUT = {
+const LOGO_MARKER_LAYOUT: NonNullable<SymbolLayerSpecification['layout']> = {
   'icon-image': LOGO_IMAGE_EXPRESSION,
   'icon-anchor': 'center',
   'icon-size': 0.5,
@@ -45,7 +46,7 @@ const LOGO_MARKER_LAYOUT = {
   'icon-allow-overlap': true,
   'icon-ignore-placement': true,
   'symbol-sort-key': ['*', -1, ['get', '_sortLat']],
-} as const;
+};
 
 
 // Keep marker prices high-contrast and independent from app palettes. This is

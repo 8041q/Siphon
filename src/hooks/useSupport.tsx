@@ -12,6 +12,7 @@ import { useRewardedAd } from './useRewardedAd';
 import { useUserLocationMarker, type UserLocationMarkerConfig } from './useUserLocationMarker';
 import type { Palette, PaletteId } from '../theme/palettes';
 import type { StyleSetId, StyleRules } from '../theme/styles';
+import { appearanceUnlocked, MONETIZATION_ENABLED } from '../config/features';
 
 export const ALL_REWARDS: readonly RewardItem[] = REWARDS;
 
@@ -65,7 +66,10 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   const locationMarker = useUserLocationMarker();
 
   const watchedCount = rewards.watchedCount;
-  const isUnlocked = rewards.isUnlocked;
+  const isUnlocked = useCallback(
+    (id: string) => appearanceUnlocked(MONETIZATION_ENABLED, rewards.isUnlocked(id)),
+    [rewards.isUnlocked],
+  );
   const recordWatch = rewards.recordWatch;
   const rewardsLoaded = rewards.loaded;
   const ensureConsent = consent.ensureConsent;
@@ -76,7 +80,7 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   // Once real reward progress is known, reset any selection the count does not
   // actually entitle the user to.
   useEffect(() => {
-    if (!rewardsLoaded) return;
+    if (!MONETIZATION_ENABLED || !rewardsLoaded) return;
     if (!isUnlocked(paletteState.paletteId)) paletteState.setPaletteId('default');
     if (!isUnlocked(iconSetState.iconSetId)) iconSetState.setIconSetId('ionicons');
     if (!isUnlocked(styleSetState.styleSetId)) styleSetState.setStyleSetId('default');
@@ -107,6 +111,7 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   // Consent information may refresh on launch, but the consent form and the
   // rewarded-ad request itself are only initiated from an explicit user action.
   const watchAd = useCallback(async (): Promise<WatchResult> => {
+    if (!MONETIZATION_ENABLED) return { earned: false, reason: 'failed' };
     // Do not let an ad completion race the persisted reward-progress hydration.
     // The rewards UI already disables the button while loading; this guard also
     // makes the provider safe for any future callers.

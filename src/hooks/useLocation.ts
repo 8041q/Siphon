@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as Location from 'expo-location';
+import i18n from '../i18n';
 
 export interface LocationState {
   latitude: number;
@@ -11,6 +12,30 @@ export interface LocationState {
 
 const DEFAULT_COORDS = { latitude: 37.5, longitude: -8.0 };
 const LOCATION_KEY = 'siphon:lastLocation';
+const ROUTING_DISCLOSURE_KEY = 'siphon:routingDisclosure:v1';
+
+async function confirmRoutingDisclosure(): Promise<boolean> {
+  const acknowledged = await AsyncStorage.getItem(ROUTING_DISCLOSURE_KEY).catch(() => null);
+  if (acknowledged === 'accepted') return true;
+
+  return new Promise((resolve) => {
+    Alert.alert(
+      i18n.t('legal.location_disclosure_title'),
+      i18n.t('legal.location_disclosure_body'),
+      [
+        { text: i18n.t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+        {
+          text: i18n.t('common.continue'),
+          onPress: () => {
+            void AsyncStorage.setItem(ROUTING_DISCLOSURE_KEY, 'accepted').catch(() => undefined);
+            resolve(true);
+          },
+        },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    );
+  });
+}
 
 function hasValidCoordinates(
   value: { latitude?: unknown; longitude?: unknown },
@@ -107,10 +132,12 @@ export function useLocation() {
       // never overwrite a newer GPS fix, and so `requesting` cannot flicker
       // false while the GPS request is still in flight.
       await refresh();
-      if (!mountedRef.current) return null;
-
-      setRequesting(true);
       try {
+        if (!mountedRef.current) return null;
+        const disclosureAccepted = await confirmRoutingDisclosure();
+        if (!disclosureAccepted || !mountedRef.current) return null;
+
+        setRequesting(true);
         const gps = await fetchGpsLocation();
         if (!gps || !mountedRef.current) return null;
 

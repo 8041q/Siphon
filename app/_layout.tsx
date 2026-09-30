@@ -81,6 +81,7 @@ function AppContent() {
         <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="legal" />
             <Stack.Screen
               name="price-trends/[id]"
               options={{ headerShown: true, presentation: 'modal' }}

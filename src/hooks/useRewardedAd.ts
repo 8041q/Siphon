@@ -8,6 +8,7 @@ import {
   RewardedAdEventType,
   TestIds,
 } from 'react-native-google-mobile-ads';
+import { MONETIZATION_ENABLED } from '../config/features';
 
 const PRODUCTION_REWARDED_AD_UNIT_ID = Platform.OS === 'ios'
   ? 'ca-app-pub-9869503535733811/3385404717'
@@ -88,6 +89,7 @@ export function useRewardedAd() {
   }, [clearLoadTimeout, disposeAd, settleLoad, settleShow]);
 
   const load = useCallback(async (): Promise<boolean> => {
+    if (!MONETIZATION_ENABLED) return false;
     if (!mountedRef.current) return false;
     if (phaseRef.current === 'ready') return true;
     if (phaseRef.current === 'loading') {
@@ -192,6 +194,7 @@ export function useRewardedAd() {
   }, [disposeAd, settleShow, updatePhase]);
 
   const watchAd = useCallback(async (): Promise<boolean> => {
+    if (!MONETIZATION_ENABLED) return false;
     if (phaseRef.current === 'showing' || phaseRef.current === 'loading') return false;
     if (phaseRef.current !== 'ready') {
       const ready = await load();

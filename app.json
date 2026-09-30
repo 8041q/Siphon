@@ -6,12 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.8041q.siphon",
@@ -54,6 +48,8 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
             "cmakeVersion": "4.1.2",
             "kotlinVersion": "2.3.0",
             "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
@@ -81,8 +77,24 @@
           "userTrackingUsageDescription": "Siphon uses the advertising identifier, with your permission, to personalize rewarded ads and support the app."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Siphon to select an image for your location marker.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       "expo-tracking-transparency",
-      "expo-iap"
+      "expo-iap",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
     ],
     "scheme": "siphon",
     "experiments": {

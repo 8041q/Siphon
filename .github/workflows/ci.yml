@@ -1,0 +1,32 @@
+name: App quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_MONETIZATION_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:config
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run doctor
+      - run: npx expo export --platform android --output-dir "$RUNNER_TEMP/android-export"

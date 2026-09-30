@@ -28,6 +28,7 @@ import { SHEET_HANDLE_INDICATOR_STYLE, SHEET_HANDLE_STYLE } from '../theme/layou
 import { Button } from './ui/button';
 import { GlassBox } from './ui/GlassBox';
 import { SheetBackground } from './ui/SheetBackground';
+import { MONETIZATION_ENABLED } from '../config/features';
 
 export type RewardsSheetHandle = { present: () => void };
 
@@ -201,13 +202,13 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     >
       <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
         <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
-          {t('settings.rewards_title')}
+          {MONETIZATION_ENABLED ? t('settings.rewards_title') : t('settings.appearance_options_title')}
         </Text>
         <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
-          {t('settings.rewards_caption')}
+          {MONETIZATION_ENABLED ? t('settings.rewards_caption') : t('settings.appearance_options_caption')}
         </Text>
 
-        <GlassBox component="card" color={colors.fieldBackground} className="rounded-md p-md mb-lg">
+        {MONETIZATION_ENABLED && <GlassBox component="card" color={colors.fieldBackground} className="rounded-md p-md mb-lg">
           <View className="flex-row items-center justify-between mb-sm">
             <Text style={{ color: colors.label }} className="text-body font-semibold">
               {t('settings.rewards_progress', { count: watchedCount })}
@@ -231,7 +232,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
               {t('settings.rewards_ad_failed')}
             </Text>
           )}
-        </GlassBox>
+        </GlassBox>}
 
         <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
           {t('settings.rewards_palettes')}
@@ -309,7 +310,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
                   {iconSet.render({ name: 'map.fill', size: 18, color: colors.tint })}
                 </View>
                 <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
-                  {t(`settings.iconset_${id}`)}
+                  {t(iconSet.labelKey)}
                 </Text>
               </View>
               {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
@@ -378,7 +379,7 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
         })}
 
         <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-md">
-          {t('settings.rewards_footnote')}
+          {MONETIZATION_ENABLED ? t('settings.rewards_footnote') : t('settings.appearance_options_footnote')}
         </Text>
       </BottomSheetScrollView>
     </BottomSheetModal>

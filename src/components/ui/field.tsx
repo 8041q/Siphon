@@ -1,5 +1,5 @@
 import { Text, TextInput, View } from 'react-native';
-import type { KeyboardTypeOptions } from 'react-native';
+import type { KeyboardTypeOptions, TextStyle } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useSupport } from '../../hooks/useSupport';
@@ -38,7 +38,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
           autoCapitalize={autoCapitalize}
           style={[
             { backgroundColor: glass ? 'transparent' : colors.fieldBackground, borderColor: colors.fieldBorder, color: colors.label },
-            glass ? undefined : applyComponentRules(rules, colors.label),
+            glass ? undefined : applyComponentRules(rules, colors.label) as TextStyle,
           ]}
           className="rounded-md px-3 py-2 text-body"
         />

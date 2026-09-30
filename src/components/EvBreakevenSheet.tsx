@@ -9,7 +9,8 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { Field } from './ui/field';
 import { GlassBox } from './ui/GlassBox';
-import { SheetBackground, SHEET_HANDLE_INDICATOR_STYLE, SHEET_HANDLE_STYLE } from './ui/SheetBackground';
+import { SheetBackground } from './ui/SheetBackground';
+import { SHEET_HANDLE_INDICATOR_STYLE, SHEET_HANDLE_STYLE } from '../theme/layout';
 import type { EvConfig } from '../utils/vehicles';
 
 export type EvBreakevenSheetHandle = { present: () => void };

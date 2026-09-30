@@ -9,6 +9,7 @@ import {
   PermissionStatus,
   requestTrackingPermissionsAsync,
 } from 'expo-tracking-transparency';
+import { MONETIZATION_ENABLED } from '../config/features';
 
 export type PrivacyOptionsResult = 'shown' | 'not_required' | 'failed';
 
@@ -25,6 +26,7 @@ export function useAdConsent() {
   }, []);
 
   const readLatestInfo = useCallback(async () => {
+    if (!MONETIZATION_ENABLED) return null;
     try {
       const info = await AdsConsent.requestInfoUpdate();
       applyInfo(info);
@@ -50,11 +52,12 @@ export function useAdConsent() {
     mountedRef.current = true;
     // Refresh consent information once per app launch. This does not display a
     // form or request an ad; rewarded ads remain strictly user initiated.
-    void refreshConsentInfo();
+    if (MONETIZATION_ENABLED) void refreshConsentInfo();
     return () => { mountedRef.current = false; };
   }, [refreshConsentInfo]);
 
   const ensureConsent = useCallback(async (): Promise<boolean> => {
+    if (!MONETIZATION_ENABLED) return false;
     try {
       await AdsConsent.requestInfoUpdate();
       const info = await AdsConsent.loadAndShowConsentFormIfRequired();
@@ -84,6 +87,7 @@ export function useAdConsent() {
   }, [applyInfo]);
 
   const showPrivacyOptions = useCallback(async (): Promise<PrivacyOptionsResult> => {
+    if (!MONETIZATION_ENABLED) return 'not_required';
     if (mountedRef.current) setRefreshing(true);
     try {
       // Do not trust a launch-time status indefinitely. Privacy-message

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, I18nManager, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, I18nManager, Linking, ScrollView, Switch, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colorScheme as nativewindColorScheme } from 'nativewind';
@@ -27,6 +28,8 @@ import { fuelLabel } from '../../src/utils/fuelNames';
 import { consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
 import type { Vehicle } from '../../src/utils/vehicles';
 import { clearRouteDistanceCache } from '../../src/utils/routeDistance';
+import { MONETIZATION_ENABLED } from '../../src/config/features';
+import { SOURCE_REPOSITORY_URL } from '../../src/config/legal';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -54,6 +57,7 @@ function normalizeLanguage(value: string): SupportedLanguage {
 
 export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
+  const router = useRouter();
   const { historyEnabled, setHistoryEnabled } = useUI();
   const {
     updateAvailable,
@@ -81,7 +85,7 @@ export default function SettingsScreen() {
   const languageChangeVersionRef = useRef(0);
 
   const { watchedCount, privacyOptionsRequired, showPrivacyOptions, privacyRefreshing } = useSupport();
-  const { paletteId, iconSetId, styleSetId, styleRules, marker: currentMarker } = useAppearanceSupport();
+  const { paletteId, iconSet, styleSetId, styleRules, marker: currentMarker } = useAppearanceSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const { colors } = useThemeTokens();
@@ -218,7 +222,7 @@ export default function SettingsScreen() {
             {t('settings.color_palette')}
           </ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
-          <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.iconset_${iconSetId}`)}>
+          <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(iconSet.labelKey)}>
             {t('settings.icon_set')}
           </ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
@@ -319,7 +323,7 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        {MONETIZATION_ENABLED && <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.privacy_ads')}
           </Text>
@@ -338,7 +342,7 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.ads_opt_in_caption')}
           </Text>
-        </View>
+        </View>}
 
         <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
@@ -398,7 +402,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        {MONETIZATION_ENABLED && <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.support')}
           </Text>
@@ -412,7 +416,7 @@ export default function SettingsScreen() {
           <ListItem onPress={() => donationSheetRef.current?.present()}>
             {t('settings.support_donate')}
           </ListItem>
-        </View>
+        </View>}
 
         <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
@@ -421,6 +425,10 @@ export default function SettingsScreen() {
           <ListItem trailing="Siphon">{t('settings.app_name')}</ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <ListItem trailing="SiphonAPI">{t('settings.data_source')}</ListItem>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <ListItem onPress={() => router.push('/legal' as never)}>{t('settings.legal_information')}</ListItem>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <ListItem onPress={() => { void Linking.openURL(SOURCE_REPOSITORY_URL); }}>{t('settings.source_code')}</ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <ListItem trailing={installedVersion}>{t('settings.version')}</ListItem>
         </View>
@@ -453,7 +461,7 @@ export default function SettingsScreen() {
         vehicles={vehicles}
       />
       <RewardsSheet ref={rewardsSheetRef} />
-      <DonationSheet ref={donationSheetRef} />
+      {MONETIZATION_ENABLED && <DonationSheet ref={donationSheetRef} />}
     </SafeAreaView>
   );
 }

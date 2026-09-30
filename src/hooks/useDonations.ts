@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useIAP, type Purchase, type Product } from 'expo-iap';
 
 import { DONATION_SKUS } from '../config/support';
+import { MONETIZATION_ENABLED } from '../config/features';
 
 type DonationState = 'idle' | 'loading' | 'purchasing' | 'success' | 'error';
 
@@ -55,7 +56,7 @@ export function useDonations(): UseDonationsValue {
   });
 
   useEffect(() => {
-    if (!connected) return;
+    if (!MONETIZATION_ENABLED || !connected) return;
     fetchProducts({ skus: DONATION_SKUS, type: 'in-app' }).catch((error) => {
       console.warn('Failed to load donation products:', error);
     });
@@ -63,6 +64,7 @@ export function useDonations(): UseDonationsValue {
 
   const purchase = useCallback(
     async (sku: string) => {
+      if (!MONETIZATION_ENABLED) return;
       setLastResult('idle');
       setPurchasing(true);
       try {
