@@ -80,4 +80,12 @@ On 1 October 2026, preview build `11d65898-c9f1-4f42-803e-6e6d489082f3` complete
 
 This is a preview APK, not a Play AAB or a completed policy audit. The compiled app still contains AdMob and Billing SDK components, including `MobileAdsInitProvider`; verify on-device that monetization stays inactive and no ad or billing network traffic occurs before making the Play Ads/Data Safety declarations. Inspect the final production AAB separately.
 
-The subsequent native cleanup adds manifest merger removal rules for the automatic AdMob provider, its service and configuration metadata, Billing version metadata, and the unused Expo continuous-location task service. The SDK libraries remain bundled for future use. Verify the replacement APK/AAB before relying on these rules; the earlier APK above predates them. WorkManager's generic foreground-service entry is left intact because it is a transitive dependency; Siphon does not start it or declare a location foreground-service use.
+### Verified native cleanup
+
+On 1 October 2026, preview build [`6027436e-1219-480f-80c2-9c229083ebde`](https://expo.dev/accounts/ctr_8041q/projects/siphon/builds/6027436e-1219-480f-80c2-9c229083ebde) completed from commit `d36c486`. Its APK SHA-256 is `f52741fa8cde42b66493b3e77c14dfbba354a9afc2f5e747d3b609ae4d06ff5b`.
+
+Google's `aapt2` confirmed package `com.ctr_8041q.siphon`, version `1.0.0`/code `1`, target SDK 36, and the absence of all blocked permissions above. The compiled manifest also lacks `MobileAdsInitProvider`, AdMob `AdService`, AdMob configuration metadata, Billing version metadata, and Expo `LocationTaskService`; no location foreground-service type remains. The certificate extracted from the APK's v2 signing block matches both EAS fingerprints recorded above. This certificate comparison does not replace complete signature verification or inspection of the future production AAB.
+
+The SDK libraries and Billing proxy activities remain bundled for future use. WorkManager's generic foreground-service entry and permission are left intact because they are transitive dependencies; Siphon does not start that service. On-device traffic inspection and a fresh-install/upgrade smoke test of this replacement APK remain required before completing Play declarations.
+
+The [GitHub quality-gates run](https://github.com/8041q/Siphon/actions/runs/36833031875) passed at commit `baba563`: clean dependency installation, release configuration, store assets, TypeScript, all 12 tests, Expo Doctor, and Android export. That commit adds only a CSS type declaration to fix clean-checkout TypeScript validation; it does not change the runtime of the inspected APK.
