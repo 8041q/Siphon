@@ -20,6 +20,7 @@
 ## App content answers for the monetization-disabled build
 
 - Ads: **No**, only after release network inspection confirms no ad requests and the final manifest lacks Google `AD_ID` and Android `ACCESS_ADSERVICES_*` permissions.
+- Verify that the release manifest also lacks AdMob's `MobileAdsInitProvider` and `AdService`, and Expo's unused `LocationTaskService`. Siphon requests a single foreground position and does not use continuous/background location or a location foreground service.
 - App access: unrestricted; no login.
 - Target audience: 13 and above.
 - Account deletion: not applicable; the app has no accounts.

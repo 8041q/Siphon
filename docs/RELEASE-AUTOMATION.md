@@ -62,6 +62,7 @@ OTA publishing is intentionally unavailable until the first tagged binary releas
 - Confirm the final manifest has target SDK 36 and lacks `RECORD_AUDIO`, unrestricted `WRITE_EXTERNAL_STORAGE`, `SYSTEM_ALERT_WINDOW`, Google `AD_ID`, all three `ACCESS_ADSERVICES_*` permissions, Install Referrer, and `com.android.vending.BILLING`.
 - Compare the AAB/APK upload-signing certificate with the EAS credential recorded below. Google Play App Signing may use a separate distribution certificate; record that certificate from Play Console after enrollment.
 - Confirm release network traffic contains no ad or Billing requests.
+- Confirm the merged manifest has no `MobileAdsInitProvider`, AdMob `AdService`, Billing version metadata, or Expo `LocationTaskService`. The `withReleaseManifest` plugin removes these unused components while monetization is disabled; ordinary one-shot foreground location remains available.
 - Exercise the location disclosure and verify OSRM receives coordinates only after the user accepts and invokes location.
 
 ## Android upload signing certificate
@@ -78,3 +79,5 @@ Keep the private keystore on EAS; do not commit exported credentials. Verify tha
 On 1 October 2026, preview build `11d65898-c9f1-4f42-803e-6e6d489082f3` completed from commit `1cde588` using the EAS keystore above. Its APK SHA-256 is `f88208aef71186768c5f6715757b516045e6786724dda0b1c1549b4189d6301e`. Inspection with Google's `aapt2 dump badging` confirmed package `com.ctr_8041q.siphon`, version `1.0.0`/code `1`, target SDK 36, and no `RECORD_AUDIO`, Google `AD_ID`, `ACCESS_ADSERVICES_*`, Install Referrer, or Play Billing permission.
 
 This is a preview APK, not a Play AAB or a completed policy audit. The compiled app still contains AdMob and Billing SDK components, including `MobileAdsInitProvider`; verify on-device that monetization stays inactive and no ad or billing network traffic occurs before making the Play Ads/Data Safety declarations. Inspect the final production AAB separately.
+
+The subsequent native cleanup adds manifest merger removal rules for the automatic AdMob provider, its service and configuration metadata, Billing version metadata, and the unused Expo continuous-location task service. The SDK libraries remain bundled for future use. Verify the replacement APK/AAB before relying on these rules; the earlier APK above predates them. WorkManager's generic foreground-service entry is left intact because it is a transitive dependency; Siphon does not start it or declare a location foreground-service use.

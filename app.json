@@ -95,7 +95,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "./plugins/withReleaseManifest"
     ],
     "scheme": "siphon",
     "experiments": {
