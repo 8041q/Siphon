@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Text, TouchableOpacity, View, type LayoutChangeEvent } from 'react-native';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Svg, {
   Circle,
@@ -17,6 +17,7 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { fuelUnit } from '../utils/fuelNames';
 import type { PricePoint } from '../utils/priceIntelligence';
 import { GlassBox } from './ui/GlassBox';
+import { FilterButton } from './ui/FilterButton';
 
 const DAY = 86_400_000;
 const RANGES = [7, 30, 90] as const;
@@ -216,27 +217,16 @@ export function PriceChart({ data, fuelLabel: label, fuelKey, source, forecast }
         </View>
       </View>
 
-      <View className="flex-row gap-xs">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {RANGES.map((days) => {
           const selected = range === days;
           return (
-            <TouchableOpacity
+            <FilterButton
               key={days}
-              activeOpacity={0.7}
+              label={t(`price_chart.range_${days}d`)}
+              selected={selected}
               onPress={() => setRange(days)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              style={{
-                paddingHorizontal: 11,
-                paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: selected ? colors.tint : colors.groupedBackground,
-              }}
-            >
-              <Text style={{ color: selected ? colors.labelOnTint : colors.secondaryLabel }} className="text-caption-1 font-semibold">
-                {t(`price_chart.range_${days}d`)}
-              </Text>
-            </TouchableOpacity>
+            />
           );
         })}
       </View>

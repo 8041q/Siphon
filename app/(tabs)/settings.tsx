@@ -7,7 +7,7 @@ import { colorScheme as nativewindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 
-import { client, useUI } from '../../src/hooks/useApp';
+import { client, useStationDistances, useUI } from '../../src/hooks/useApp';
 import { useAppearanceSupport, useSupport } from '../../src/hooks/useSupport';
 import { useAppUpdate } from '../../src/hooks/useAppUpdate';
 import { useVehicles } from '../../src/hooks/useVehicles';
@@ -27,7 +27,6 @@ import { DonationSheet, DonationSheetHandle } from '../../src/components/Donatio
 import { fuelLabel } from '../../src/utils/fuelNames';
 import { consumptionUnit, capacityUnit } from '../../src/utils/vehicles';
 import type { Vehicle } from '../../src/utils/vehicles';
-import { clearRouteDistanceCache } from '../../src/utils/routeDistance';
 import { MONETIZATION_ENABLED } from '../../src/config/features';
 import { SOURCE_REPOSITORY_URL } from '../../src/config/legal';
 
@@ -59,6 +58,9 @@ export default function SettingsScreen() {
   const { t, i18n: i18nInstance } = useTranslation();
   const router = useRouter();
   const { historyEnabled, setHistoryEnabled } = useUI();
+  const { clearSavedRoadDistances } = useStationDistances();
+  const [clearingRoutes, setClearingRoutes] = useState(false);
+  const routeClearDialogRef = useRef(false);
   const {
     updateAvailable,
     updateKind,
@@ -66,7 +68,12 @@ export default function SettingsScreen() {
     installedVersion,
     distribution,
     checking,
+    hasChecked,
     applying,
+    autoCheckEnabled,
+    autoCheckLoaded,
+    autoCheckSaving,
+    setAutoCheckEnabled,
     error,
     check,
     applyUpdate,
@@ -151,9 +158,31 @@ export default function SettingsScreen() {
     setHistoryEnabled(value);
   };
 
-  const handleClearRoutes = async () => {
+  const handleClearRoutes = () => {
+    if (routeClearDialogRef.current || clearingRoutes) return;
+    routeClearDialogRef.current = true;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-    await clearRouteDistanceCache().catch(() => 0);
+    Alert.alert(t('settings.route_cache_confirm_title'), t('settings.route_cache_confirm_body'), [
+      { text: t('common.cancel'), style: 'cancel', onPress: () => { routeClearDialogRef.current = false; } },
+      {
+        text: t('settings.route_cache_clear_action'),
+        style: 'destructive',
+        onPress: () => {
+          setClearingRoutes(true);
+          void clearSavedRoadDistances().then((count) => {
+            Alert.alert(
+              t(count > 0 ? 'settings.route_cache_cleared_title' : 'settings.route_cache_empty_title'),
+              count > 0 ? t('settings.route_cache_cleared_body', { count }) : t('settings.route_cache_empty_body'),
+            );
+          }).catch(() => {
+            Alert.alert(t('settings.route_cache_error_title'), t('settings.route_cache_error_body'));
+          }).finally(() => {
+            routeClearDialogRef.current = false;
+            setClearingRoutes(false);
+          });
+        },
+      },
+    ], { cancelable: false });
   };
 
   const handlePrivacyOptions = async () => {
@@ -178,6 +207,13 @@ export default function SettingsScreen() {
     const ok = await applyUpdate();
     if (!ok) {
       Alert.alert(t('settings.update_error_title'), t('settings.update_apply_failed'));
+    }
+  };
+
+  const handleToggleAutoCheck = async (enabled: boolean) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    if (!await setAutoCheckEnabled(enabled)) {
+      Alert.alert(t('settings.update_error_title'), t('settings.update_preference_save_failed'));
     }
   };
 
@@ -317,7 +353,9 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.data_storage')}
           </Text>
-          <ListItem onPress={handleClearRoutes}>{t('settings.clear_route_cache')}</ListItem>
+          <ListItem onPress={clearingRoutes ? undefined : handleClearRoutes}>
+            {t(clearingRoutes ? 'settings.route_cache_clearing' : 'settings.clear_route_cache')}
+          </ListItem>
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.route_cache_caption')}
           </Text>
@@ -360,6 +398,21 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.updates')}
           </Text>
+          <View style={{ backgroundColor: colors.surface }} className="flex-row items-center justify-between px-lg py-md">
+            <Text style={{ color: colors.label, marginEnd: 8 }} className="text-callout flex-1">
+              {t('settings.auto_check_updates')}
+            </Text>
+            <Switch
+              value={autoCheckEnabled}
+              disabled={!autoCheckLoaded || autoCheckSaving}
+              onValueChange={(value) => { void handleToggleAutoCheck(value); }}
+              accessibilityLabel={t('settings.auto_check_updates')}
+            />
+          </View>
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md">
+            {t('settings.auto_check_updates_caption')}
+          </Text>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <ListItem
             trailing={
               checking
@@ -374,7 +427,9 @@ export default function SettingsScreen() {
                         ? t('settings.update_available_ota')
                         : updateKind === 'binary'
                           ? t('settings.update_available_version', { version: latestVersion })
-                          : t('settings.up_to_date')
+                          : !hasChecked
+                            ? t('settings.update_not_checked')
+                            : t('settings.up_to_date')
             }
           >
             {t('settings.update_status')}

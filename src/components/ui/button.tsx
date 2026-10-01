@@ -25,9 +25,12 @@ export function Button({
   const { colors } = useThemeTokens();
   const { styleRules } = useSupport();
   const rules = useStyleConfig(styleRules, 'button');
+  const labelColor = variant === 'primary' ? colors.labelOnTint : colors.tint;
 
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       activeOpacity={0.7}
       onPress={onPress}
       disabled={disabled || loading}
@@ -35,9 +38,9 @@ export function Button({
       className={`rounded-md py-md px-lg items-center justify-center ${className} ${disabled ? 'opacity-50' : ''}`}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={colors.labelOnTint} />
+        <ActivityIndicator size="small" color={labelColor} />
       ) : typeof children === 'string' ? (
-        <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">{children}</Text>
+        <Text style={{ color: labelColor }} className="font-semibold text-callout">{children}</Text>
       ) : (
         children
       )}

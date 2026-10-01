@@ -1,4 +1,4 @@
-import type { ViewStyle } from 'react-native';
+import { Platform, type ViewStyle } from 'react-native';
 import type { ComponentRules, StyleRules } from '../theme/styles';
 
 export function useStyleConfig(rules: StyleRules, component: keyof StyleRules): ComponentRules {
@@ -25,6 +25,13 @@ export function applyComponentRules(rules: ComponentRules, borderColor?: string)
   }
   if (rules.borderWidth !== undefined) style.borderWidth = rules.borderWidth;
   if (rules.opacity !== undefined && !rules.glass) style.opacity = rules.opacity;
-  if (rules.glass) style.overflow = 'hidden';
+  // Android can clip away children when a rounded view changes its border or
+  // background (for example, when switching from Retro to Liquid Glass).
+  // Clip the backdrop itself there, keeping text and controls outside that mask.
+  if (rules.glass) {
+    style.overflow = Platform.OS === 'android' ? 'visible' : 'hidden';
+    // Keep the negative-z backdrop within this surface's stacking context.
+    style.isolation = 'isolate';
+  }
   return style;
 }

@@ -25,6 +25,21 @@ type LegacyCachedDistance = {
 };
 
 const pendingRequests = new Map<string, Promise<DistanceResult>>();
+const activeRouteOperations = new Set<Promise<unknown>>();
+let cacheClearPromise: Promise<number> | null = null;
+
+async function withRouteOperation<T>(operation: () => Promise<T>): Promise<T> {
+  // New reads/writes wait for a clear; existing operations finish first so
+  // a delayed network response or legacy migration cannot restore old entries.
+  while (cacheClearPromise) await cacheClearPromise.catch(() => undefined);
+  const pending = operation();
+  activeRouteOperations.add(pending);
+  try {
+    return await pending;
+  } finally {
+    activeRouteOperations.delete(pending);
+  }
+}
 
 function hasValidCoordinates(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
@@ -147,7 +162,18 @@ async function readCachedRoute(fromId: string, point: RoadDistancePoint): Promis
  * distances are persisted without a TTL. Network/provider failures return the
  * instantaneous estimate and are never cached as if they were real routes.
  */
-export async function roadDistanceKm(
+export function roadDistanceKm(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  fromId: string,
+  toId: string,
+): Promise<DistanceResult> {
+  return withRouteOperation(() => calculateRoadDistanceKm(fromLat, fromLng, toLat, toLng, fromId, toId));
+}
+
+async function calculateRoadDistanceKm(
   fromLat: number,
   fromLng: number,
   toLat: number,
@@ -221,7 +247,16 @@ async function routeIndividuallyWithBoundedConcurrency(
  * durable file store first; only missing routes reach the provider. OSRM uses a
  * single Table request for the unresolved destinations in each caller batch.
  */
-export async function roadDistancesKm(
+export function roadDistancesKm(
+  fromLat: number,
+  fromLng: number,
+  points: readonly RoadDistancePoint[],
+  fromId: string,
+): Promise<Map<string, DistanceResult>> {
+  return withRouteOperation(() => calculateRoadDistancesKm(fromLat, fromLng, points, fromId));
+}
+
+async function calculateRoadDistancesKm(
   fromLat: number,
   fromLng: number,
   points: readonly RoadDistancePoint[],
@@ -278,19 +313,16 @@ export async function roadDistancesKm(
 }
 
 /** Deletes all permanently cached routed distances. Estimates are unaffected. */
-export async function clearRouteDistanceCache(): Promise<number> {
-  const keys = await hybridStore.listKeys?.('siphon:route:') ?? [];
-  if (hybridStore.removeItem) {
-    await Promise.allSettled(keys.map((key) => hybridStore.removeItem!(key)));
-  }
-
-  // Also remove the phase-8 AsyncStorage cache. Otherwise a cleared legacy
-  // route could be lazily migrated back into the permanent cache later.
-  const legacyKeys = (await AsyncStorage.getAllKeys().catch(() => []))
-    .filter((key) => key.startsWith(`${LEGACY_CACHE_PREFIX}:`));
-  if (legacyKeys.length > 0) {
-    await AsyncStorage.multiRemove(legacyKeys).catch(() => undefined);
-  }
-
-  return keys.length + legacyKeys.length;
+export function clearRouteDistanceCache(): Promise<number> {
+  if (cacheClearPromise) return cacheClearPromise;
+  const clear = (async () => {
+    await Promise.allSettled([...activeRouteOperations]);
+    const legacyKeys = (await AsyncStorage.getAllKeys())
+      .filter((key) => key.startsWith(`${LEGACY_CACHE_PREFIX}:`));
+    const deleted = await hybridStore.clearRouteCache();
+    if (legacyKeys.length > 0) await AsyncStorage.multiRemove(legacyKeys);
+    return deleted + legacyKeys.length;
+  })();
+  cacheClearPromise = clear.finally(() => { cacheClearPromise = null; });
+  return cacheClearPromise;
 }

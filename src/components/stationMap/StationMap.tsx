@@ -346,8 +346,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
   return (
     <View style={{ flex: 1 }} onLayout={handleMapLayout}>
+      {/* Keep the Android map in the view hierarchy so sheet/backdrop overlays
+          and the blur target composite together, including at the screen edge. */}
       <MapComponent
         style={{ flex: 1 }}
+        androidView="texture"
         mapStyle={OPENFREEMAP_STYLE}
         compass
         logo={false}

@@ -49,7 +49,7 @@ const PriceForecastComponent = ({ data, unit }: PriceForecastProps) => {
 
   return (
     <View style={[{ backgroundColor: cardGlass ? 'transparent' : colors.surface }, applyComponentRules(cardRules, colors.label)]} className="rounded-md p-lg gap-sm">
-      {cardGlass && <GlassBackdrop color={colors.surface} />}
+      {cardGlass && <GlassBackdrop color={colors.surface} borderRadius={cardRules.borderRadius} />}
       <Text style={{ color: colors.label }} className="text-footnote font-semibold uppercase tracking-wide">
         {t('price_trends.forecast_title')}
       </Text>

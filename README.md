@@ -1,118 +1,73 @@
-## Publishing & updates
+# Siphon
 
-The first Android cloud test build uses `npx eas-cli@24.7.0 build --platform android --profile preview`. It produces an installable APK and can establish the Android signing credentials. See [the release runbook](docs/RELEASE-AUTOMATION.md) for the one-time EAS and Play setup.
-
-For a tagged release, commit matching `version` values in `app.json` and `package.json`, then push a matching `vX.Y.Z` tag. The tag workflow checks the app, builds a Play AAB and GitHub APK, and creates a GitHub prerelease. Play internal submission runs only after `PLAY_SUBMIT_ENABLED` is enabled. The workflow needs an `EXPO_TOKEN` GitHub Actions secret.
-
-The public support contact is `8041q@proton.me`. The app and privacy site read it from `release-contact.json`. The policy is published through GitHub Pages at <https://8041q.github.io/Siphon/privacy/>; enable Pages with **GitHub Actions** as the source and run **Publish privacy policy** before submitting to Play.
-
-### How the app checks for updates
-
-- On launch the app silently verifies whether a newer version exists (no download, result cached 30 min).
-- **Settings → Updates** shows the status, a manual "Check for updates", and - when one exists - a "Download update" button:
-  - **GitHub sideload builds**: checks GitHub releases and directs to `https://github.com/8041q/Siphon/releases/latest/download/siphon.apk`
-  - **Google Play Store builds**: automatic updates via Play Store (no GitHub check performed)
-  - **iOS**: opens the GitHub release page until an iOS distribution path is configured.
+Siphon is a fuel-station app for Portugal and Spain, built with React Native, Expo, and MapLibre. It uses public government price data processed by [SiphonAPI](https://github.com/8041q/SiphonAPI).
 
 ## Features
 
-- Stations search with filters: brand, country, fuel type, price range, city, max distance, etc
-- Favorites
-- 5-language support: English, Portuguese, Spanish, French, German
-- Theme support: light / dark (future implementation: custom theme colors)
-- Customizable location marker (4 built-in icons, SVGs, or a custom image) - Placeholders still
-- Price-history charts per fuel type, 90-day rolling window (live in server - cached on device, max 100mb for 90 days)
-- Station detail sheet - prices per fuel unit (€/L, €/kg, €/m³), opening schedule, services, payment methods, margin, directions, copy address, distance (API source & Crowdsource)
-- GPS-based location with cached last known location, doesn't follow user. Used only when requested, so no battery drained continually
+- Map and station search with fuel, brand, price, country, and distance filters.
+- Favorites, vehicle preferences, station details, and directions.
+- Up to 90 days of locally cached price history, plus a fuel-market dashboard.
+- Foreground location on request, with OSRM road distances and local estimates when routing is unavailable.
+- Light/dark themes, color palettes, icon styles, and custom location-marker images.
+- English, Portuguese, Spanish, French, and German.
 
-## Prerequisites
+The current release has ads disabled. Appearance options are available without watching ads. Monetization remains disabled until permission for commercial use of DGEG data is obtained. Ads usage is 100% optional.
 
-- Node.js
-- **iOS:** macOS, Xcode with the iOS Simulator, CocoaPods
-- **Android:** Android Studio with an emulator, or a physical device with USB debugging enabled
+## Development
 
-## Setup - dev only
+Node.js 22 (the CI version). Android development requires Android Studio and/or an emulator as a connected device; iOS requires macOS, Xcode, and CocoaPods. Native dependencies require a development build rather than Expo Go.
 
 ```bash
-npm install
-npx expo install --check
-npx expo install --fix
+npm ci
+npm run android
+# On macOS:
+npm run ios
 ```
 
-## Running the app
+Configuration lives in `app.json`, `app.config.js`, and `plugins/`. Generated `android/` and `ios/` folders are ignored by Git and excluded from EAS uploads. After changing native configuration, regenerate the relevant project with `npx expo prebuild --clean --platform android` (or `ios`) before building. Clean prebuild replaces local native edits. Keep Android CMake pinned to `3.22.1`.
 
-### iOS (requires Xcode & iOS Simulator)
+## Checks
 
 ```bash
-npx expo prebuild --clean --platform ios
-npx expo run:ios
+npm run validate:config
+npm run typecheck
+npm test
+npm run doctor
+npm run export:android
 ```
 
-### Android (requires Android Studio & phone connected via USB)
+`npm run smoke:api` checks the public data endpoints; `npm run validate:store` checks the prepared Play listing assets. Run `npm run markers:check` after changing station-marker assets.
 
-```bash
-npx expo prebuild --clean --platform android
-npx expo run:android
-```
+Keep dependency versions compatible with the Expo SDK. The npm overrides retain patched `@xmldom/xmldom` 0.8 and `brace-expansion` versions. Do not force xmldom 0.9: its parser API breaks the current Expo plist tooling. Review `npm audit --omit=dev` before releases; avoid `npm audit fix --force`, which can replace SDK-compatible packages.
 
-## Building release packages - after previous setup
+## Data and privacy
 
-### Android
+Station data is downloaded over HTTPS from the SiphonAPI GitHub repository. The app loads cached stations immediately, checks the manifest, and refreshes changed or missing data. Price history is optional and limited to a rolling 90-day device cache. Sync uses a persistent request budget, cooldown, and server backoff; offline use relies on data already downloaded.
 
-```bash
-npx expo prebuild --clean --platform android
-cd android
-gradlew assembleRelease
-```
+Maps use OpenFreeMap and OpenStreetMap. GPS is requested only after a locate action and routing disclosure. Coordinates go to OSRM over HTTPS to calculate road distances; there is no continuous location tracking. Favorites, vehicles, settings, and custom marker images stay on the device. EAS Update requests include a random installation ID.
 
-### iOS
+Read the [privacy policy](https://8041q.github.io/Siphon/privacy/) and [Data Safety guide](docs/DATA-SAFETY.md).
 
-iOS release builds go through Xcode, not Gradle:
+## Releases and updates
 
-```bash
-npx expo run:ios --configuration Release
-```
+Android distribution uses EAS: `preview` builds an internal APK, `production` builds a Play AAB, and `production-github` builds a sideload APK.
 
-> `ios/` and `android/` are gitignored and generated by `npx expo prebuild`. Native config lives declaratively in `app.json` (under `expo.ios` / `expo.android`), not in the committed native folders.
+The public app version has one source: `package.json` → `version`. `app.config.js` uses it for Expo and the OTA runtime follows it. For a new binary release, run `npm version X.Y.Z --no-git-tag-version` (which also updates the lockfile), commit the release source, then create and push tag `vX.Y.Z`. See the [release guide](docs/RELEASE.md) for first-upload and automatic Play submission setup.
 
-## How data sync works
+With **Settings → Updates → Check for updates on startup** enabled (the default), the app checks for EAS updates once per launch. Both public Android distributions also check GitHub Releases for newer binary versions. Turning the setting off skips these startup checks; manual checks remain available. **Settings → Updates** can check again and apply an available update:
 
-On app launch, sync runs once, in order:
+- EAS updates download and reload the app when selected.
+- Play builds open Google Play for a newer binary.
+- GitHub builds open the APK asset or release page.
 
-1. **`checkForUpdates()`** - conditional GET on the root manifest using an ETag (`If-None-Match`). If nothing changed, the server returns `304 Not Modified` with no body, and no countries are flagged as changed.
-2. **`syncAll(changedCountries)`** - refreshes only the tiles whose server-side hash differs from the cached one. On a `304`, this step makes zero network calls.
-3. **`checkHistoryUpdates()`** - downloads missing or changed price-history files, gated by the "Save price history on device" setting (on by default).
+The check itself does not download an update. Native changes require a new binary.
+Public iOS binary distribution is not configured.
 
-All three steps only touch the network when something actually changed - on a no-change day, the app runs entirely from cache.
+## Documentation and support
 
-To protect the GitHub data source, sync is guarded client-side (persisted in file-backed storage so it survives cache clears): a rolling **hourly request budget** (~300), a **minimum interval between sync cycles** (10 min), and **backoff on 429/403** responses. When a limit is hit, the app runs from cache and shows a short "sync paused" notice instead of spamming GitHub.
+- [Release guide](docs/RELEASE.md)
+- [Data Safety and privacy declarations](docs/DATA-SAFETY.md)
+- [Data client reference](docs/API.md)
+- [Privacy policy source](docs/privacy/index.template.html)
 
-The **"Search this area"** button reads from the cached data for the current map region, and only hits the network if that country was flagged as changed at launch.
-
-Tiles for Spain use a 3×3 grid-key lookup to handle boundary/edge cases between regions.
-
-## Data source
-
-Fuel prices come from the Spanish and Portuguese government fuel-price feeds, processed by the companion SiphonAPI project and served to the app as a static manifest plus per-tile data.
-
-## Location & GPS
-
-The app uses foreground location only when requested. Before the first location permission request, it explains that precise coordinates are sent to the public OSRM service to calculate driving distance. It does not track location continuously.
-
-## Troubleshooting (Android)
-
-If a native build fails after a config change, clean the build artifacts:
-
-```bash
-cd android
-./gradlew clean
-rm -rf .cxx
-```
-
-The project pins Android CMake to `3.22.1` in `app.json`; keep that value when changing native build settings.
-
-## Docs
-
-See `docs/API-Calls-Reference.md` for the full client/API reference.
-
-## License
+Contact: [8041q@proton.me](mailto:8041q@proton.me), or [open an issue](https://github.com/8041q/Siphon/issues). Public contact details are maintained in `release-contact.json`.

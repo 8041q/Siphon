@@ -25,7 +25,7 @@ export function ListItem({ children, onPress, trailing }: ListItemProps) {
       style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
       className="flex-row items-center justify-between px-lg py-md"
     >
-      {glass && <GlassBackdrop color={colors.surface} />}
+      {glass && <GlassBackdrop color={colors.surface} borderRadius={rules.borderRadius} />}
       <View className="flex-1 mr-md">
         {typeof children === 'string' ? (
           <Text style={{ color: colors.label }} className="text-body">{children}</Text>

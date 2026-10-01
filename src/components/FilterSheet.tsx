@@ -5,7 +5,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@g
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Chip } from './ui/chip';
+import { FilterButton } from './ui/FilterButton';
 import { GlassBox } from './ui/GlassBox';
 import type { SearchFilter } from '../hooks/useApp';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
@@ -77,11 +77,6 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
     const pulse = useCallback(() => {
       void Haptics.selectionAsync().catch(() => undefined);
     }, []);
-
-    const chipText = useCallback(
-      (selected: boolean) => ({ color: selected ? colors.labelOnTint : colors.label }),
-      [colors.label, colors.labelOnTint],
-    );
 
     const sortFuelOptions = useMemo<readonly FuelKey[]>(() => {
       if (localFilters.fuelTypes?.length) return localFilters.fuelTypes;
@@ -218,44 +213,37 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         onChange={handleSheetChange}
         onDismiss={handleDismiss}
         backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
+          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} pressBehavior="none" accessible={false} />
         )}
         backgroundComponent={SheetBackground}
       >
-        <View style={{ flex: 1 }}>
+        <View collapsable={false} pointerEvents="auto" style={{ flex: 1 }}>
           <BottomSheetScrollView
             style={{ flex: 1 }}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 20 }}
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 20 }}
           >
-            <View className="gap-lg">
+            <View className="gap-md">
               <View>
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                   {t('search.country')}
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <Chip
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  <FilterButton
                     selected={!localFilters.countries?.length}
                     onPress={clearCountries}
-                    className="rounded-full px-4 py-2"
-                  >
-                    <Text style={chipText(!localFilters.countries?.length)} className="text-subheadline">
-                      {t('search.any_country')}
-                    </Text>
-                  </Chip>
+                    label={t('search.any_country')}
+                  />
                   {(['PT', 'ES'] as CountryCode[]).map((code) => {
                     const selected = localFilters.countries?.includes(code) ?? false;
                     return (
-                      <Chip
+                      <FilterButton
                         key={code}
                         selected={selected}
                         onPress={() => toggleCountry(code)}
-                        className="rounded-full px-4 py-2"
-                      >
-                        <Text style={chipText(selected)} className="text-subheadline">
-                          {code === 'PT' ? t('search.portugal') : t('search.spain')}
-                        </Text>
-                      </Chip>
+                        multiSelect
+                        label={code === 'PT' ? t('search.portugal') : t('search.spain')}
+                      />
                     );
                   })}
                 </View>
@@ -265,29 +253,22 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                   {t('search.fuel_type')}
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <Chip
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  <FilterButton
                     selected={!localFilters.fuelTypes?.length}
                     onPress={clearFuelTypes}
-                    className="rounded-full px-4 py-2"
-                  >
-                    <Text style={chipText(!localFilters.fuelTypes?.length)} className="text-subheadline">
-                      {t('search.any_fuel')}
-                    </Text>
-                  </Chip>
+                    label={t('search.any_fuel')}
+                  />
                   {visibleFuelKeys.map((key) => {
                     const selected = localFilters.fuelTypes?.includes(key) ?? false;
                     return (
-                      <Chip
+                      <FilterButton
                         key={key}
                         selected={selected}
                         onPress={() => toggleFuelType(key)}
-                        className="rounded-full px-4 py-2"
-                      >
-                        <Text style={chipText(selected)} className="text-subheadline">
-                          {fuelLabel(key)}
-                        </Text>
-                      </Chip>
+                        multiSelect
+                        label={fuelLabel(key)}
+                      />
                     );
                   })}
                 </View>
@@ -310,29 +291,21 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                   {t('search.price_range')}
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <Chip
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  <FilterButton
                     selected={!localFilters.priceRange}
                     onPress={() => setPriceRange(undefined)}
-                    className="rounded-full px-4 py-2"
-                  >
-                    <Text style={chipText(!localFilters.priceRange)} className="text-subheadline">
-                      {t('search.any_price')}
-                    </Text>
-                  </Chip>
+                    label={t('search.any_price')}
+                  />
                   {PRICE_OPTIONS.map((max) => {
                     const selected = localFilters.priceRange?.max === max;
                     return (
-                      <Chip
+                      <FilterButton
                         key={max}
                         selected={selected}
                         onPress={() => setPriceRange(selected ? undefined : max)}
-                        className="rounded-full px-4 py-2"
-                      >
-                        <Text style={chipText(selected)} className="text-subheadline">
-                          {t('search.under', { max: max.toFixed(2) })}
-                        </Text>
-                      </Chip>
+                        label={t('search.under', { max: max.toFixed(2) })}
+                      />
                     );
                   })}
                 </View>
@@ -342,14 +315,13 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                   {t('search.city')}
                 </Text>
-                <GlassBox component="input" className="rounded-md">
+                <GlassBox component="input" style={{ borderRadius: 6 }}>
                   <TextInput
                     value={localFilters.city ?? ''}
                     onChangeText={(city) => setLocalFilters((current) => ({ ...current, city: city || undefined }))}
                     placeholder={t('search.city_placeholder')}
                     placeholderTextColor={colors.placeholder}
-                    style={{ backgroundColor: 'transparent', color: colors.label }}
-                    className="rounded-md px-3 py-2"
+                    style={{ backgroundColor: 'transparent', color: colors.label, minHeight: 36, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 }}
                     accessibilityLabel={t('search.city')}
                   />
                 </GlassBox>
@@ -359,27 +331,21 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                   {t('search.distance')}
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <Chip
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  <FilterButton
                     selected={!localFilters.maxDistance}
                     onPress={() => setDistance(undefined)}
-                    className="rounded-full px-4 py-2"
-                  >
-                    <Text style={chipText(!localFilters.maxDistance)} className="text-subheadline">
-                      {t('search.any_distance')}
-                    </Text>
-                  </Chip>
+                    label={t('search.any_distance')}
+                  />
                   {DISTANCE_OPTIONS.map((km) => {
                     const selected = localFilters.maxDistance === km;
                     return (
-                      <Chip
+                      <FilterButton
                         key={km}
                         selected={selected}
                         onPress={() => setDistance(selected ? undefined : km)}
-                        className="rounded-full px-4 py-2"
-                      >
-                        <Text style={chipText(selected)} className="text-subheadline">{km} km</Text>
-                      </Chip>
+                        label={`${km} km`}
+                      />
                     );
                   })}
                 </View>
@@ -390,51 +356,43 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                   <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
                     {t('search.sort_by')}
                   </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {([
-                    [undefined, 'search.no_sort'],
-                    ['price', 'search.sort_cheapest'],
-                    ['distance', 'search.sort_nearest'],
-                  ] as const).map(([value, labelKey]) => {
-                    const selected = localFilters.sortBy === value;
-                    return (
-                      <Chip
-                        key={value ?? 'recommended'}
-                        selected={selected}
-                        onPress={() => setSort(value)}
-                        className="rounded-full px-4 py-2"
-                      >
-                        <Text style={chipText(selected)} className="text-subheadline">
-                          {t(labelKey)}
-                        </Text>
-                      </Chip>
-                    );
-                  })}
-                </View>
-
-                {localFilters.sortBy === 'price' && (
-                  <View className="mt-md">
-                    <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-sm">
-                      {t('search.sort_fuel_hint')}
-                    </Text>
-                    <View className="flex-row flex-wrap gap-2">
-                      {sortFuelOptions.map((fuel) => {
-                        const selected = activeSortFuel === fuel;
-                        return (
-                          <Chip
-                            key={fuel}
-                            selected={selected}
-                            onPress={() => setSortFuel(fuel)}
-                            className="rounded-full px-4 py-2"
-                          >
-                            <Text style={chipText(selected)} className="text-subheadline">
-                              {fuelLabel(fuel)}
-                            </Text>
-                          </Chip>
-                        );
-                      })}
-                    </View>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {([
+                      [undefined, 'search.no_sort'],
+                      ['price', 'search.sort_cheapest'],
+                      ['distance', 'search.sort_nearest'],
+                    ] as const).map(([value, labelKey]) => {
+                      const selected = localFilters.sortBy === value;
+                      return (
+                        <FilterButton
+                          key={value ?? 'recommended'}
+                          selected={selected}
+                          onPress={() => setSort(value)}
+                          label={t(labelKey)}
+                        />
+                      );
+                    })}
                   </View>
+
+                  {localFilters.sortBy === 'price' && (
+                    <View className="mt-md">
+                      <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-sm">
+                        {t('search.sort_fuel_hint')}
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {sortFuelOptions.map((fuel) => {
+                          const selected = activeSortFuel === fuel;
+                          return (
+                            <FilterButton
+                              key={fuel}
+                              selected={selected}
+                              onPress={() => setSortFuel(fuel)}
+                              label={fuelLabel(fuel)}
+                            />
+                          );
+                        })}
+                      </View>
+                    </View>
                   )}
                 </View>
               )}
@@ -452,15 +410,15 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
             }}
           >
             <View className="flex-row gap-3">
-              <GlassBox component="card" className="flex-1 rounded-md overflow-hidden">
+              <GlassBox component="card" style={{ borderRadius: 6 }} className="flex-1 overflow-hidden">
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleClear}
                   accessibilityRole="button"
                   accessibilityLabel={t('search.clear_filters')}
-                  className="py-3 items-center"
+                  style={{ flex: 1, minHeight: 40, paddingVertical: 8, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Text style={{ color: colors.label }} className="text-body">
+                  <Text style={{ color: colors.label, fontSize: 14, textAlign: 'center' }}>
                     {t('search.clear_filters')}
                   </Text>
                 </TouchableOpacity>
@@ -470,10 +428,9 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
                 onPress={handleApply}
                 accessibilityRole="button"
                 accessibilityLabel={t('search.apply')}
-                style={{ backgroundColor: colors.tint }}
-                className="flex-1 py-3 rounded-md items-center"
+                style={{ backgroundColor: colors.tint, flex: 1, minHeight: 40, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ color: colors.labelOnTint }} className="text-body font-semibold">
+                <Text style={{ color: colors.labelOnTint, fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
                   {t('search.apply')}{filterCount > 0 ? ` (${filterCount})` : ''}
                 </Text>
               </TouchableOpacity>

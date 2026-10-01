@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -7,7 +7,7 @@ import { useCommodities } from '../../src/hooks/useCommodities';
 import { CommodityChart } from '../../src/components/CommodityChart';
 import { MarketIntelligenceCard } from '../../src/components/MarketIntelligenceCard';
 import { MarketDetailsCard } from '../../src/components/MarketDetailsCard';
-import { fuelLabel } from '../../src/utils/fuelNames';
+import { MarketFilters, type MarketCountry, type MarketFuel } from '../../src/components/MarketFilters';
 import { analyzeMarket } from '../../src/utils/marketAnalysis';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../src/hooks/useSupport';
@@ -15,15 +15,6 @@ import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleCon
 import { tabBarClearance } from '../../src/theme/layout';
 
 import type { CommodityMetrics } from '../../src/api/siphonClient';
-
-const COUNTRIES = [
-  { key: 'es', labelKey: 'market.country_es' },
-  { key: 'pt', labelKey: 'market.country_pt' },
-  { key: 'combined', labelKey: 'market.country_combined' },
-] as const;
-
-type CountryKey = (typeof COUNTRIES)[number]['key'];
-const FUELS = ['gasoline95', 'diesel'] as const;
 
 function formatPct(value: number | null): string {
   if (value === null) return '-';
@@ -39,8 +30,8 @@ export default function MarketScreen() {
   const cardStyle = applyComponentRules(cardRules, colors.label);
   const { dashboard, loading, error } = useCommodities({ refresh: false });
 
-  const [country, setCountry] = useState<CountryKey>('combined');
-  const [fuel, setFuel] = useState<(typeof FUELS)[number]>('gasoline95');
+  const [country, setCountry] = useState<MarketCountry>('combined');
+  const [fuel, setFuel] = useState<MarketFuel>('gasoline95');
 
   const metricKey = `${fuel}_${country}`;
   const metrics: CommodityMetrics | undefined = dashboard?.metrics?.[metricKey] ?? undefined;
@@ -51,15 +42,6 @@ export default function MarketScreen() {
     () => analyzeMarket(crudePoints, retailPoints, metrics, wtiPoints),
     [crudePoints, retailPoints, metrics, wtiPoints],
   );
-
-  const chipBg = (selected: boolean) => ({
-    backgroundColor: selected ? colors.tint : colors.surface,
-  });
-  const chipText = (selected: boolean) => ({
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: selected ? colors.labelOnTint : colors.label,
-  });
 
   const snapshot = [
     { label: t('market.crude_7d'), value: formatPct(insight.crude7), raw: insight.crude7 },
@@ -85,41 +67,12 @@ export default function MarketScreen() {
           <View style={{ height: 12 }} />
         )}
 
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          {COUNTRIES.map((item) => {
-            const selected = country === item.key;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                activeOpacity={0.7}
-                onPress={() => setCountry(item.key)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, ...chipBg(selected) }}
-              >
-                <Text style={chipText(selected)}>{t(item.labelKey)}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-          {FUELS.map((item) => {
-            const selected = fuel === item;
-            return (
-              <TouchableOpacity
-                key={item}
-                activeOpacity={0.7}
-                onPress={() => setFuel(item)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, ...chipBg(selected) }}
-              >
-                <Text style={chipText(selected)}>{fuelLabel(item)}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <MarketFilters
+          country={country}
+          fuel={fuel}
+          onCountryChange={setCountry}
+          onFuelChange={setFuel}
+        />
 
         {loading && !dashboard ? (
           <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>

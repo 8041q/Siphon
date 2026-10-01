@@ -29,16 +29,16 @@ export const midnight: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#0B1B2B',
     secondaryLabel: 'rgba(11, 27, 43, 0.7)',
-    tertiaryLabel: 'rgba(11, 27, 43, 0.55)',
+    tertiaryLabel: 'rgba(11, 27, 43, 0.64)',
     labelOnTint: '#FFFFFF',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(11, 27, 43, 0.18)',
-    tint: '#2563EB',
+    tint: '#1D4ED8',
     destructive: '#DC2626',
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#FFFFFF',
     fieldBorder: 'rgba(11, 27, 43, 0.18)',
-    placeholder: 'rgba(11, 27, 43, 0.3)',
+    placeholder: 'rgba(11, 27, 43, 0.64)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(11, 27, 43, 0.3)',
     // ── Other ─────────────────────────────────────────────────────
@@ -53,18 +53,18 @@ export const midnight: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#16A34A',
+    priceLow: '#13733A',
     priceLowTint: 'rgba(22, 163, 74, 0.1)',
-    priceMid: '#D97706',
-    priceHigh: '#DC2626',
+    priceMid: '#A34A08',
+    priceHigh: '#BE1D1D',
     priceHighTint: 'rgba(220, 38, 38, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
-    worthItText: '#16A34A',
+    worthItText: '#13733A',
     worthItBg: 'rgba(22, 163, 74, 0.1)',
-    notWorthText: '#DC2626',
+    notWorthText: '#BE1D1D',
     notWorthBg: 'rgba(220, 38, 38, 0.1)',
     // ── Favorite ─────────────────────────────────────────────────
-    favorite: '#FFD60A',
+    favorite: '#99630C',
     // ── Charts ────────────────────────────────────────────────────
     chartLine: '#2563EB',
     chartGrid: 'rgba(11, 27, 43, 0.18)',
@@ -73,11 +73,11 @@ export const midnight: Palette = {
     // ── Radar ─────────────────────────────────────────────────────
     radarLine: '#2563EB',
     radarDot: 'rgba(11, 27, 43, 0.7)',
-    radarBest: '#2563EB',
+    radarBest: '#1D4ED8',
     radarGrid: 'rgba(11, 27, 43, 0.18)',
     radarLabel: 'rgba(11, 27, 43, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#16A34A',
+    dayBannerBg: '#13733A',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -90,8 +90,8 @@ export const midnight: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#EAF1FB',
     secondaryLabel: 'rgba(234, 241, 251, 0.75)',
-    tertiaryLabel: 'rgba(234, 241, 251, 0.5)',
-    labelOnTint: '#FFFFFF',
+    tertiaryLabel: 'rgba(234, 241, 251, 0.56)',
+    labelOnTint: '#0B1B2B',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(148, 163, 184, 0.45)',
     tint: '#60A5FA',
@@ -99,7 +99,7 @@ export const midnight: Palette = {
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#1C2A44',
     fieldBorder: 'rgba(148, 163, 184, 0.45)',
-    placeholder: 'rgba(234, 241, 251, 0.5)',
+    placeholder: 'rgba(234, 241, 251, 0.56)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(234, 241, 251, 0.5)',
     // ── Other ─────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ export const midnight: Palette = {
     radarLabel: 'rgba(234, 241, 251, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
     dayBannerBg: '#4ADE80',
-    dayBannerText: '#FFFFFF',
+    dayBannerText: '#0B1B2B',
   },
 };
 
@@ -156,16 +156,16 @@ export const sunset: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#3B1D12',
     secondaryLabel: 'rgba(59, 29, 18, 0.7)',
-    tertiaryLabel: 'rgba(59, 29, 18, 0.55)',
+    tertiaryLabel: 'rgba(59, 29, 18, 0.65)',
     labelOnTint: '#FFFFFF',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(59, 29, 18, 0.18)',
-    tint: '#E8590C',
+    tint: '#B84208',
     destructive: '#C92A2A',
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#FFFFFF',
     fieldBorder: 'rgba(59, 29, 18, 0.18)',
-    placeholder: 'rgba(59, 29, 18, 0.3)',
+    placeholder: 'rgba(59, 29, 18, 0.65)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(59, 29, 18, 0.3)',
     // ── Other ─────────────────────────────────────────────────────
@@ -180,18 +180,18 @@ export const sunset: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#2F9E44',
+    priceLow: '#237534',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
-    priceMid: '#B8860B',
+    priceMid: '#A34A08',
     priceHigh: '#C92A2A',
     priceHighTint: 'rgba(201, 42, 42, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
-    worthItText: '#2F9E44',
+    worthItText: '#237534',
     worthItBg: 'rgba(47, 158, 68, 0.1)',
     notWorthText: '#C92A2A',
     notWorthBg: 'rgba(201, 42, 42, 0.1)',
     // ── Favorite ─────────────────────────────────────────────────
-    favorite: '#FFD60A',
+    favorite: '#99630C',
     // ── Charts ────────────────────────────────────────────────────
     chartLine: '#E8590C',
     chartGrid: 'rgba(59, 29, 18, 0.18)',
@@ -200,11 +200,11 @@ export const sunset: Palette = {
     // ── Radar ─────────────────────────────────────────────────────
     radarLine: '#E8590C',
     radarDot: 'rgba(59, 29, 18, 0.7)',
-    radarBest: '#E8590C',
+    radarBest: '#B84208',
     radarGrid: 'rgba(59, 29, 18, 0.18)',
     radarLabel: 'rgba(59, 29, 18, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#2F9E44',
+    dayBannerBg: '#237534',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -217,8 +217,8 @@ export const sunset: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#FDEBE0',
     secondaryLabel: 'rgba(253, 235, 224, 0.75)',
-    tertiaryLabel: 'rgba(253, 235, 224, 0.5)',
-    labelOnTint: '#FFFFFF',
+    tertiaryLabel: 'rgba(253, 235, 224, 0.56)',
+    labelOnTint: '#3B1D12',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(240, 189, 165, 0.4)',
     tint: '#FF922B',
@@ -226,7 +226,7 @@ export const sunset: Palette = {
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#46291D',
     fieldBorder: 'rgba(240, 189, 165, 0.4)',
-    placeholder: 'rgba(253, 235, 224, 0.5)',
+    placeholder: 'rgba(253, 235, 224, 0.56)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(253, 235, 224, 0.5)',
     // ── Other ─────────────────────────────────────────────────────
@@ -266,7 +266,7 @@ export const sunset: Palette = {
     radarLabel: 'rgba(253, 235, 224, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
     dayBannerBg: '#69DB7C',
-    dayBannerText: '#FFFFFF',
+    dayBannerText: '#3B1D12',
   },
 };
 
@@ -283,7 +283,7 @@ export const forest: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#12241A',
     secondaryLabel: 'rgba(18, 36, 26, 0.7)',
-    tertiaryLabel: 'rgba(18, 36, 26, 0.55)',
+    tertiaryLabel: 'rgba(18, 36, 26, 0.64)',
     labelOnTint: '#FFFFFF',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(18, 36, 26, 0.18)',
@@ -292,7 +292,7 @@ export const forest: Palette = {
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#FFFFFF',
     fieldBorder: 'rgba(18, 36, 26, 0.18)',
-    placeholder: 'rgba(18, 36, 26, 0.3)',
+    placeholder: 'rgba(18, 36, 26, 0.64)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(18, 36, 26, 0.3)',
     // ── Other ─────────────────────────────────────────────────────
@@ -307,18 +307,18 @@ export const forest: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#2F9E44',
+    priceLow: '#237534',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
-    priceMid: '#B08900',
+    priceMid: '#A34A08',
     priceHigh: '#C92A2A',
     priceHighTint: 'rgba(201, 42, 42, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
-    worthItText: '#2F9E44',
+    worthItText: '#237534',
     worthItBg: 'rgba(47, 158, 68, 0.1)',
     notWorthText: '#C92A2A',
     notWorthBg: 'rgba(201, 42, 42, 0.1)',
     // ── Favorite ─────────────────────────────────────────────────
-    favorite: '#FFD60A',
+    favorite: '#99630C',
     // ── Charts ────────────────────────────────────────────────────
     chartLine: '#1F6B45',
     chartGrid: 'rgba(18, 36, 26, 0.18)',
@@ -331,7 +331,7 @@ export const forest: Palette = {
     radarGrid: 'rgba(18, 36, 26, 0.18)',
     radarLabel: 'rgba(18, 36, 26, 0.7)',
     // ── Day banner ────────────────────────────────────────────────
-    dayBannerBg: '#2F9E44',
+    dayBannerBg: '#237534',
     dayBannerText: '#FFFFFF',
   },
   dark: {
@@ -344,16 +344,16 @@ export const forest: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#E9F5EC',
     secondaryLabel: 'rgba(233, 245, 236, 0.75)',
-    tertiaryLabel: 'rgba(233, 245, 236, 0.5)',
-    labelOnTint: '#FFFFFF',
+    tertiaryLabel: 'rgba(233, 245, 236, 0.56)',
+    labelOnTint: '#0C1C13',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(155, 194, 165, 0.45)',
-    tint: '#378d5e',
+    tint: '#49A873',
     destructive: '#FF8787',
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#1E3325',
     fieldBorder: 'rgba(155, 194, 165, 0.45)',
-    placeholder: 'rgba(233, 245, 236, 0.5)',
+    placeholder: 'rgba(233, 245, 236, 0.56)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(233, 245, 236, 0.5)',
     // ── Other ─────────────────────────────────────────────────────
@@ -388,12 +388,12 @@ export const forest: Palette = {
     // ── Radar ─────────────────────────────────────────────────────
     radarLine: '#378d5e',
     radarDot: 'rgba(233, 245, 236, 0.75)',
-    radarBest: '#378d5e',
+    radarBest: '#49A873',
     radarGrid: 'rgba(155, 194, 165, 0.45)',
     radarLabel: 'rgba(233, 245, 236, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
     dayBannerBg: '#69DB7C',
-    dayBannerText: '#FFFFFF',
+    dayBannerText: '#0C1C13',
   },
 };
 
@@ -410,7 +410,7 @@ export const mono: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#111111',
     secondaryLabel: 'rgba(17, 17, 17, 0.7)',
-    tertiaryLabel: 'rgba(17, 17, 17, 0.55)',
+    tertiaryLabel: 'rgba(17, 17, 17, 0.64)',
     labelOnTint: '#FFFFFF',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(17, 17, 17, 0.18)',
@@ -419,7 +419,7 @@ export const mono: Palette = {
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#FFFFFF',
     fieldBorder: 'rgba(17, 17, 17, 0.18)',
-    placeholder: 'rgba(17, 17, 17, 0.3)',
+    placeholder: 'rgba(17, 17, 17, 0.64)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(17, 17, 17, 0.3)',
     // ── Other ─────────────────────────────────────────────────────
@@ -436,7 +436,7 @@ export const mono: Palette = {
     // ── Price badges ─────────────────────────────────────────────
     priceLow: '#1C7C54',
     priceLowTint: 'rgba(28, 124, 84, 0.1)',
-    priceMid: '#8A6D00',
+    priceMid: '#8A6400',
     priceHigh: '#B3261E',
     priceHighTint: 'rgba(179, 38, 30, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
@@ -445,7 +445,7 @@ export const mono: Palette = {
     notWorthText: '#B3261E',
     notWorthBg: 'rgba(179, 38, 30, 0.1)',
     // ── Favorite ─────────────────────────────────────────────────
-    favorite: '#FFD60A',
+    favorite: '#99630C',
     // ── Charts ────────────────────────────────────────────────────
     chartLine: '#404040',
     chartGrid: 'rgba(17, 17, 17, 0.18)',
@@ -471,7 +471,7 @@ export const mono: Palette = {
     // ── Text ──────────────────────────────────────────────────────
     label: '#F5F5F5',
     secondaryLabel: 'rgba(245, 245, 245, 0.75)',
-    tertiaryLabel: 'rgba(245, 245, 245, 0.5)',
+    tertiaryLabel: 'rgba(245, 245, 245, 0.56)',
     labelOnTint: '#111111',
     // ── Decorative ────────────────────────────────────────────────
     separator: 'rgba(163, 163, 163, 0.5)',
@@ -480,7 +480,7 @@ export const mono: Palette = {
     // ── Inputs ────────────────────────────────────────────────────
     fieldBackground: '#262626',
     fieldBorder: 'rgba(163, 163, 163, 0.5)',
-    placeholder: 'rgba(245, 245, 245, 0.5)',
+    placeholder: 'rgba(245, 245, 245, 0.56)',
     // ── Sheet handle ──────────────────────────────────────────────
     handleIndicator: 'rgba(245, 245, 245, 0.5)',
     // ── Other ─────────────────────────────────────────────────────
@@ -520,7 +520,7 @@ export const mono: Palette = {
     radarLabel: 'rgba(245, 245, 245, 0.75)',
     // ── Day banner ────────────────────────────────────────────────
     dayBannerBg: '#4ADE80',
-    dayBannerText: '#FFFFFF',
+    dayBannerText: '#111111',
   },
 };
 

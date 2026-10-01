@@ -11,8 +11,8 @@ const MAPPING: Record<string, MaterialName> = {
   'list': 'list',
   'magnifyingglass': 'search',
   'search': 'search',
-  'star.fill': 'star-half',
-  'star': 'star',
+  'star.fill': 'star',
+  'star': 'star-border',
   'star_border': 'star-border',
   'gearshape.fill': 'settings',
   'settings': 'settings',
@@ -26,7 +26,7 @@ const MAPPING: Record<string, MaterialName> = {
   'kofi': 'local-cafe',
   'lock': 'lock',
   'gift': 'card-giftcard',
-  'oilcan.fill': 'pie-chart',
+  'oilcan.fill': 'show-chart',
 };
 
 export const render: IconRenderer = ({ name, size, color }) => {

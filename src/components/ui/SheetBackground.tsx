@@ -33,7 +33,7 @@ export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
       borderBottomRightRadius: 0,
     },
     glass
-      ? { backgroundColor: 'transparent', overflow: 'hidden' }
+      ? { backgroundColor: 'transparent', overflow: 'hidden', isolation: 'isolate' }
       : { backgroundColor: colors.sheet },
   ];
 

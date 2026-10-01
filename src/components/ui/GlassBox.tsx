@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../hooks/useSupport';
@@ -21,6 +21,7 @@ export function GlassBox({ component, children, color, className = '', style }: 
   const { styleRules } = useAppearanceSupport();
   const rules = useStyleConfig(styleRules, component);
   const glass = isGlass(rules);
+  const borderRadius = StyleSheet.flatten(style)?.borderRadius ?? rules.borderRadius;
 
   return (
     <View
@@ -31,7 +32,7 @@ export function GlassBox({ component, children, color, className = '', style }: 
       ]}
       className={className}
     >
-      {glass && <GlassBackdrop color={color ?? colors.surface} />}
+      {glass && <GlassBackdrop color={color ?? colors.surface} borderRadius={borderRadius} />}
       {children}
     </View>
   );

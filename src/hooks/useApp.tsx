@@ -5,7 +5,7 @@ import { FuelDataClient, isFuelKey, type FuelKey, type FuelStationFeature, type 
 import { RateLimitedError } from '../api/rateLimit';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
-import { roadEstimateKm, roadDistanceKm, roadDistancesKm } from '../utils/routeDistance';
+import { clearRouteDistanceCache, roadEstimateKm, roadDistanceKm, roadDistancesKm } from '../utils/routeDistance';
 import { enrichStations } from '../utils/markerEnrichment';
 import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
@@ -86,6 +86,7 @@ interface StationDistanceState {
   distanceLoading: boolean;
   ensureRoutedDistance: (station: FuelStationFeature) => Promise<void>;
   isDistanceRouted: (stationId: string) => boolean;
+  clearSavedRoadDistances: () => Promise<number>;
 }
 
 interface StationSyncState {
@@ -216,6 +217,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadSeqRef = useRef(0);
   const enrichSeqRef = useRef(0);
   const enrichingRef = useRef(false);
+  const routeClearPromiseRef = useRef<Promise<number> | null>(null);
+  const routeResetSeqRef = useRef(0);
+  const routingInputRef = useRef({ allStations, location });
+  routingInputRef.current = { allStations, location };
   const autoRouteKeyRef = useRef<string | null>(null);
   const distanceLocationKeyRef = useRef<string | null>(null);
   const unmountedRef = useRef(false);
@@ -574,7 +579,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // replaces the old "improve calculation" button while keeping request volume
   // bounded and preserving instant estimates if OSRM is unavailable.
   const refineNearbyDistances = useCallback(async () => {
-    if (enrichingRef.current) return;
+    if (enrichingRef.current || routeClearPromiseRef.current) return;
     const { latitude: lat, longitude: lng } = location;
     if (location.approximate || !allStations.length) return;
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -656,7 +661,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // batch. Refine that one station immediately so trip economics use a real
   // route whenever the active provider is reachable.
   const ensureRoutedDistance = useCallback(async (station: FuelStationFeature) => {
-    if (location.approximate || routedStationIdsRef.current.has(station.properties.id)) return;
+    if (routeClearPromiseRef.current || location.approximate || routedStationIdsRef.current.has(station.properties.id)) return;
+    const resetSequence = routeResetSeqRef.current;
     const lat = location.latitude;
     const lng = location.longitude;
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -672,7 +678,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       `user:${routeKey}`,
       station.properties.id,
     );
-    if (unmountedRef.current || distanceLocationKeyRef.current !== routeKey) return;
+    if (unmountedRef.current || routeResetSeqRef.current !== resetSequence || distanceLocationKeyRef.current !== routeKey) return;
 
     if (Number.isFinite(result.value)) {
       setStationDistances((current) => {
@@ -692,6 +698,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, [location, locationRouteKey]);
+
+  const clearSavedRoadDistances = useCallback((): Promise<number> => {
+    if (routeClearPromiseRef.current) return routeClearPromiseRef.current;
+    // Cancel publication of outstanding results before clearing their saved
+    // entries. Keep the automatic routing key so clearing does not refill them.
+    enrichSeqRef.current += 1;
+    routeResetSeqRef.current += 1;
+    enrichingRef.current = false;
+    setDistanceLoading(false);
+    const clear = clearRouteDistanceCache().then((count) => {
+      if (unmountedRef.current) return count;
+      const { allStations: currentStations, location: currentLocation } = routingInputRef.current;
+      const estimates = new Map<string, number>();
+      for (const station of currentStations) {
+        const [lng, lat] = station.geometry.coordinates;
+        const estimate = roadEstimateKm(currentLocation.latitude, currentLocation.longitude, lat, lng);
+        if (Number.isFinite(estimate)) estimates.set(station.properties.id, estimate);
+      }
+      stationDistancesRef.current = estimates;
+      setStationDistances(estimates);
+      const emptyRouted = new Set<string>();
+      routedStationIdsRef.current = emptyRouted;
+      setRoutedStationIds(emptyRouted);
+      return count;
+    }).finally(() => { routeClearPromiseRef.current = null; });
+    routeClearPromiseRef.current = clear;
+    return clear;
+  }, []);
 
   useEffect(() => {
     if (!selectedStation) return;
@@ -869,6 +903,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       distanceLoading,
       ensureRoutedDistance,
       isDistanceRouted,
+      clearSavedRoadDistances,
     }),
     [
       stationDistances,
@@ -876,6 +911,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       distanceLoading,
       ensureRoutedDistance,
       isDistanceRouted,
+      clearSavedRoadDistances,
     ],
   );
 

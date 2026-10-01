@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { Field } from './ui/field';
 import { GlassBox } from './ui/GlassBox';
+import { FilterButton } from './ui/FilterButton';
 import { SheetBackground } from './ui/SheetBackground';
 import { SHEET_HANDLE_INDICATOR_STYLE, SHEET_HANDLE_STYLE } from '../theme/layout';
 import type { EvConfig } from '../utils/vehicles';
@@ -152,9 +153,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, {
   const winner = Math.abs(result.evTotal - result.iceTotal) < 100 ? 'close' : result.evTotal < result.iceTotal ? 'ev' : 'ice';
 
   const vehicleChip = (vehicle: VehicleLike, selected: boolean, onPress: () => void) => (
-    <TouchableOpacity key={vehicle.id} onPress={onPress} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: selected ? colors.tint : colors.groupedBackground }}>
-      <Text style={{ color: selected ? colors.labelOnTint : colors.label }} className="text-footnote font-semibold">{vehicle.name}</Text>
-    </TouchableOpacity>
+    <FilterButton key={vehicle.id} label={vehicle.name} selected={selected} onPress={onPress} />
   );
 
   return (

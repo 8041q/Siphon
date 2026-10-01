@@ -1,11 +1,10 @@
-import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { PNG } from 'pngjs';
 
 const root = new URL('../', import.meta.url);
-const locales = [
-  { locale: 'en-US', suffix: 'EN', graphic: 'en' },
-  { locale: 'pt-PT', suffix: 'PT', graphic: 'pt' },
-];
+// These files are both the editable originals and the Play Console uploads.
+// Preparation crops screenshots in place; there is no second source folder.
+const locales = ['en-US', 'pt-PT'];
 const screens = ['home', 'prices', 'market'];
 const checkOnly = process.argv.includes('--check');
 
@@ -64,6 +63,10 @@ function checkScreenshot(bytes, label) {
 
 function croppedScreenshot(bytes, label) {
   const { width, height } = pngInfo(bytes, label);
+  if (width * 16 === height * 9) {
+    checkScreenshot(bytes, label);
+    return bytes;
+  }
   if (Math.abs(width / height - 9 / 16) > 0.01) {
     throw new Error(`${label}: source is too far from 9:16 for a small crop`);
   }
@@ -88,36 +91,26 @@ if (listingFiles.join(',') !== 'en-US.md,pt-PT.md') {
   throw new Error(`Expected only en-US and pt-PT store listings, found: ${listingFiles.join(', ')}`);
 }
 
-const icon = await readFile(new URL('store/graphics/store-icon.png', root));
+const icon = await readFile(new URL('store/play-upload/store-icon.png', root));
 if (icon.length > 1024 * 1024 || icon.readUInt32BE(16) !== 512 || icon.readUInt32BE(20) !== 512 || icon[24] !== 8 || icon[25] !== 6) {
   throw new Error('Play Store icon must be a 512×512 32-bit RGBA PNG under 1024 KB');
 }
 PNG.sync.read(icon);
 
-for (const { locale, suffix, graphic } of locales) {
-  const featureSource = new URL(`assets/store/feature-graphic-${graphic}.jpg`, root);
+for (const locale of locales) {
   const featureTarget = new URL(`store/play-upload/${locale}/feature-graphic.jpg`, root);
-  const featureBytes = await readFile(checkOnly ? featureTarget : featureSource);
-  const featureDimensions = jpegInfo(featureBytes, checkOnly ? featureTarget.pathname : featureSource.pathname);
+  const featureBytes = await readFile(featureTarget);
+  const featureDimensions = jpegInfo(featureBytes, featureTarget.pathname);
   if (featureDimensions.width !== 1024 || featureDimensions.height !== 500) {
-    throw new Error(`${featureSource.pathname}: feature graphic must be 1024×500`);
-  }
-  if (!checkOnly) {
-    await mkdir(new URL('.', featureTarget), { recursive: true });
-    await copyFile(featureSource, featureTarget);
+    throw new Error(`${featureTarget.pathname}: feature graphic must be 1024×500`);
   }
 
   for (const [index, screen] of screens.entries()) {
-    const source = new URL(`store/screenshots/${screen}_${suffix}.png`, root);
     const target = new URL(`store/play-upload/${locale}/phone/${String(index + 1).padStart(2, '0')}-${screen}.png`, root);
-    const expected = checkOnly ? null : croppedScreenshot(await readFile(source), source.pathname);
+    const input = await readFile(target);
+    const output = checkOnly ? input : croppedScreenshot(input, target.pathname);
     if (!checkOnly) {
-      await mkdir(new URL('.', target), { recursive: true });
-      await writeFile(target, expected);
-    }
-    const output = await readFile(target);
-    if (expected && !output.equals(expected)) {
-      throw new Error(`${target.pathname}: screenshot is stale; run npm run prepare:store`);
+      if (!output.equals(input)) await writeFile(target, output);
     }
     const dimensions = checkScreenshot(output, target.pathname);
     console.log(`${locale} ${screen}: ${dimensions.width}×${dimensions.height}, RGB PNG`);

@@ -141,7 +141,7 @@ async function writeFileAtomically(destination: File, value: string): Promise<vo
   }
 }
 
-export const hybridStore: KeyValueStore = {
+export const hybridStore: KeyValueStore & { clearRouteCache(): Promise<number> } = {
   async getItem(key: string): Promise<string | null> {
     if (!isFileKey(key)) return AsyncStorage.getItem(key);
     prepareFileStore();
@@ -200,5 +200,18 @@ export const hybridStore: KeyValueStore = {
     } catch {
       // Missing/corrupt cache entries are already equivalent to removed.
     }
+  },
+
+  async clearRouteCache(): Promise<number> {
+    prepareFileStore();
+    // User-requested deletion must report real errors, unlike best-effort
+    // removal of individual corrupt cache entries.
+    const keys = listFilesRecursive(ROUTE_DIR, 'siphon:route:');
+    for (const key of keys) {
+      const file = routeFilePath(key);
+      if (file.exists) file.delete();
+      if (file.exists) throw new Error('Could not remove a saved road distance');
+    }
+    return keys.length;
   },
 };

@@ -8,6 +8,7 @@ import { useStationCatalog, useStationDistances, useStationSync } from '../../sr
 import { usePriceHistory } from '../../src/hooks/usePriceHistory';
 import { useCommodities } from '../../src/hooks/useCommodities';
 import { PriceChart } from '../../src/components/PriceChart';
+import { FilterButton } from '../../src/components/ui/FilterButton';
 import { PriceStats } from '../../src/components/PriceStats';
 import { CheapDayBanner } from '../../src/components/CheapDayBanner';
 import { PriceIntelligenceCard } from '../../src/components/PriceIntelligenceCard';
@@ -222,31 +223,16 @@ export default function PriceTrendsScreen() {
             )}
 
             {fuels.length > 1 && (
-              <View className="flex-row flex-wrap gap-sm mb-lg">
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
                 {fuels.map((fuel) => {
                   const selected = selectedFuel === fuel;
                   return (
-                    <TouchableOpacity
+                    <FilterButton
                       key={fuel}
-                      activeOpacity={0.7}
+                      label={fuelLabel(fuel)}
+                      selected={selected}
                       onPress={() => setSelectedFuel(fuel)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={fuelLabel(fuel)}
-                      style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 16,
-                        backgroundColor: selected ? colors.tint : colors.groupedBackground,
-                      }}
-                    >
-                      <Text
-                        className="text-caption-1 font-semibold"
-                        style={{ color: selected ? colors.labelOnTint : colors.label }}
-                      >
-                        {fuelLabel(fuel)}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   );
                 })}
               </View>

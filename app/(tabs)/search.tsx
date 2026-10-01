@@ -140,6 +140,20 @@ ${properties.address}`.toLocaleLowerCase(),
     return result;
   }, 4), [allStations, deferredBrandQuery, location, relevantDistances, searchFilter, searchIndex]);
 
+  // A new search starts at the top; catalog and distance updates keep the current position.
+  const resultsKey = JSON.stringify({
+    query: deferredBrandQuery.trim().toLocaleLowerCase(),
+    countries: [...(searchFilter.countries ?? [])].sort(),
+    fuelTypes: [...(searchFilter.fuelTypes ?? [])].sort(),
+    city: searchFilter.city?.trim().toLocaleLowerCase() ?? '',
+    priceMax: searchFilter.priceRange?.max ?? null,
+    maxDistance: searchFilter.maxDistance || null,
+    sortBy: searchFilter.sortBy ?? null,
+    sortByFuel: searchFilter.sortBy === 'price'
+      ? searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95'
+      : null,
+  });
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <View className="flex-1">
@@ -150,7 +164,8 @@ ${properties.address}`.toLocaleLowerCase(),
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => filterSheetRef.current?.present()}
-            style={{ backgroundColor: colors.groupedBackground, borderRadius: 8, padding: 12 }}
+            style={{ backgroundColor: colors.groupedBackground, borderRadius: 6, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel={
               filterCount > 0
@@ -160,7 +175,7 @@ ${properties.address}`.toLocaleLowerCase(),
             accessibilityState={{ selected: filterCount > 0 }}
           >
             <View className="relative">
-              <Icon name="filter_list" size={20} color={colors.secondaryLabel} />
+              <Icon name="filter_list" size={18} color={colors.secondaryLabel} />
               {filterCount > 0 && (
                 <View
                   style={{
@@ -198,6 +213,7 @@ ${properties.address}`.toLocaleLowerCase(),
         )}
 
         <StationList
+          key={resultsKey}
           results={results}
           handleStationPress={handleStationPress}
           handleShowOnMap={handleShowOnMap}

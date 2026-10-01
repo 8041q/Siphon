@@ -5,8 +5,8 @@ import type { IconRenderer } from '../types';
 type FaName = FontAwesomeIconName;
 
 const MAPPING: Record<string, FaName> = {
-  'map.fill': 'globe',
-  'map': 'globe',
+  'map.fill': 'map',
+  'map': 'map-o',
   'list.bullet': 'list',
   'list': 'list',
   'magnifyingglass': 'search',
@@ -26,7 +26,7 @@ const MAPPING: Record<string, FaName> = {
   'kofi': 'coffee',
   'lock': 'lock',
   'gift': 'gift',
-  'oilcan.fill': 'tags',
+  'oilcan.fill': 'line-chart',
 };
 
 export const render: IconRenderer = ({ name, size, color }) => {

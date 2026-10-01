@@ -17,7 +17,7 @@ const MAPPING: Record<string, IoniconsName> = {
   'gearshape.fill': 'cog',
   'settings': 'cog',
   'my_location': 'locate',
-  'filter_list': 'color-filter-outline',
+  'filter_list': 'options-outline',
   'directions': 'navigate',
   'copy': 'copy-outline',
   'info.circle': 'information-circle-outline',

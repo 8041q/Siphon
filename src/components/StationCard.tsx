@@ -106,7 +106,7 @@ const StationCardComponent: FC<StationCardProps> = ({
         }
       }}
     >
-      {glass && <GlassBackdrop color={colors.groupedBackground} />}
+      {glass && <GlassBackdrop color={colors.groupedBackground} borderRadius={rules.borderRadius} />}
 
       <View className="flex-row items-start justify-between">
         <View style={{ flex: 1, marginEnd: 8 }}>

@@ -22,9 +22,9 @@ export function Badge({ label, value, color }: BadgeProps) {
       style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
       className="rounded-sm px-3 py-1.5 gap-1"
     >
-      {glass && <GlassBackdrop color={colors.surface} />}
+      {glass && <GlassBackdrop color={colors.surface} borderRadius={rules.borderRadius} />}
       <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{label}</Text>
-      <Text className="text-subheadline" style={color ? { color } : undefined}>
+      <Text className="text-subheadline" style={{ color: color ?? colors.label }}>
         {value}
       </Text>
     </View>

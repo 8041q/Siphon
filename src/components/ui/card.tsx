@@ -22,7 +22,7 @@ export function Card({ children, className = '' }: CardProps) {
       style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules, colors.label)]}
       className={`rounded-md p-md ${className}`}
     >
-      {glass && <GlassBackdrop color={colors.groupedBackground} />}
+      {glass && <GlassBackdrop color={colors.groupedBackground} borderRadius={rules.borderRadius} />}
       {children}
     </View>
   );

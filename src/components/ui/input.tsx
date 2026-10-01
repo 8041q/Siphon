@@ -24,7 +24,10 @@ export function Input({ value, onChangeText, placeholder, className = '' }: Inpu
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={colors.placeholder}
-      style={[{ backgroundColor: glass ? 'transparent' : undefined }, applyComponentRules(rules, colors.label) as TextStyle]}
+      style={[
+        { backgroundColor: glass ? 'transparent' : undefined, color: colors.label },
+        applyComponentRules(rules, colors.label) as TextStyle,
+      ]}
       className={`flex-1 px-1 ${className}`}
     />
   );

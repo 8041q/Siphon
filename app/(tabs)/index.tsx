@@ -346,7 +346,7 @@ export default function MapScreen() {
 
       {/* Filters button */}
       <View style={{ position: 'absolute', top: insets.top + 12, start: 16, zIndex: 10 }}>
-        <GlassSurface color={colors.surface} style={{ borderRadius: 22 }}>
+        <GlassSurface color={colors.surface} style={{ borderRadius: 6 }}>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => filterSheetRef.current?.present()}
@@ -357,15 +357,16 @@ export default function MapScreen() {
                 : t('search.filters')
             }
             accessibilityState={{ selected: filterCount > 0 }}
+            hitSlop={4}
             style={{
-              width: 44,
-              height: 44,
+              width: 36,
+              height: 36,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
             <View className="relative">
-              <Icon name="filter_list" size={20} color={colors.tint} />
+              <Icon name="filter_list" size={18} color={colors.tint} />
               {filterCount > 0 && (
                 <View
                   style={{

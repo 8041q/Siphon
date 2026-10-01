@@ -10,6 +10,7 @@ const MONETIZATION_PERMISSIONS = [
   'com.android.vending.BILLING',
 ];
 const { supportEmail } = require('./release-contact.json');
+const { version } = require('./package.json');
 
 /** @type {import('expo/config').ConfigContext['config']} */
 module.exports = ({ config }) => {
@@ -27,6 +28,7 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    version,
     android: {
       ...config.android,
       blockedPermissions: [...blockedPermissions],

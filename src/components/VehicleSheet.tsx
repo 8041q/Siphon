@@ -10,7 +10,7 @@ import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 
 import { Field } from './ui/field';
-import { Chip } from './ui/chip';
+import { FilterButton } from './ui/FilterButton';
 import { SheetBackground } from './ui/SheetBackground';
 import { fuelLabel } from '../utils/fuelNames';
 import {
@@ -199,9 +199,6 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
       bottomSheetRef.current?.dismiss();
     }, [editing, onRemove]);
 
-    const chipText = (selected: boolean) =>
-      selected ? { color: colors.labelOnTint } : { color: colors.label };
-
     const isEdit = editing !== null;
 
     return (
@@ -249,15 +246,14 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
                   const selected = fuels.some((f) => f.fuelType === key);
                   const atMax = fuels.length >= MAX_FUELS && !selected;
                   return (
-                    <Chip
+                    <FilterButton
                       key={key}
                       selected={selected}
                       onPress={() => toggleFuel(key)}
                       disabled={atMax}
-                      className={`px-3.5 py-1.5 rounded-full ${atMax ? 'opacity-40' : ''}`}
-                    >
-                      <Text style={chipText(selected)} className="text-caption-1 font-semibold">{fuelLabel(key)}</Text>
-                    </Chip>
+                      multiSelect
+                      label={fuelLabel(key)}
+                    />
                   );
                 })}
               </View>

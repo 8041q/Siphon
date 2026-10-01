@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAppUpdatePreferences, type AppUpdatePreferences } from '../utils/appUpdatePreferences';
 
 const GITHUB_REPO = '8041q/Siphon';
 const GITHUB_API_LATEST_RELEASE = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
@@ -26,7 +28,8 @@ type GitHubRelease = {
   assets?: unknown;
 };
 
-type UpdateSnapshot = {
+type UpdateSnapshot = AppUpdatePreferences & {
+  hasChecked: boolean;
   checking: boolean;
   applying: boolean;
   updateAvailable: boolean;
@@ -77,6 +80,10 @@ function installedVersionForBuild(): string {
 }
 
 const initialSnapshot: UpdateSnapshot = {
+  hasChecked: false,
+  autoCheckEnabled: true,
+  autoCheckLoaded: false,
+  autoCheckSaving: false,
   checking: false,
   applying: false,
   updateAvailable: false,
@@ -98,6 +105,8 @@ function publish(next: Partial<UpdateSnapshot>) {
   snapshot = { ...snapshot, ...next };
   for (const listener of listeners) listener(snapshot);
 }
+
+const updatePreferences = createAppUpdatePreferences(AsyncStorage, publish);
 
 async function fetchLatestGitHubRelease(): Promise<{
   version: string;
@@ -168,6 +177,7 @@ async function runCheck(force = false): Promise<void> {
 
     if (release && isNewerVersion(release.version, installedVersion)) {
       publish({
+        hasChecked: true,
         checking: false,
         applying: false,
         updateAvailable: true,
@@ -184,6 +194,7 @@ async function runCheck(force = false): Promise<void> {
 
     if (otaAvailable) {
       publish({
+        hasChecked: true,
         checking: false,
         applying: false,
         updateAvailable: true,
@@ -200,6 +211,7 @@ async function runCheck(force = false): Promise<void> {
 
     const noReleases = (distribution === 'play' || distribution === 'github') && !release && !releaseCheckFailed;
     publish({
+      hasChecked: true,
       checking: false,
       applying: false,
       updateAvailable: false,
@@ -264,21 +276,28 @@ export function getUpdateUrl(): string {
   return snapshot.apkUrl ?? snapshot.releaseUrl ?? GITHUB_RELEASES_URL;
 }
 
-export function useAppUpdate() {
+export function useAppUpdate({ checkOnStartup = false } = {}) {
   const [state, setState] = useState<UpdateSnapshot>(snapshot);
 
   useEffect(() => {
     listeners.add(setState);
     setState(snapshot);
-    void runCheck(false);
+    void updatePreferences.load();
     return () => {
       listeners.delete(setState);
     };
   }, []);
 
+  useEffect(() => {
+    if (checkOnStartup) {
+      void updatePreferences.checkOnStartup(() => runCheck(false));
+    }
+  }, [checkOnStartup]);
+
   return {
     ...state,
     check: runCheck,
     applyUpdate: applyAvailableUpdate,
+    setAutoCheckEnabled: updatePreferences.setEnabled,
   };
 }

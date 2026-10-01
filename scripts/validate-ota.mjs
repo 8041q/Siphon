@@ -12,7 +12,7 @@ const nativePatterns = [
   /^eas\.json$/,
   /^package(?:-lock)?\.json$/,
   /^plugins\//,
-  /^assets\/(?:icon|adaptive-icon|splash-icon)\./,
+  /^assets\/(?:icon(?:-dark)?|adaptive-(?:icon|monochrome)|splash-icon(?:-dark)?)\./,
 ];
 const unsafe = changed.filter((file) => nativePatterns.some((pattern) => pattern.test(file)));
 

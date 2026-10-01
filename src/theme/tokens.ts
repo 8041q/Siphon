@@ -22,7 +22,7 @@ export const ui = {
     /** Secondary text */
     secondaryLabel: 'rgba(11, 31, 34, 0.68)',
     /** Tertiary / caption text */
-    tertiaryLabel: 'rgba(11, 31, 34, 0.48)',
+    tertiaryLabel: 'rgba(11, 31, 34, 0.64)',
     /** Text on primary tint background (buttons, chips) */
     labelOnTint: '#FFFFFF',
 
@@ -30,7 +30,7 @@ export const ui = {
     /** Separator lines, borders */
     separator: 'rgba(11, 31, 34, 0.14)',
     /** Primary action accent (buttons, active tabs, selected state) */
-    tint: '#0C8599',
+    tint: '#08798B',
     /** Destructive action (delete, remove) */
     destructive: '#E24C4C',
 
@@ -40,7 +40,7 @@ export const ui = {
     /** Input field border */
     fieldBorder: 'rgba(11, 31, 34, 0.16)',
     /** Input / field placeholder text color */
-    placeholder: 'rgba(11, 31, 34, 0.35)',
+    placeholder: 'rgba(11, 31, 34, 0.64)',
 
     // ── Bottom sheet drag handle ─────────────────────────────────
     /** Bottom sheet drag handle indicator */
@@ -70,9 +70,9 @@ export const ui = {
     /** Secondary text */
     secondaryLabel: 'rgba(241, 250, 250, 0.72)',
     /** Tertiary / caption text */
-    tertiaryLabel: 'rgba(241, 250, 250, 0.5)',
+    tertiaryLabel: 'rgba(241, 250, 250, 0.56)',
     /** Text on primary tint background */
-    labelOnTint: '#FFFFFF',
+    labelOnTint: '#0B1F22',
 
     // ── Decorative ────────────────────────────────────────────────
     /** Separator lines / borders */
@@ -88,7 +88,7 @@ export const ui = {
     /** Input field border */
     fieldBorder: 'rgba(148, 196, 196, 0.28)',
     /** Input / placeholder text */
-    placeholder: 'rgba(241, 250, 250, 0.46)',
+    placeholder: 'rgba(241, 250, 250, 0.56)',
 
     // ── Bottom sheet drag handle ─────────────────────────────────
     /** Bottom sheet drag handle indicator */
@@ -127,29 +127,29 @@ export const station = {
 
     // ── Price badges ─────────────────────────────────────────────
     /** Low price indicator */
-    priceLow: '#1E9E67',
+    priceLow: '#126E46',
     /** Low price tint background (badges, stats) */
     priceLowTint: 'rgba(30, 158, 103, 0.1)',
     /** Mid range price indicator */
-    priceMid: '#DB9A2B',
+    priceMid: '#8E590B',
     /** High price indicator */
-    priceHigh: '#E24C4C',
+    priceHigh: '#BB2B2B',
     /** High price tint background */
     priceHighTint: 'rgba(226, 76, 76, 0.1)',
 
     // ── Worth-the-drive banner ───────────────────────────────────
     /** Savings label green */
-    worthItText: '#1E9E67',
+    worthItText: '#126E46',
     /** Savings background */
     worthItBg: 'rgba(30, 158, 103, 0.1)',
     /** Not worth label red */
-    notWorthText: '#E24C4C',
+    notWorthText: '#BB2B2B',
     /** Not worth background */
     notWorthBg: 'rgba(226, 76, 76, 0.1)',
 
     // ── Favorite star ────────────────────────────────────────────
     /** Favorited station star fill */
-    favorite: '#FFD60A',
+    favorite: '#99630C',
 
     // ── Price Chart ──────────────────────────────────────────────
     /** Chart data line */
@@ -167,7 +167,7 @@ export const station = {
     /** Radar non-best day dot */
     radarDot: 'rgba(11, 31, 34, 0.68)',
     /** Radar best day dot+label */
-    radarBest: '#0C8599',
+    radarBest: '#08798B',
     /** Radar ring / axis */
     radarGrid: 'rgba(11, 31, 34, 0.14)',
     /** Radar day label */
@@ -175,7 +175,7 @@ export const station = {
 
     // ── Cheap Day Banner ─────────────────────────────────────────
     /** Day banner background */
-    dayBannerBg: '#1E9E67',
+    dayBannerBg: '#126E46',
     /** Day banner text */
     dayBannerText: '#FFFFFF',
   },
@@ -251,7 +251,7 @@ export const station = {
     /** Day banner background */
     dayBannerBg: '#3BCB8E',
     /** Day banner text */
-    dayBannerText: '#FFFFFF',
+    dayBannerText: '#0B1F22',
   },
 } as const;
 

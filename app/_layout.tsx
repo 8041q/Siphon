@@ -66,7 +66,7 @@ function SystemBackgroundSync() {
 }
 
 function UpdateWatcher() {
-  useAppUpdate();
+  useAppUpdate({ checkOnStartup: true });
   return null;
 }
 

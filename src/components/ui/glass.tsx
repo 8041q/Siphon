@@ -41,9 +41,11 @@ export function useAppBlurTarget(): BlurTargetRef | null {
 export function GlassBackdrop({
   color,
   blurTarget,
+  borderRadius,
 }: {
   color?: string;
   blurTarget?: BlurTargetRef | null;
+  borderRadius?: ViewStyle['borderRadius'];
 }) {
   const { scheme, colors } = useThemeTokens();
   const tint =
@@ -56,7 +58,10 @@ export function GlassBackdrop({
   const overlayOpacity = android && !canBlurAndroid ? 0.78 : 0.35;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View
+      style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden', zIndex: -1 }]}
+      pointerEvents="none"
+    >
       {shouldRenderBlur && (
         <BlurView
           style={StyleSheet.absoluteFill}
@@ -79,9 +84,9 @@ export function GlassBackdrop({
 }
 
 /**
- * A clipped glass/tint surface. Without an Android BlurTargetView it deliberately
- * uses the performant tint fallback from GlassBackdrop instead of invoking the
- * legacy Android blur path.
+ * A glass/tint surface. Android clips only the backdrop so rounded clipping
+ * cannot hide the foreground content. Without an Android BlurTargetView it uses
+ * the performant tint fallback instead of invoking the legacy Android blur path.
  */
 export function GlassSurface({
   children,
@@ -97,8 +102,16 @@ export function GlassSurface({
   }
 >) {
   return (
-    <View {...viewProps} style={[{ overflow: 'hidden' }, style]}>
-      <GlassBackdrop color={color} blurTarget={blurTarget} />
+    <View
+      {...viewProps}
+      style={[
+        { overflow: 'hidden' },
+        style,
+        { isolation: 'isolate' },
+        Platform.OS === 'android' && { overflow: 'visible' },
+      ]}
+    >
+      <GlassBackdrop color={color} blurTarget={blurTarget} borderRadius={StyleSheet.flatten(style)?.borderRadius} />
       {children}
     </View>
   );

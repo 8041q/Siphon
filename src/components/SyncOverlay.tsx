@@ -1,4 +1,4 @@
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
@@ -8,19 +8,40 @@ interface SyncOverlayProps {
 }
 
 export function SyncOverlay({ message }: SyncOverlayProps) {
-  const { colors } = useThemeTokens();
+  const { colors, scheme } = useThemeTokens();
+  const artwork = scheme === 'dark'
+    ? require('../../assets/splash-screen-dark.png')
+    : require('../../assets/splash-screen.png');
 
   return (
-    <SafeAreaView
-      className="flex-1 justify-center items-center p-xl"
-      style={{ backgroundColor: colors.background }}
+    <ImageBackground
+      source={artwork}
+      resizeMode="contain"
+      style={{ flex: 1, backgroundColor: scheme === 'dark' ? '#121212' : '#faf8f1' }}
     >
-      <ActivityIndicator size="large" color={colors.tint} />
-      {message && (
-        <Text style={{ color: colors.secondaryLabel }} className="mt-sm text-center">
-          {message}
-        </Text>
-      )}
-    </SafeAreaView>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.progress} accessibilityLiveRegion="polite">
+          <ActivityIndicator size="large" color={colors.tint} />
+          {message && (
+            <Text
+              style={{ color: scheme === 'dark' ? '#f5f1e7' : '#262626' }}
+              className="mt-sm text-center"
+            >
+              {message}
+            </Text>
+          )}
+        </View>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  progress: {
+    position: 'absolute',
+    top: '58%',
+    left: 24,
+    right: 24,
+    alignItems: 'center',
+  },
+});

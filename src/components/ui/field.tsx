@@ -28,7 +28,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
         {label}
       </Text>
       <View style={glass ? applyComponentRules(rules, colors.label) : undefined}>
-        {glass && <GlassBackdrop color={colors.fieldBackground} />}
+        {glass && <GlassBackdrop color={colors.fieldBackground} borderRadius={rules.borderRadius} />}
         <TextInput
           value={value}
           onChangeText={onChangeText}
