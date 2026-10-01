@@ -2,6 +2,8 @@
 
 ## One-time setup
 
+For the next steps after identity approval, use `docs/FIRST-PLAY-RELEASE.md`. The first AAB can be uploaded manually to internal testing before configuring automated submission credentials.
+
 The app is linked to the `@ctr_8041q/siphon` EAS project. Sign in to the `8041q` Expo account with access to that team before building.
 
 1. Complete the Play account and package gates in `store/PLAY-CONSOLE-CHECKLIST.md`.
@@ -15,6 +17,8 @@ The app is linked to the `@ctr_8041q/siphon` EAS project. Sign in to the `8041q`
 Monetization is explicitly disabled in every EAS build profile. Do not change that flag until the DGEG commercial-use gate and the related privacy/ad review are complete.
 
 The Android CMake version is pinned to `3.22.1` in `app.json` because the current native build depends on it. Keep that version when changing other Expo build properties.
+
+`.easignore` excludes local credentials/environment files, Git history, workflows, release documents, store artwork/screenshots, tests, and local scripts from cloud build uploads. The app source, runtime assets, native plugins, dependency lockfile, `eas.json`, and public contact configuration remain included. GitHub quality gates still run on the full checkout before EAS uploads the reduced build inputs. Keep the shared exclusion rules synchronized with `.gitignore`; EAS prioritizes `.easignore` when it exists.
 
 ## Binary release
 

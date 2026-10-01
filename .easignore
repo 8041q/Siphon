@@ -1,15 +1,9 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# EAS uses this file instead of .gitignore. Keep shared exclusions in sync.
 node_modules/
-
-# Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
-
-# Native
 .kotlin/
 *.orig.*
 *.jks
@@ -19,23 +13,14 @@ expo-env.d.ts
 *.pfx
 *.key
 *.mobileprovision
-
-# Metro
 .metro-health-check*
-
-# debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
 .DS_Store
 *.pem
-
-# Local secrets (the example contains only public configuration)
 .env
 .env.*
-!.env.example
 /credentials.json
 /credentials/
 /secrets/
@@ -44,19 +29,26 @@ yarn-error.*
 *google-play*.json
 /.npmrc
 /.netrc
-
-# typescript
 *.tsbuildinfo
-
-# generated native folders
 /ios
 /android
 /.openchamber
 /.codex
 /.agents
-
-# Local build artifacts
 *.apk
 *.aab
 *.ipa
 coverage/
+
+# Build metadata is resolved before upload; the cloud build needs no Git copy.
+/.git
+/.github
+
+# Public release material stays in GitHub; it is excluded only from EAS uploads.
+# Local quality tools run in GitHub CI before the reduced build upload.
+/README.md
+/docs
+/store
+/tests
+/scripts
+/assets/store
