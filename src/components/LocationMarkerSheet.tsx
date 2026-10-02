@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,6 +14,7 @@ import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { svgMarkers, SVG_MARKER_NAMES } from './userLocationMarkers';
 import { SheetBackground } from './ui/SheetBackground';
+import { SheetBackdrop } from './ui/SheetBackdrop';
 
 export type LocationMarkerSheetHandle = { present: () => void };
 
@@ -107,9 +108,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         ]}
         onChange={handleSheetChange}
         onDismiss={handleSheetDismiss}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-        )}
+        backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>

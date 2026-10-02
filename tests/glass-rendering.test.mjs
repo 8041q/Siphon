@@ -33,10 +33,11 @@ async function loadSource(relative, dependencies = {}) {
 
 const { STYLE_SETS } = await loadSource('../src/theme/styles/sets.ts');
 
-async function fixture(os, version = 31, scheme = 'light') {
+async function fixture(os, version = 31, scheme = 'light', styleSet = 'liquid-glass') {
   const native = {
     Platform: { OS: os, Version: version },
     View: 'View',
+    Text: 'Text',
     TextInput: 'TextInput',
     StyleSheet: {
       absoluteFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
@@ -45,7 +46,7 @@ async function fixture(os, version = 31, scheme = 'light') {
   };
   const colors = { surface: '#ffffff', label: scheme === 'dark' ? '#ffffff' : '#000000' };
   const theme = { useThemeTokens: () => ({ scheme, colors }) };
-  const support = { useAppearanceSupport: () => ({ styleRules: STYLE_SETS['liquid-glass'] }) };
+  const support = { useAppearanceSupport: () => ({ styleRules: STYLE_SETS[styleSet] }) };
   support.useSupport = support.useAppearanceSupport;
   const rules = await loadSource('../src/hooks/useStyleConfig.ts', { 'react-native': native });
   const glass = await loadSource('../src/components/ui/glass.tsx', {
@@ -66,7 +67,14 @@ async function fixture(os, version = 31, scheme = 'light') {
     '../../hooks/useSupport': support,
     '../../hooks/useStyleConfig': rules,
   });
-  return { ...rules, ...glass, ...box, ...input };
+  const field = await loadSource('../src/components/ui/field.tsx', {
+    'react-native': native,
+    '../../hooks/useThemeTokens': theme,
+    '../../hooks/useSupport': support,
+    '../../hooks/useStyleConfig': rules,
+    './glass': glass,
+  });
+  return { ...rules, ...glass, ...box, ...input, ...field };
 }
 
 test('Android Liquid Glass removes content clipping across all glass components and prior styles', async () => {
@@ -86,11 +94,34 @@ test('Android Liquid Glass removes content clipping across all glass components 
   }
 });
 
+test('every style keeps a native stacking boundary before and after an appearance switch', async () => {
+  const { applyComponentRules } = await fixture('android');
+  for (const [style, components] of Object.entries(STYLE_SETS)) {
+    for (const [component, rules] of Object.entries(components)) {
+      // Fabric treats isolation as FormsStackingContext even for layout-only
+      // views; without it, descendants are reparented when Glass is toggled.
+      assert.equal(applyComponentRules(rules).isolation, 'isolate', `${style}/${component}`);
+    }
+  }
+});
+
+test('field keeps the same foreground slot and stacking parent throughout repeated style changes', async () => {
+  for (const styleSet of ['default', 'retro', 'liquid-glass', 'dotted', 'liquid-glass', 'default']) {
+    const { Field } = await fixture('android', 31, 'dark', styleSet);
+    const field = Field({ label: 'City', value: 'Porto', onChangeText: () => {} });
+    const parent = field.props.children[1];
+    assert.equal(flatten(parent.props.style).isolation, 'isolate', styleSet);
+    assert.equal(parent.props.children[1].type, 'TextInput');
+    assert.equal(parent.props.children[1].props.value, 'Porto');
+    assert.equal(flatten(parent.props.children[1].props.style).color, '#ffffff');
+  }
+});
+
 test('rounded Android glass keeps foreground outside the backdrop mask and preserves radius overrides', async () => {
   const { GlassBox, GlassSurface, GlassBackdrop } = await fixture('android');
   const text = require('react').createElement('Text', null, 'Visible label');
   for (const surface of [
-    GlassBox({ component: 'card', children: text, className: 'overflow-hidden', style: [{ borderRadius: 6 }] }),
+    GlassBox({ component: 'card', children: text, className: 'overflow-hidden', style: [{ borderRadius: 6, overflow: 'hidden' }] }),
     GlassSurface({ children: text, style: [{ borderRadius: 6, overflow: 'hidden' }] }),
   ]) {
     assert.equal(flatten(surface.props.style).overflow, 'visible');

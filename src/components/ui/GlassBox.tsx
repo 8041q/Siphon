@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../hooks/useSupport';
@@ -29,6 +29,7 @@ export function GlassBox({ component, children, color, className = '', style }: 
         { backgroundColor: glass ? 'transparent' : color ?? colors.surface },
         applyComponentRules(rules, colors.label),
         style,
+        glass && Platform.OS === 'android' && { overflow: 'visible' },
       ]}
       className={className}
     >

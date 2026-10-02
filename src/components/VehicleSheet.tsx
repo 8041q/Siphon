@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,6 +12,7 @@ import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layou
 import { Field } from './ui/field';
 import { FilterButton } from './ui/FilterButton';
 import { SheetBackground } from './ui/SheetBackground';
+import { SheetBackdrop } from './ui/SheetBackdrop';
 import { fuelLabel } from '../utils/fuelNames';
 import {
   VEHICLE_FUEL_KEYS,
@@ -215,9 +216,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         ]}
         onChange={handleSheetChange}
         onDismiss={handleSheetDismiss}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-        )}
+        backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>

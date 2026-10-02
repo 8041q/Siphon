@@ -27,7 +27,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
       <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
         {label}
       </Text>
-      <View style={glass ? applyComponentRules(rules, colors.label) : undefined}>
+      <View style={[{ isolation: 'isolate' }, glass && applyComponentRules(rules, colors.label)]}>
         {glass && <GlassBackdrop color={colors.fieldBackground} borderRadius={rules.borderRadius} />}
         <TextInput
           value={value}

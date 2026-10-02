@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FuelKey, FuelStationFeature } from '../api/siphonClient';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
 import { formatSchedule, marginLabel } from '../utils/schedule';
+import { serviceLabel, stationTypeLabel } from '../utils/stationLabels';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { Icon } from '../theme/Icon';
 import { useUI, useStationDistances } from '../hooks/useApp';
@@ -18,6 +19,7 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { WorthTheDrive } from './WorthTheDrive';
 import { SheetBackground } from './ui/SheetBackground';
+import { SheetBackdrop } from './ui/SheetBackdrop';
 import { GlassBox } from './ui/GlassBox';
 
 const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
@@ -196,7 +198,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
                   {t('station.services')}
                 </Text>
                 <Text style={{ color: colors.secondaryLabel }} className="text-callout">
-                  {services.join(', ')}
+                  {services.map((service) => serviceLabel(service, t)).join(', ')}
                 </Text>
               </View>
             )}
@@ -240,7 +242,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
                 <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('common.station')}
                 </Text>
-                {extra?.stationType && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.station_type')}: {extra?.stationType}</Text>}
+                {extra?.stationType && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.station_type')}: {stationTypeLabel(extra.stationType, t)}</Text>}
                 {otherServices && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.other_services')}: {otherServices}</Text>}
                 {extra?.margin && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.margin')}: {marginLabel(extra.margin)}</Text>}
                 {observations && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{observations}</Text>}
@@ -349,9 +351,7 @@ export function StationDetailSheet() {
         ]}
       onChange={handleChange}
       onDismiss={handleDismiss}
-      backdropComponent={(props) => (
-        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-      )}
+      backdropComponent={SheetBackdrop}
       backgroundComponent={SheetBackground}
     >
       <View className="flex-1">

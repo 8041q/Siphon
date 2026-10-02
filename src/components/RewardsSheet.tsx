@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type { MutableRefObject } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -28,6 +28,7 @@ import { SHEET_HANDLE_INDICATOR_STYLE, SHEET_HANDLE_STYLE } from '../theme/layou
 import { Button } from './ui/button';
 import { GlassBox } from './ui/GlassBox';
 import { SheetBackground } from './ui/SheetBackground';
+import { SheetBackdrop } from './ui/SheetBackdrop';
 import { MONETIZATION_ENABLED } from '../config/features';
 
 export type RewardsSheetHandle = { present: () => void };
@@ -37,6 +38,11 @@ const UNLOCKED_FLASH_MS = 2_500;
 const AD_FAILED_MS = 2_500;
 
 type TimerRef = MutableRefObject<ReturnType<typeof setTimeout> | null>;
+
+type AppearanceSelection =
+  | { kind: 'palette'; id: PaletteId }
+  | { kind: 'icon'; id: IconSetId }
+  | { kind: 'style'; id: StyleSetId };
 
 function clearTimer(ref: TimerRef): void {
   if (!ref.current) return;
@@ -49,7 +55,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
   const { colors } = useThemeTokens();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
-    const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
+  const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
+  const pendingAppearanceRef = useRef<AppearanceSelection | null>(null);
   const snapPoints = useMemo(() => ['82%'], []);
 
   const {
@@ -140,6 +147,33 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     }, LOCKED_NOTICE_MS);
   }, []);
 
+  const applySelection = useCallback((selection: AppearanceSelection) => {
+    switch (selection.kind) {
+      case 'palette': setPaletteId(selection.id); break;
+      case 'icon': setIconSetId(selection.id); break;
+      case 'style': setStyleSetId(selection.id); break;
+    }
+  }, [setPaletteId, setIconSetId, setStyleSetId]);
+
+  const handleAppearanceDismiss = useCallback(() => {
+    handleSheetDismiss();
+    const selection = pendingAppearanceRef.current;
+    pendingAppearanceRef.current = null;
+    if (selection) applySelection(selection);
+  }, [handleSheetDismiss, applySelection]);
+
+  const selectAppearance = useCallback((selection: AppearanceSelection) => {
+    // Updating appearance can insert/remove native backdrops and swap icon view
+    // types. Wait for Gorhom to finish dismissing before changing that hierarchy.
+    // A timer or onChange(-1) can run while the closing animation is still active.
+    if (!bottomSheetRef.current) {
+      applySelection(selection);
+      return;
+    }
+    pendingAppearanceRef.current = selection;
+    bottomSheetRef.current.dismiss();
+  }, [applySelection]);
+
   const handleSelectPalette = useCallback((id: PaletteId) => {
     const reward = rewardForPalette(id);
     if (reward && !isUnlocked(reward.id)) {
@@ -147,9 +181,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       return;
     }
     void Haptics.selectionAsync().catch(() => undefined);
-    setPaletteId(id);
-    bottomSheetRef.current?.dismiss();
-  }, [isUnlocked, setPaletteId, showLockedNotice]);
+    selectAppearance({ kind: 'palette', id });
+  }, [isUnlocked, selectAppearance, showLockedNotice]);
 
   const handleSelectIcon = useCallback((id: IconSetId) => {
     const reward = rewardForIcon(id);
@@ -158,9 +191,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       return;
     }
     void Haptics.selectionAsync().catch(() => undefined);
-    setIconSetId(id);
-    bottomSheetRef.current?.dismiss();
-  }, [isUnlocked, setIconSetId, showLockedNotice]);
+    selectAppearance({ kind: 'icon', id });
+  }, [isUnlocked, selectAppearance, showLockedNotice]);
 
   const handleSelectStyle = useCallback((id: StyleSetId) => {
     const reward = rewardForStyle(id);
@@ -169,9 +201,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       return;
     }
     void Haptics.selectionAsync().catch(() => undefined);
-    setStyleSetId(id);
-    bottomSheetRef.current?.dismiss();
-  }, [isUnlocked, setStyleSetId, showLockedNotice]);
+    selectAppearance({ kind: 'style', id });
+  }, [isUnlocked, selectAppearance, showLockedNotice]);
 
   const trailingFor = (remaining: number, unlocked: boolean, id: string) => {
     if (lastUnlockedIds.has(id)) {
@@ -194,10 +225,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       handleStyle={SHEET_HANDLE_STYLE}
       handleIndicatorStyle={[SHEET_HANDLE_INDICATOR_STYLE, { backgroundColor: colors.handleIndicator }]}
       onChange={handleSheetChange}
-      onDismiss={handleSheetDismiss}
-      backdropComponent={(props) => (
-        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-      )}
+      onDismiss={handleAppearanceDismiss}
+      backdropComponent={SheetBackdrop}
       backgroundComponent={SheetBackground}
     >
       <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>

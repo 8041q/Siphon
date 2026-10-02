@@ -20,7 +20,7 @@ function sanitizeEvConfig(raw: unknown): EvConfig {
   const cfg = raw as Partial<EvConfig>;
   for (const field of NUMERIC_FIELDS) {
     const n = Number(cfg[field]);
-    if (Number.isFinite(n) && n > 0) base[field] = n;
+    if (Number.isFinite(n) && n >= 0) base[field] = n;
   }
   return base;
 }

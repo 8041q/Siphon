@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsFocused } from 'expo-router';
-import { AccessibilityInfo, ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { AccessibilityInfo, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { StationMap } from '../../src/components/stationMap/StationMap';
 import type { MapCameraRequest } from '../../src/components/stationMap/types';
 import { SyncOverlay } from '../../src/components/SyncOverlay';
+import { MapActionButton } from '../../src/components/MapActionButton';
 import { FilterSheet } from '../../src/components/FilterSheet';
 import { Icon } from '../../src/components/ui/icon';
 import { GlassSurface } from '../../src/components/ui/glass';
@@ -344,76 +345,22 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Filters button */}
-      <View style={{ position: 'absolute', top: insets.top + 12, start: 16, zIndex: 10 }}>
-        <GlassSurface color={colors.surface} style={{ borderRadius: 6 }}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => filterSheetRef.current?.present()}
-            accessibilityRole="button"
-            accessibilityLabel={
-              filterCount > 0
-                ? t('search.active_filters', { count: filterCount })
-                : t('search.filters')
-            }
-            accessibilityState={{ selected: filterCount > 0 }}
-            hitSlop={4}
-            style={{
-              width: 36,
-              height: 36,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <View className="relative">
-              <Icon name="filter_list" size={18} color={colors.tint} />
-              {filterCount > 0 && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: -6,
-                    end: -6,
-                    backgroundColor: colors.tint,
-                    borderRadius: 9999,
-                    minWidth: 16,
-                    height: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 4,
-                  }}
-                >
-                  <Text className="text-[10px] font-bold" style={{ color: colors.labelOnTint }}>{filterCount}</Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        </GlassSurface>
-      </View>
-
-      {/* Locate me button */}
-      <View style={{ position: 'absolute', top: 128, start: 16, zIndex: 10 }}>
-        <GlassSurface color={colors.surface} style={{ borderRadius: 22 }}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleLocate}
-            disabled={requestingLocation}
-            accessibilityRole="button"
-            accessibilityLabel={t('map.locate_me')}
-            accessibilityState={{ disabled: requestingLocation, busy: requestingLocation }}
-            style={{
-              width: 44,
-              height: 44,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {requestingLocation ? (
-              <ActivityIndicator size="small" color={colors.tint} />
-            ) : (
-              <Icon name="my_location" size={20} color={colors.tint} />
-            )}
-          </TouchableOpacity>
-        </GlassSurface>
+      {/* Shared geometry keeps both map actions aligned below the safe area. */}
+      <View style={{ position: 'absolute', top: insets.top + 12, start: 16, zIndex: 10, gap: 12 }}>
+        <MapActionButton
+          iconName="filter_list"
+          label={filterCount > 0
+            ? t('search.active_filters', { count: filterCount })
+            : t('search.filters')}
+          badgeCount={filterCount}
+          onPress={() => filterSheetRef.current?.present()}
+        />
+        <MapActionButton
+          iconName="my_location"
+          label={t('map.locate_me')}
+          onPress={handleLocate}
+          busy={requestingLocation}
+        />
       </View>
 
       <FilterSheet

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { Icon } from '../../src/components/ui/icon';
 import { GlassBackdrop } from '../../src/components/ui/glass';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../src/hooks/useSupport';
+import { useStationMapData, useStationSync } from '../../src/hooks/useApp';
 import { useStyleConfig, applyComponentRules, isGlass } from '../../src/hooks/useStyleConfig';
 import { TAB_BAR_HEIGHT, TAB_BAR_H_MARGIN, TAB_BAR_FLOAT_GAP } from '../../src/theme/layout';
 
@@ -60,9 +61,14 @@ export default function TabLayout() {
   const glass = isGlass(rules);
   const pillRadius = rules.borderRadius ?? TAB_BAR_HEIGHT / 2;
   const blurTargetRef = useRef<View | null>(null);
+  const { loading } = useStationSync();
+  const { stations } = useStationMapData();
+  const showingSplash = loading && stations.length === 0;
 
   const shapeStyle = applyComponentRules(rules, colors.label);
-  if (glass) delete shapeStyle.overflow;
+  // The backdrop owns rounded clipping; the floating bar must retain its
+  // shadow and foreground on both platforms throughout style changes.
+  shapeStyle.overflow = 'visible';
 
   return (
     <Tabs>
@@ -86,15 +92,12 @@ export default function TabLayout() {
             elevation: 8,
           },
           shapeStyle,
+          // Keep triggers registered while the map's startup splash is visible.
+          { display: showingSplash ? 'none' : 'flex' },
         ]}
       >
         {glass && (
-          <View
-            style={[StyleSheet.absoluteFill, { borderRadius: pillRadius, overflow: 'hidden' }]}
-            pointerEvents="none"
-          >
-            <GlassBackdrop blurTarget={blurTargetRef} />
-          </View>
+          <GlassBackdrop blurTarget={blurTargetRef} borderRadius={pillRadius} />
         )}
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>

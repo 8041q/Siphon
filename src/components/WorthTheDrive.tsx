@@ -8,7 +8,7 @@ import { useStationCatalog, useStationDistances, useUI } from '../hooks/useApp';
 import { useVehicles } from '../hooks/useVehicles';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
-import { capacityUnit } from '../utils/vehicles';
+import { capacityUnit, refillLiters } from '../utils/vehicles';
 import { GlassBox } from './ui/GlassBox';
 
 const COMPARISON_RADIUS_KM = 25;
@@ -43,7 +43,8 @@ type Comparison = {
   key: string;
   vehicleName: string;
   fuel: FuelKey;
-  capacity: number;
+  refillAmount: number;
+  refillCost: number;
   capacityUnit: string;
   stationPrice: number;
   roundTripKm: number;
@@ -115,11 +116,12 @@ export function WorthTheDrive({
         if (!Number.isFinite(consumption) || consumption <= 0 || !Number.isFinite(capacity) || capacity <= 0) continue;
 
         const configuredCapacityUnit = capacityUnit(fuel);
+        const refillAmount = refillLiters(capacity);
         const targetPriceUnit = expectedPriceQuantityUnit(fuel, station.properties.source);
         const unitMismatch = configuredCapacityUnit !== targetPriceUnit;
         const roundTripKm = distanceKm * 2;
         const oneWayFuelNeeded = (distanceKm / 100) * consumption;
-        const targetReachable = oneWayFuelNeeded <= capacity + Number.EPSILON;
+        const targetReachable = oneWayFuelNeeded <= refillAmount + Number.EPSILON;
         const targetTripCost = unitMismatch
           ? 0
           : (roundTripKm / 100) * consumption * stationPrice;
@@ -130,7 +132,7 @@ export function WorthTheDrive({
               price: number;
               distanceKm: number;
               tripCost: number;
-              effectiveFullFillCost: number;
+              effectiveRefillCost: number;
               routed: boolean;
             }
           | null = null;
@@ -145,18 +147,18 @@ export function WorthTheDrive({
             if (expectedPriceQuantityUnit(fuel, candidate.properties.source) !== configuredCapacityUnit) continue;
 
             const candidateOneWayFuelNeeded = (candidateDistance / 100) * consumption;
-            if (candidateOneWayFuelNeeded > capacity + Number.EPSILON) continue;
+            if (candidateOneWayFuelNeeded > refillAmount + Number.EPSILON) continue;
 
             const candidateTripCost = (candidateDistance * 2 / 100) * consumption * candidatePrice;
-            const effectiveFullFillCost = candidatePrice * capacity + candidateTripCost;
+            const effectiveRefillCost = candidatePrice * refillAmount + candidateTripCost;
 
-            if (!bestReference || effectiveFullFillCost < bestReference.effectiveFullFillCost) {
+            if (!bestReference || effectiveRefillCost < bestReference.effectiveRefillCost) {
               bestReference = {
                 station: candidate,
                 price: candidatePrice,
                 distanceKm: candidateDistance,
                 tripCost: candidateTripCost,
-                effectiveFullFillCost,
+                effectiveRefillCost,
                 routed: routedStationIds.has(candidate.properties.id),
               };
             }
@@ -166,7 +168,7 @@ export function WorthTheDrive({
         const referencePrice = bestReference?.price ?? null;
         const referenceTripCost = bestReference?.tripCost ?? null;
         const unitPriceSaving = referencePrice == null ? 0 : referencePrice - stationPrice;
-        const grossFuelSaving = referencePrice == null ? 0 : unitPriceSaving * capacity;
+        const grossFuelSaving = referencePrice == null ? 0 : unitPriceSaving * refillAmount;
         const extraTripCost = referenceTripCost == null ? 0 : targetTripCost - referenceTripCost;
         const netSaving = referencePrice == null ? 0 : grossFuelSaving - extraTripCost;
 
@@ -182,7 +184,8 @@ export function WorthTheDrive({
           key: `${vehicle.id ?? vehicle.name}:${fuel}`,
           vehicleName: vehicle.name,
           fuel,
-          capacity,
+          refillAmount,
+          refillCost: unitMismatch ? 0 : stationPrice * refillAmount,
           capacityUnit: configuredCapacityUnit,
           stationPrice,
           roundTripKm,
@@ -197,7 +200,7 @@ export function WorthTheDrive({
           extraTripCost,
           netSaving,
           breakEvenFill,
-          breakEvenExceedsCapacity: breakEvenFill != null && breakEvenFill > capacity,
+          breakEvenExceedsCapacity: breakEvenFill != null && breakEvenFill > refillAmount,
           unitMismatch,
           fullyRouted: distanceRouted && (bestReference?.routed ?? false),
         });
@@ -255,6 +258,16 @@ export function WorthTheDrive({
               </Text>
             </View>
 
+            {!comparison.unitMismatch && (
+              <Text style={{ color: colors.label }} className="text-footnote mt-sm font-semibold">
+                {t('settings.worth_refill_cost', {
+                  amount: Number(comparison.refillAmount.toFixed(1)),
+                  unit: comparison.capacityUnit,
+                  cost: comparison.refillCost.toFixed(2),
+                })}
+              </Text>
+            )}
+
             {comparison.unitMismatch ? (
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-sm">
                 {t('settings.worth_unit_mismatch')}
@@ -301,8 +314,8 @@ export function WorthTheDrive({
                 })()}
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-xs">
                   {comparison.grossFuelSaving >= 0
-                    ? t('settings.worth_full_tank_saving', { saving: comparison.grossFuelSaving.toFixed(2) })
-                    : t('settings.worth_full_tank_extra', { cost: Math.abs(comparison.grossFuelSaving).toFixed(2) })}
+                    ? t('settings.worth_refill_saving', { saving: comparison.grossFuelSaving.toFixed(2) })
+                    : t('settings.worth_refill_extra', { cost: Math.abs(comparison.grossFuelSaving).toFixed(2) })}
                 </Text>
                 <Text style={{ color: colors.secondaryLabel }} className="text-footnote mt-xs">
                   {comparison.extraTripCost >= 0
@@ -340,11 +353,6 @@ export function WorthTheDrive({
             {!comparison.fullyRouted && (
               <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
                 {t('settings.worth_estimated_distance')}
-              </Text>
-            )}
-            {hasReference && !comparison.unitMismatch && comparison.targetReachable && (
-              <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-xs">
-                {t('settings.worth_full_tank_assumption')}
               </Text>
             )}
           </GlassBox>

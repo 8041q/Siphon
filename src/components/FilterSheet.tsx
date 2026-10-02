@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +13,7 @@ import { FUEL_KEYS, fuelLabel } from '../utils/fuelNames';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
+import { SheetBackdrop } from './ui/SheetBackdrop';
 import type { CountryCode, FuelKey } from '../api/siphonClient';
 
 const PRICE_OPTIONS = [1.65, 1.87, 2.0] as const;
@@ -212,9 +213,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
         ]}
         onChange={handleSheetChange}
         onDismiss={handleDismiss}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} pressBehavior="none" accessible={false} />
-        )}
+        backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
         <View collapsable={false} pointerEvents="auto" style={{ flex: 1 }}>

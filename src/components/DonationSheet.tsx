@@ -11,7 +11,6 @@ import { Linking, Text, TouchableOpacity, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +22,7 @@ import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
+import { SheetBackdrop } from './ui/SheetBackdrop';
 import { GlassBox } from './ui/GlassBox';
 
 export type DonationSheetHandle = { present: () => void };
@@ -104,9 +104,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
         ]}
         onChange={handleSheetChange}
         onDismiss={handleSheetDismiss}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-        )}
+        backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
         <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>

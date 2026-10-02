@@ -148,12 +148,25 @@ export function isVehicleFormValid(form: {
 
 // ---------- Cost math ----------
 
+/** Estimate reserve from the configured tank, without changing saved capacity. */
+export function tankReserveLiters(capacity: number): number {
+  if (!Number.isFinite(capacity) || capacity <= 0) return 0;
+  // Below the 40 L compact-car example, scale the buffer to smaller tanks.
+  if (capacity <= 45) return Math.min(4, capacity * 0.1);
+  if (capacity <= 60) return 6;
+  return 10;
+}
+
+export function refillLiters(capacity: number): number {
+  if (!Number.isFinite(capacity) || capacity <= 0) return 0;
+  return capacity - tankReserveLiters(capacity);
+}
+
 export function roundTripFuelCostKm(distanceKm: number, consumption: number, pricePerLiter: number): number {
   return ((distanceKm * 2) / 100) * consumption * pricePerLiter;
 }
 
-// For liquid fuels, `capacity` is tank size in liters, so multiplying by the
-// per-liter CO2 factor is correct. For EVs, `capacity` is range in km (see
+// Liquid-fuel estimates exclude reserve. For EVs, `capacity` is range in km (see
 // capacityUnit/capacityRange), which isn't meaningful multiplied by a €/L-style
 // constant. Pass `consumption` (kWh/100km) to get a real grid-CO2 estimate for
 // a full charge's range; without it, EVs return 0 rather
@@ -162,11 +175,11 @@ export function co2PerTank(capacity: number, fuelType: string, consumption?: num
     if (consumption === undefined) return 0;
     return (capacity / 100) * consumption * GRID_CO2_KG_PER_KWH;
   }
-  return capacity * co2PerLiter(fuelType);
+  return refillLiters(capacity) * co2PerLiter(fuelType);
 }
 
 export function savingPerTank(priceDiffPerLiter: number, capacity: number): number {
-  return priceDiffPerLiter * capacity;
+  return priceDiffPerLiter * refillLiters(capacity);
 }
 
 export interface EvBreakevenResult {

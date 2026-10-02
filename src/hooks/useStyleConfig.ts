@@ -17,7 +17,10 @@ export function isGlass(rules: ComponentRules): boolean {
  * would also fade the text/children.
  */
 export function applyComponentRules(rules: ComponentRules, borderColor?: string): ViewStyle {
-  const style: ViewStyle = {};
+  // Fabric changes native parentage when a view starts/stops forming a stacking
+  // context. Keep this boundary from the first render, across every style, so
+  // a border/backdrop change cannot reparent foreground text during an animation.
+  const style: ViewStyle = { isolation: 'isolate' };
   if (rules.borderRadius !== undefined) style.borderRadius = rules.borderRadius;
   if (rules.borderStyle !== undefined) {
     style.borderStyle = rules.borderStyle;
@@ -30,8 +33,6 @@ export function applyComponentRules(rules: ComponentRules, borderColor?: string)
   // Clip the backdrop itself there, keeping text and controls outside that mask.
   if (rules.glass) {
     style.overflow = Platform.OS === 'android' ? 'visible' : 'hidden';
-    // Keep the negative-z backdrop within this surface's stacking context.
-    style.isolation = 'isolate';
   }
   return style;
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import vm from 'node:vm';
 import ts from 'typescript';
 
@@ -38,6 +38,10 @@ async function mountSheet(kind = 'FilterSheet', initial = {}, showSort = true) {
   const modal = { present: () => {}, dismiss: () => { dismissals += 1; } };
   const native = Object.fromEntries(['Text', 'TextInput', 'TouchableOpacity', 'View'].map((name) => [name, name]));
   const { PUBLISHED_FUEL_KEYS } = await loadSource('../src/api/siphonClient.ts', { './rateLimit': {} });
+  const sharedBackdrop = await loadSource('../src/components/ui/SheetBackdrop.tsx', {
+    'react/jsx-runtime': { jsx, jsxs: jsx },
+    '@gorhom/bottom-sheet': { BottomSheetBackdrop: 'Backdrop' },
+  });
   const dependencies = {
     react: {
       forwardRef: (component) => component,
@@ -63,6 +67,7 @@ async function mountSheet(kind = 'FilterSheet', initial = {}, showSort = true) {
     './ui/GlassBox': { GlassBox: 'GlassBox' },
     './ui/field': { Field: 'Field' },
     './ui/SheetBackground': { SheetBackground: 'Background' },
+    './ui/SheetBackdrop': sharedBackdrop,
     '../utils/vehicles': await loadSource('../src/utils/vehicles.ts'),
   };
   const exports = await loadSource(`../src/components/${kind}.tsx`, dependencies);
@@ -223,4 +228,26 @@ test('filter backdrop taps cannot close the sheet or discard pending choices', a
   sheet.action('search.apply');
   sheet.dismiss();
   assert.deepEqual(sheet.applied[0], { countries: ['PT'] });
+});
+
+
+test('every bottom sheet uses the shared non-dismissing backdrop', async () => {
+  const directory = new URL('../src/components/', import.meta.url);
+  let sheets = 0;
+  for (const name of await readdir(directory)) {
+    if (!name.endsWith('.tsx')) continue;
+    const source = await readFile(new URL(name, directory), 'utf8');
+    const ast = ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const inspect = node => {
+      if (ts.isJsxOpeningElement(node) && node.tagName.getText(ast) === 'BottomSheetModal') {
+        sheets++;
+        const attribute = node.attributes.properties.find(prop => prop.name?.getText(ast) === 'backdropComponent');
+        assert.equal(attribute?.initializer?.expression?.getText(ast), 'SheetBackdrop', name);
+        assert.ok(source.includes("import { SheetBackdrop } from './ui/SheetBackdrop'"), name);
+      }
+      ts.forEachChild(node, inspect);
+    };
+    inspect(ast);
+  }
+  assert.equal(sheets, 9, 'cover the complete current sheet inventory');
 });
