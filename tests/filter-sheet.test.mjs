@@ -37,7 +37,9 @@ async function mountSheet(kind = 'FilterSheet', initial = {}, showSort = true) {
   const applied = [];
   const modal = { present: () => {}, dismiss: () => { dismissals += 1; } };
   const native = Object.fromEntries(['Text', 'TextInput', 'TouchableOpacity', 'View'].map((name) => [name, name]));
-  const { PUBLISHED_FUEL_KEYS } = await loadSource('../src/api/siphonClient.ts', { './rateLimit': {} });
+  const { PUBLISHED_FUEL_KEYS } = await loadSource('../src/api/siphonClient.ts', {
+    './rateLimit': {}, '../utils/mapRegion': await loadSource('../src/utils/mapRegion.ts'),
+  });
   const sharedBackdrop = await loadSource('../src/components/ui/SheetBackdrop.tsx', {
     'react/jsx-runtime': { jsx, jsxs: jsx },
     '@gorhom/bottom-sheet': { BottomSheetBackdrop: 'Backdrop' },

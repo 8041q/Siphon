@@ -17,26 +17,53 @@ The current release has ads disabled. Appearance options are available without w
 
 Node.js 22 (the CI version). Android development requires Android Studio and/or an emulator as a connected device; iOS requires macOS, Xcode, and CocoaPods. Native dependencies require a development build rather than Expo Go.
 
-```bash
-npm ci
-npm run android
-# On macOS:
-npm run ios
-```
+## Prerequisites
 
-Configuration lives in `app.json`, `app.config.js`, and `plugins/`. Generated `android/` and `ios/` folders are ignored by Git and excluded from EAS uploads. After changing native configuration, regenerate the relevant project with `npx expo prebuild --clean --platform android` (or `ios`) before building. Clean prebuild replaces local native edits. Keep Android CMake pinned to `3.22.1`.
+- Node.js
+- **iOS:** macOS, Xcode with the iOS Simulator, CocoaPods
+- **Android:** Android Studio with an emulator, or a physical device with USB debugging enabled
 
-## Checks
+## Setup - dev only
 
 ```bash
-npm run validate:config
-npm run typecheck
-npm test
-npm run doctor
-npm run export:android
+npm install
+npx expo install --check
+npx expo install --fix
 ```
 
-`npm run smoke:api` checks the public data endpoints; `npm run validate:store` checks the prepared Play listing assets. Run `npm run markers:check` after changing station-marker assets.
+## Running the app
+
+### iOS (requires Xcode & iOS Simulator)
+
+```bash
+npx expo prebuild --clean --platform ios
+npx expo run:ios
+```
+
+### Android (requires Android Studio & phone connected via USB)
+
+```bash
+npx expo prebuild --clean --platform android
+npx expo run:android
+```
+
+## Building release packages - after previous setup
+
+### Android
+
+```bash
+npx expo prebuild --clean --platform android
+cd android
+gradlew assembleRelease
+```
+
+### iOS
+
+iOS release builds go through Xcode, not Gradle:
+
+```bash
+npx expo run:ios --configuration Release
+```
 
 Keep dependency versions compatible with the Expo SDK. The npm overrides retain patched `@xmldom/xmldom` 0.8 and `brace-expansion` versions. Do not force xmldom 0.9: its parser API breaks the current Expo plist tooling. Review `npm audit --omit=dev` before releases; avoid `npm audit fix --force`, which can replace SDK-compatible packages.
 

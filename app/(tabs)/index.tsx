@@ -27,7 +27,7 @@ export default function MapScreen() {
 
   const { stations, filteredStations } = useStationMapData();
   const { loading, syncProgress, error, offline, rateLimited, reload } = useStationSync();
-  const { location, requestingLocation, locateWithGps } = useLocationState();
+  const { location, locationHydrated, requestingLocation, locateWithGps } = useLocationState();
   const {
     setSelectedStation,
     searchFilter,
@@ -35,7 +35,7 @@ export default function MapScreen() {
     mapFocusRequest,
     clearMapFocusRequest,
   } = useUI();
-  const { loadStationsForRegion } = useActions();
+  const { loadStationsForRegion, rememberMapRegion } = useActions();
 
   const filterSheetRef = useRef<{ present: () => void }>(null);
   const filterCount = useMemo(() => {
@@ -151,11 +151,12 @@ export default function MapScreen() {
     // Ignore the initial pre-camera world view (centered 0,0 with global bounds) -
     // it's not a real map region and would load bogus grid_0_0 stations.
     if (east - west >= 180 || north - south >= 160) return;
+    rememberMapRegion(lat, lng, bounds);
     if (!firstBoundsRef.current) {
       firstBoundsRef.current = true;
-      loadStationsForRegion(lat, lng, bounds);
+      if (!loading) void loadStationsForRegion(lat, lng, bounds);
     }
-  }, [loadStationsForRegion]);
+  }, [loadStationsForRegion, loading, rememberMapRegion]);
 
   // If the first visible-region read happened while the startup sync was still
   // running, refresh that exact region once the new tiles are committed. This
@@ -202,10 +203,10 @@ export default function MapScreen() {
   const handleMapReady = useCallback(() => {
     if (mapReadyRef.current) return;
     mapReadyRef.current = true;
-    if (stationsLenRef.current === 0) {
+    if (!loading && stationsLenRef.current === 0) {
       loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
     }
-  }, [loadStationsForRegion]);
+  }, [loadStationsForRegion, loading]);
 
   const handleLocate = useCallback(async () => {
     const gps = await locateWithGps();
@@ -251,8 +252,11 @@ export default function MapScreen() {
   }), [location.latitude, location.longitude]);
 
   const hasRegionData = stations.length > 0;
+  const mapFeedback = searchFeedback ?? (loading && !hasRegionData ? syncProgress : null);
 
-  if (loading && !hasRegionData) return <SyncOverlay message={syncProgress} />;
+  // Mount the native map while station/history downloads continue. Waiting
+  // only for saved coordinates prevents an initial camera jump on hydration.
+  if (!locationHydrated) return <SyncOverlay message={syncProgress} />;
 
   if (error && !hasRegionData) {
     return (
@@ -333,12 +337,12 @@ export default function MapScreen() {
       </View>
 
       {/* Search feedback */}
-      {searchFeedback && (
+      {mapFeedback && (
         <View style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
           <GlassSurface color={colors.surface} style={{ borderRadius: 999 }}>
             <View className="px-lg py-1.5" accessibilityLiveRegion="polite">
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
-                {searchFeedback}
+                {mapFeedback}
               </Text>
             </View>
           </GlassSurface>

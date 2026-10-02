@@ -179,10 +179,15 @@ function brandToIconKey(brand: string | undefined | null): string {
   return key || 'default';
 }
 
-/** Extend a station feature with precomputed marker properties. */
+const enrichedStationCache = new WeakMap<FuelStationFeature, FuelStationFeature>();
+
+/** Reuse unchanged pins, but recompute opening status so cached hours stay current. */
 export function enrichStation(station: FuelStationFeature, now = new Date()): FuelStationFeature {
   const { status, icon, price95, priceDiesel } = computeMarkerData(station, now);
-  return {
+  const cached = enrichedStationCache.get(station);
+  if (cached && cached.properties._status === status && cached.properties._icon === icon &&
+    cached.properties._price95 === price95 && cached.properties._priceDiesel === priceDiesel) return cached;
+  const enriched: FuelStationFeature = {
     ...station,
     properties: {
       ...station.properties,
@@ -193,6 +198,8 @@ export function enrichStation(station: FuelStationFeature, now = new Date()): Fu
       _priceLabel: `95 ${price95 ?? '-'}\nD ${priceDiesel ?? '-'}`,
     },
   };
+  enrichedStationCache.set(station, enriched);
+  return enriched;
 }
 
 export function enrichStations(stations: FuelStationFeature[], now = new Date()): FuelStationFeature[] {

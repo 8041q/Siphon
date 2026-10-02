@@ -12,14 +12,17 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useAppearanceSupport } from '../../hooks/useSupport';
 import { svgMarkers } from '../userLocationMarkers';
 import { getStationMarkerImage } from './brandIcons';
-import { MARKER_WIDTH, MARKER_HEIGHT, PRICE_TEXT_SIZE, PRICE_TOP, getMarkerStackOrders } from './markerLayout';
+import { MARKER_WIDTH, MARKER_HEIGHT, PRICE_TEXT_SIZE, PRICE_TOP, projectStations, getProjectedMarkerStackOrders, detailedMarkersVisible } from './markerLayout';
 import { measureSync } from '../../utils/perf';
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 // Below this zoom we fall back to the lightweight circle dots so the whole
 // country is never rendered as individual markers.
-export const STATION_MARKER_MIN_ZOOM = 13;
+export { STATION_MARKER_MIN_ZOOM } from './markerLayout';
+const DOTS_VISIBLE = { visibility: 'visible' } as const;
+const DOTS_HIDDEN = { visibility: 'none' } as const;
+const MARKER_BEARING_INTERVAL_MS = 100;
 
 const StationPriceMarker = memo(function StationPriceMarker({ station, zIndex, onPress }: {
   station: FuelStationFeature;
@@ -87,6 +90,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const [cameraMounted, setCameraMounted] = useState(false);
   const [showDetailedMarkers, setShowDetailedMarkers] = useState(true);
   const [mapBearing, setMapBearing] = useState(0);
+  const detailedMarkersRef = useRef(true);
+  const appliedBearingRef = useRef(0);
+  const pendingBearingRef = useRef(0);
+  const bearingUpdatedAtRef = useRef(0);
+  const bearingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Stable camera center - written once on first render so the native map never
   // receives a mid-init reposition via the Camera prop. All subsequent moves
@@ -102,6 +110,10 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     isMounted.current = true;
     return () => {
       isMounted.current = false;
+      if (bearingTimerRef.current !== null) {
+        clearTimeout(bearingTimerRef.current);
+        bearingTimerRef.current = null;
+      }
       if (cameraMoveFrameRef.current !== null) {
         cancelAnimationFrame(cameraMoveFrameRef.current);
         cameraMoveFrameRef.current = null;
@@ -231,10 +243,9 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         const id = station.properties.id;
         if (id) index.set(String(id), station);
 
-        // Marker enrichment already produced the MapLibre-only properties. Push
-        // the feature directly instead of cloning every station + properties
-        // again on each region/source update.
-        features.push(station);
+        // Dots need only an ID for hit testing. Keep full station data on the JS
+        // side for native pins/detail sheets, out of the serialized map source.
+        features.push({ type: 'Feature', geometry: station.geometry, properties: { id } });
         validStations.push(station);
       }
 
@@ -261,9 +272,34 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
     [colors.pin, colors.pinStroke],
   );
 
-  const markerStackOrders = useMemo(() => {
-    return getMarkerStackOrders(validStations, mapBearing);
-  }, [validStations, mapBearing]);
+  const projectedStations = useMemo(() => projectStations(validStations), [validStations]);
+  const markerStackOrders = useMemo(() => showDetailedMarkers
+    ? getProjectedMarkerStackOrders(projectedStations, mapBearing)
+    : new Map<string, number>(), [projectedStations, mapBearing, showDetailedMarkers]);
+
+  const updateMarkerViewport = useCallback((zoom: number, bearing: number, settled: boolean) => {
+    const visible = detailedMarkersVisible(zoom, detailedMarkersRef.current);
+    if (visible !== detailedMarkersRef.current) {
+      detailedMarkersRef.current = visible;
+      setShowDetailedMarkers(visible);
+    }
+    if (!Number.isFinite(bearing)) return;
+    pendingBearingRef.current = Math.round(bearing);
+    const applyBearing = () => {
+      bearingTimerRef.current = null;
+      bearingUpdatedAtRef.current = Date.now();
+      if (appliedBearingRef.current === pendingBearingRef.current) return;
+      appliedBearingRef.current = pendingBearingRef.current;
+      setMapBearing(pendingBearingRef.current);
+    };
+    if (settled || Date.now() - bearingUpdatedAtRef.current >= MARKER_BEARING_INTERVAL_MS) {
+      if (bearingTimerRef.current !== null) clearTimeout(bearingTimerRef.current);
+      applyBearing();
+    } else if (bearingTimerRef.current === null && appliedBearingRef.current !== pendingBearingRef.current) {
+      bearingTimerRef.current = setTimeout(applyBearing,
+        MARKER_BEARING_INTERVAL_MS - (Date.now() - bearingUpdatedAtRef.current));
+    }
+  }, []);
 
   const validUserLocation =
     userLocation != null &&
@@ -274,10 +310,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
   const handleRegionDidChange = useCallback(
     (event: Parameters<NonNullable<ComponentProps<typeof MapComponent>['onRegionDidChange']>>[0]) => {
-      const zoom = event.nativeEvent.zoom;
-      if (Number.isFinite(zoom)) setShowDetailedMarkers(zoom >= STATION_MARKER_MIN_ZOOM);
-      const bearing = event.nativeEvent.bearing;
-      if (Number.isFinite(bearing)) setMapBearing(Math.round(bearing));
+      updateMarkerViewport(event.nativeEvent.zoom, event.nativeEvent.bearing, true);
       if (!onRegionChange) return;
 
       const nativeEvent = event.nativeEvent as unknown as { center?: unknown; bounds?: unknown };
@@ -316,17 +349,14 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
       onRegionChange(lat, lng, bounds);
     },
-    [onRegionChange],
+    [onRegionChange, updateMarkerViewport],
   );
 
   const handleRegionIsChanging = useCallback(
     (event: Parameters<NonNullable<ComponentProps<typeof MapComponent>['onRegionIsChanging']>>[0]) => {
-      const zoom = event.nativeEvent.zoom;
-      if (Number.isFinite(zoom)) setShowDetailedMarkers(zoom >= STATION_MARKER_MIN_ZOOM);
-      const bearing = event.nativeEvent.bearing;
-      if (Number.isFinite(bearing)) setMapBearing(Math.round(bearing));
+      updateMarkerViewport(event.nativeEvent.zoom, event.nativeEvent.bearing, false);
     },
-    [],
+    [updateMarkerViewport],
   );
 
   const handleStationSourcePress = useCallback(
@@ -436,7 +466,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
           id="station-dots"
           type="circle"
           source="station-points"
-          maxzoom={STATION_MARKER_MIN_ZOOM}
+          layout={showDetailedMarkers ? DOTS_HIDDEN : DOTS_VISIBLE}
           paint={dotPaint}
         />
         </GeoJSONSource>

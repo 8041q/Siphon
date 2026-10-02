@@ -8,6 +8,7 @@
 // ---------- Types matching the documented schemas ----------
 
 import { RateLimiter, RateLimitedError, DEFAULT_BACKOFF_MS } from './rateLimit';
+import { paddedMapBounds, stationsInBounds } from '../utils/mapRegion';
 
 export type CountryCode = 'ES' | 'PT';
 
@@ -441,6 +442,37 @@ export class FuelDataClient {
   private baseUrl: string;
   private store: KeyValueStore;
   readonly rateLimiter: RateLimiter;
+  // Bound both tile count and station count: large districts must not retain
+  // the entire catalog in a second cache. The disk hash remains authoritative.
+  private stationTileCache = new Map<string, { hash: string | null; data: GeoJsonFeatureCollection }>();
+  private stationTileFlights = new Map<string, Promise<GeoJsonFeatureCollection | null>>();
+  private stationTileCacheSize = 0;
+
+  private rememberStationTile(path: string, hash: string | null, data: GeoJsonFeatureCollection): void {
+    const previous = this.stationTileCache.get(path);
+    if (previous) this.stationTileCacheSize -= previous.data.features.length;
+    this.stationTileCache.delete(path);
+    if (data.features.length > 8000) return;
+    this.stationTileCache.set(path, { hash, data });
+    this.stationTileCacheSize += data.features.length;
+    while (this.stationTileCache.size > 24 || this.stationTileCacheSize > 8000) {
+      const oldest = this.stationTileCache.keys().next().value!;
+      this.stationTileCacheSize -= this.stationTileCache.get(oldest)!.data.features.length;
+      this.stationTileCache.delete(oldest);
+    }
+  }
+
+  private async readStationTile(path: string, hash: string | null): Promise<GeoJsonFeatureCollection | null> {
+    const memory = this.stationTileCache.get(path);
+    if (memory && memory.hash === hash) {
+      this.stationTileCache.delete(path);
+      this.stationTileCache.set(path, memory);
+      return memory.data;
+    }
+    const data = parseGeoJsonFeatureCollection(tryParse<unknown>(await this.store.getItem(KEYS.tileData(path))));
+    if (data) this.rememberStationTile(path, hash, data);
+    return data;
+  }
 
   constructor(opts: { store: KeyValueStore; baseUrl?: string }) {
     this.store = opts.store;
@@ -595,11 +627,22 @@ export class FuelDataClient {
   // rather than throwing - so users can still see stations they previously
   // downloaded even when offline.
   async fetchIfChanged(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection | null> {
+    const key = `${entry.path}:${entry.hash}`;
+    const existing = this.stationTileFlights.get(key);
+    if (existing) return existing;
+    const request = this.loadStationTile(entry);
+    this.stationTileFlights.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (this.stationTileFlights.get(key) === request) this.stationTileFlights.delete(key);
+    }
+  }
+
+  private async loadStationTile(entry: { path: string; hash: string }): Promise<GeoJsonFeatureCollection | null> {
     const cachedHash = await this.store.getItem(KEYS.tileHash(entry.path));
     if (cachedHash === entry.hash) {
-      const cached = parseGeoJsonFeatureCollection(
-        tryParse<unknown>(await this.store.getItem(KEYS.tileData(entry.path))),
-      );
+      const cached = await this.readStationTile(entry.path, cachedHash);
       if (cached) return cached;
     }
 
@@ -613,11 +656,10 @@ export class FuelDataClient {
       // first could make stale/partial data look current after a crash.
       await this.store.setItem(KEYS.tileData(entry.path), JSON.stringify(geojson));
       await this.store.setItem(KEYS.tileHash(entry.path), entry.hash);
+      this.rememberStationTile(entry.path, entry.hash, geojson);
       return geojson;
     } catch (e) {
-      const cached = parseGeoJsonFeatureCollection(
-        tryParse<unknown>(await this.store.getItem(KEYS.tileData(entry.path))),
-      );
+      const cached = await this.readStationTile(entry.path, await this.store.getItem(KEYS.tileHash(entry.path)));
       if (cached) return cached;
       if (e instanceof RateLimitedError) throw e;
       return null;
@@ -1049,9 +1091,9 @@ export class FuelDataClient {
   // only what's actually needed."
   //
   // Checks BOTH Spain and Portugal so users near the border get stations
-  // from both sides instead of just one country's data. Spain tiles are
-  // looked up via a 3×3 grid-key block around the point so a user near a
-  // tile boundary also pulls adjacent tiles.
+  // from both sides instead of just one country's data. With bounds, select
+  // only intersecting tiles/districts plus the viewport margin. Without bounds,
+  // use the neighboring Spanish grids and nearby Portuguese districts.
   //
   // `changedCountries` should be the array returned by checkForUpdates() -
   // pass it straight through so a country whose hash didn't move is read
@@ -1071,14 +1113,19 @@ export class FuelDataClient {
       this.getPortugalManifest(changedCountries.includes('PT')),
     ]);
 
-    const esEntries = es
-      ? this.spainNeighborGridKeys(lat, lng)
-          .map((key) => es.tiles[key])
-          .filter(Boolean)
-      : [];
-    const ptEntries = pt
-      ? this.portugalDistrictsNear(pt, lat, lng)
-      : [];
+    const visibleBounds = bounds ? paddedMapBounds(bounds) : null;
+    const intersectsViewport = (entry: { bbox: [number, number, number, number] }) => {
+      if (!visibleBounds) return true;
+      const [west, south, east, north] = visibleBounds;
+      const [entryWest, entrySouth, entryEast, entryNorth] = entry.bbox;
+      return entryWest <= east && entryEast >= west && entrySouth <= north && entryNorth >= south;
+    };
+    const esEntries = !es ? [] : visibleBounds
+      ? Object.values(es.tiles).filter(intersectsViewport)
+      : this.spainNeighborGridKeys(lat, lng).map((key) => es.tiles[key]).filter(Boolean);
+    const ptEntries = !pt ? [] : visibleBounds
+      ? Object.values(pt.districts).filter(intersectsViewport)
+      : this.portugalDistrictsNear(pt, lat, lng);
 
     const allEntries = [...esEntries, ...ptEntries];
     const geojsons = await Promise.all(allEntries.map((e) => this.fetchIfChanged(e)));
@@ -1089,18 +1136,10 @@ export class FuelDataClient {
       for (const f of geojson.features) {
         if (f.properties.id && seen.has(f.properties.id)) continue;
         if (f.properties.id) seen.add(f.properties.id);
-        if (bounds) {
-          const [west, south, east, north] = bounds;
-          const margin = 0.15;
-          const dLat = (north - south) * margin;
-          const dLng = (east - west) * margin;
-          const [slng, slat] = f.geometry.coordinates;
-          if (slat < south - dLat || slat > north + dLat || slng < west - dLng || slng > east + dLng) continue;
-        }
         features.push(f);
       }
     }
 
-    return features;
+    return bounds ? stationsInBounds(features, bounds) : features;
   }
 }

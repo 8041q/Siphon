@@ -142,8 +142,7 @@ test('tabs retain their backdrop and navigation registrations while hiding the s
   const native = { Platform: { OS: 'android' }, Pressable: 'Pressable', View: 'View' };
   const rules = await loadSource('../src/hooks/useStyleConfig.ts', { 'react-native': native });
   let activeStyle = 'default';
-  const sync = { loading: false };
-  const map = { stations: [] };
+  const location = { locationHydrated: true };
   const { default: TabLayout } = await loadSource('../app/(tabs)/_layout.tsx', {
     react: { useRef: () => ({ current: null }) }, 'react-native': native,
     'expo-router/ui': { Tabs: 'Tabs', TabList: 'TabList', TabTrigger: 'TabTrigger', TabSlot: 'TabSlot' },
@@ -155,7 +154,7 @@ test('tabs retain their backdrop and navigation registrations while hiding the s
     '../../src/hooks/useThemeTokens': { useThemeTokens: () => ({ colors: PALETTES.default.light }) },
     '../../src/hooks/useSupport': { useAppearanceSupport: () => ({ styleRules: STYLE_SETS[activeStyle] }) },
     '../../src/hooks/useStyleConfig': rules,
-    '../../src/hooks/useApp': { useStationSync: () => sync, useStationMapData: () => map },
+    '../../src/hooks/useApp': { useLocationState: () => location },
     '../../src/theme/layout': { TAB_BAR_HEIGHT: 64, TAB_BAR_H_MARGIN: 16, TAB_BAR_FLOAT_GAP: 8 },
   });
   for (const style of ['default', 'retro', 'liquid-glass', 'dotted', 'liquid-glass', 'default']) {
@@ -170,14 +169,11 @@ test('tabs retain their backdrop and navigation registrations while hiding the s
       assert.equal(shape.overflow, 'visible');
     }
   }
-  for (const [loading, stations, display] of [
-    [true, [], 'none'], // First launch and a cold retry.
-    [true, [{ id: 'cached' }], 'flex'], // Cached data remains usable during sync.
-    [false, [{ id: 'ready' }], 'flex'],
-    [false, [], 'flex'], // A failed sync must leave navigation accessible.
+  for (const [hydrated, display] of [
+    [false, 'none'],
+    [true, 'flex'], // Navigation is usable even with an empty map during sync.
   ]) {
-    sync.loading = loading;
-    map.stations = stations;
+    location.locationHydrated = hydrated;
     const tree = TabLayout();
     const bar = walk(tree).find(node => node.type === 'TabList');
     assert.equal(Object.assign({}, ...bar.props.style).display, display);

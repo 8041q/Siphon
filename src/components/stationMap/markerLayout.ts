@@ -10,20 +10,38 @@ type PositionedStation = {
   properties: { id: string };
 };
 
-function screenDepth(station: PositionedStation, bearing: number): number {
-  const [longitude, latitude] = station.geometry.coordinates;
-  const radians = Math.PI / 180;
-  const safeLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
-  const mercatorX = (longitude + 180) / 360;
-  const mercatorY = (1 - Math.log(Math.tan(Math.PI / 4 + safeLatitude * radians / 2)) / Math.PI) / 2;
-  const angle = bearing * radians;
-  // More-positive screen Y is closer to the bottom edge and covers earlier pins.
-  return mercatorY * Math.cos(angle) - mercatorX * Math.sin(angle);
+export type ProjectedStation = { id: string; x: number; y: number };
+
+export function projectStations(stations: readonly PositionedStation[]): ProjectedStation[] {
+  return stations.map(station => {
+    const [longitude, latitude] = station.geometry.coordinates;
+    const radians = Math.PI / 180;
+    const safeLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
+    const mercatorX = (longitude + 180) / 360;
+    const mercatorY = (1 - Math.log(Math.tan(Math.PI / 4 + safeLatitude * radians / 2)) / Math.PI) / 2;
+    return { id: station.properties.id, x: mercatorX, y: mercatorY };
+  });
+}
+
+export function getProjectedMarkerStackOrders(stations: readonly ProjectedStation[], bearing: number): Map<string, number> {
+  const angle = bearing * Math.PI / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  // Calculate depth once per station, rather than inside every sort comparison.
+  const frontToBack = stations.map(station => ({ id: station.id, depth: station.y * cos - station.x * sin }))
+    .sort((a, b) => b.depth - a.depth);
+  // React Native rounds zIndex to an integer on Android. Give each pin a
+  // distinct integer so its PNG and price stack as a single unit.
+  return new Map(frontToBack.map((station, index) => [station.id, frontToBack.length - index]));
 }
 
 export function getMarkerStackOrders(stations: readonly PositionedStation[], bearing: number): Map<string, number> {
-  const frontToBack = [...stations].sort((a, b) => screenDepth(b, bearing) - screenDepth(a, bearing));
-  // React Native rounds zIndex to an integer on Android. Give each pin a
-  // distinct integer so its PNG and price stack as a single unit.
-  return new Map(frontToBack.map((station, index) => [station.properties.id, frontToBack.length - index]));
+  return getProjectedMarkerStackOrders(projectStations(stations), bearing);
+}
+
+export const STATION_MARKER_MIN_ZOOM = 13;
+
+export function detailedMarkersVisible(zoom: number, currentlyVisible: boolean): boolean {
+  if (!Number.isFinite(zoom)) return currentlyVisible;
+  return currentlyVisible ? zoom > STATION_MARKER_MIN_ZOOM - 0.1 : zoom >= STATION_MARKER_MIN_ZOOM + 0.1;
 }

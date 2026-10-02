@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import type { FC } from 'react';
 import i18n from '../i18n';
 import { beginPerf, endPerf, measureAsync } from '../utils/perf';
+import { initialMapRegion, sameStationFeatures, stationsInBounds, type MapRegion } from '../utils/mapRegion';
 
 const ROUTING_ENRICH_LIMIT = 100;
 const ROUTING_TABLE_BATCH_SIZE = 20;
@@ -98,9 +99,15 @@ interface StationSyncState {
   reload: () => void;
 }
 
+interface SecondaryDataUpdates {
+  historyDataVersion: number;
+  commodityDataVersion: number;
+}
+
 export type StationState = StationCatalogState & StationMapDataState & StationDistanceState & StationSyncState;
 
 interface LocationState {
+  locationHydrated: boolean;
   location: ReturnType<typeof useLocation>['location'];
   requestingLocation: boolean;
   refreshLocation: () => void;
@@ -141,6 +148,7 @@ interface UIState {
 }
 
 interface Actions {
+  rememberMapRegion: (lat: number, lng: number, bounds?: [number, number, number, number]) => void;
   loadStationsForRegion: (lat: number, lng: number, bounds?: [number, number, number, number]) => Promise<FuelStationFeature[]>;
 }
 
@@ -148,6 +156,7 @@ const StationCatalogContext = createContext<StationCatalogState | null>(null);
 const StationMapDataContext = createContext<StationMapDataState | null>(null);
 const StationDistanceContext = createContext<StationDistanceState | null>(null);
 const StationSyncContext = createContext<StationSyncState | null>(null);
+const SecondaryDataContext = createContext<SecondaryDataUpdates | null>(null);
 const LocationContext = createContext<LocationState | null>(null);
 const UIContext = createContext<UIState | null>(null);
 const ActionsContext = createContext<Actions | null>(null);
@@ -197,6 +206,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [offline, setOffline] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
+  const [historyDataVersion, setHistoryDataVersion] = useState(0);
+  const [commodityDataVersion, setCommodityDataVersion] = useState(0);
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
   const [mapFocusRequest, setMapFocusRequest] = useState<MapFocusRequest | null>(null);
   const mapFocusRequestSeqRef = useRef(0);
@@ -214,6 +225,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const regionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regionWaiterRef = useRef<{ seq: number; resolve: (stations: FuelStationFeature[]) => void } | null>(null);
   const regionRequestSeqRef = useRef(0);
+  const mapRegionRef = useRef<MapRegion | null>(null);
+  const startupLocationRef = useRef(location);
+  if (!bootLoadStartedRef.current) startupLocationRef.current = location;
   const loadSeqRef = useRef(0);
   const enrichSeqRef = useRef(0);
   const enrichingRef = useRef(false);
@@ -390,6 +404,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [rebuildAllStationsData]);
 
+  const loadStationsForRegion = useCallback(
+    (lat: number, lng: number, bounds?: [number, number, number, number]) => {
+      mapRegionRef.current = { lat, lng, bounds };
+      return new Promise<FuelStationFeature[]>((resolve) => {
+        if (regionTimerRef.current) {
+          clearTimeout(regionTimerRef.current);
+          regionTimerRef.current = null;
+        }
+
+        // Resolve the previous debounced/in-flight caller immediately. Its native
+        // request may still finish, but the sequence guard below prevents stale data.
+        regionWaiterRef.current?.resolve([]);
+
+        const seq = ++regionRequestSeqRef.current;
+        regionWaiterRef.current = { seq, resolve };
+
+        regionTimerRef.current = setTimeout(async () => {
+          regionTimerRef.current = null;
+          const regionPerf = beginPerf('siphon.map.load_region');
+          try {
+            const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
+            if (unmountedRef.current || regionRequestSeqRef.current !== seq) {
+              resolve([]);
+              return;
+            }
+
+            const enriched = enrichStations(nearby);
+            setStations(current => sameStationFeatures(current, enriched) ? current : enriched);
+            resolve(nearby);
+          } catch (error) {
+            if (__DEV__ && !unmountedRef.current && regionRequestSeqRef.current === seq) {
+              console.warn('[loadStationsForRegion] failed:', error);
+            }
+            resolve([]);
+          } finally {
+            endPerf(regionPerf, 2);
+            if (regionWaiterRef.current?.seq === seq) {
+              regionWaiterRef.current = null;
+            }
+          }
+        }, 50);
+      });
+    },
+    [],
+  );
+
+  const rememberMapRegion = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
+    mapRegionRef.current = { lat, lng, bounds };
+  }, []);
+
   const load = useCallback(async () => {
     const perf = beginPerf('siphon.startup.sync_cycle');
     const run = ++loadSeqRef.current;
@@ -405,7 +469,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Read the trusted aggregate in parallel with the rate-limit gate/network
     // decision. Search/Favorites can use it immediately while a sync continues.
-    const trustedCatalogPromise = loadAllStationsData(false);
+    const showCachedRegion = (catalog: FuelStationFeature[]) => {
+      if (!isActive() || catalog.length === 0) return catalog;
+      const region = mapRegionRef.current ?? initialMapRegion(
+        startupLocationRef.current.latitude, startupLocationRef.current.longitude,
+      );
+      // Cache hydration cannot replace a region request already in progress.
+      if (regionRequestSeqRef.current === 0 && region.bounds) {
+        const enriched = enrichStations(stationsInBounds(catalog, region.bounds));
+        setStations(current => sameStationFeatures(current, enriched) ? current : enriched);
+      }
+      return catalog;
+    };
+    const trustedCatalogPromise = loadAllStationsData(false).then(showCachedRegion);
 
     try {
       const gate = await client.rateLimiter.shouldRunSync();
@@ -417,13 +493,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (gate === 'blocked') {
         setRateLimited(true);
         const cached = trustedCatalog.length > 0 ? trustedCatalog : await loadAllStationsData(true);
+        showCachedRegion(cached);
         if (isActive() && cached.length === 0) {
           setError(i18n.t('common.something_went_wrong'));
         }
         return;
       }
       if (gate === 'cooldown') {
-        if (trustedCatalog.length === 0) await loadAllStationsData(true);
+        if (trustedCatalog.length === 0) showCachedRegion(await loadAllStationsData(true));
         return;
       }
 
@@ -440,11 +517,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (result.offline) {
         changedCountriesRef.current = [];
         const cached = trustedCatalog.length > 0 ? trustedCatalog : await loadAllStationsData(true);
+        showCachedRegion(cached);
         if (isActive() && cached.length === 0) setError(i18n.t('sync.no_connection'));
         return;
       }
 
       changedCountriesRef.current = result.changedCountries;
+      // Fetch and publish the current area before downloading both countries.
+      // Use the actual camera bounds if available, otherwise a bounded startup
+      // area. Full-sync validation/root commit still happen only after all tiles.
+      const region = mapRegionRef.current ?? initialMapRegion(
+        startupLocationRef.current.latitude, startupLocationRef.current.longitude,
+      );
+      await loadStationsForRegion(region.lat, region.lng, region.bounds);
+      if (!isActive()) return;
       const cacheNeedsVerification = await client.stationCacheNeedsVerification();
       if (!isActive()) return;
 
@@ -478,26 +564,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       changedCountriesRef.current = [];
 
-      if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY).catch(() => null)) !== 'false') {
-        await measureAsync(
-          'siphon.startup.history_sync',
-          () => client.checkHistoryUpdates(),
-          4,
-        );
-      }
-      if (!isActive()) return;
-
-      await measureAsync(
-        'siphon.startup.commodity_sync',
-        () => client.refreshCommodityDashboard().then(() => undefined).catch(() => undefined),
-        2,
-      );
-
       if (result.changedCountries.length > 0 || trustedCatalog.length === 0) {
         await rebuildAllStationsData();
       }
       if (!isActive()) return;
 
+      setLoading(false);
+      setSyncProgress(null);
+      // Give the map a chance to commit before history/market cache work.
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      if (!isActive()) return;
+
+      if ((await AsyncStorage.getItem(HISTORY_ENABLED_KEY).catch(() => null)) !== 'false') {
+        const historyResult = await measureAsync(
+          'siphon.startup.history_sync',
+          () => client.checkHistoryUpdates(),
+          4,
+        );
+        if (isActive() && historyResult.changed) setHistoryDataVersion(version => version + 1);
+      }
+      if (!isActive()) return;
+
+      const dashboard = await measureAsync(
+        'siphon.startup.commodity_sync',
+        () => client.refreshCommodityDashboard().catch(() => null),
+        2,
+      );
+
+      if (!isActive()) return;
+      if (dashboard) setCommodityDataVersion(version => version + 1);
       await client.rateLimiter.recordSyncCompleted().catch(() => undefined);
     } catch (error: unknown) {
       changedCountriesRef.current = [];
@@ -505,6 +600,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const cached = await loadAllStationsData(true);
       if (!isActive()) return;
+      showCachedRegion(cached);
 
       if (error instanceof RateLimitedError) {
         setRateLimited(true);
@@ -522,7 +618,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSyncProgress(null);
       }
     }
-  }, [loadAllStationsData, rebuildAllStationsData]);
+  }, [loadAllStationsData, rebuildAllStationsData, loadStationsForRegion]);
 
   useEffect(() => {
     if (!locationHydrated || bootLoadStartedRef.current) return;
@@ -744,50 +840,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const loadStationsForRegion = useCallback(
-    (lat: number, lng: number, bounds?: [number, number, number, number]) => {
-      return new Promise<FuelStationFeature[]>((resolve) => {
-        if (regionTimerRef.current) {
-          clearTimeout(regionTimerRef.current);
-          regionTimerRef.current = null;
-        }
-
-        // Resolve the previous debounced/in-flight caller immediately. Its native
-        // request may still finish, but the sequence guard below prevents stale data.
-        regionWaiterRef.current?.resolve([]);
-
-        const seq = ++regionRequestSeqRef.current;
-        regionWaiterRef.current = { seq, resolve };
-
-        regionTimerRef.current = setTimeout(async () => {
-          regionTimerRef.current = null;
-          const regionPerf = beginPerf('siphon.map.load_region');
-          try {
-            const nearby = await client.getStationsNear(lat, lng, changedCountriesRef.current, bounds);
-            if (unmountedRef.current || regionRequestSeqRef.current !== seq) {
-              resolve([]);
-              return;
-            }
-
-            setStations(enrichStations(nearby));
-            resolve(nearby);
-          } catch (error) {
-            if (__DEV__ && !unmountedRef.current && regionRequestSeqRef.current === seq) {
-              console.warn('[loadStationsForRegion] failed:', error);
-            }
-            resolve([]);
-          } finally {
-            endPerf(regionPerf, 2);
-            if (regionWaiterRef.current?.seq === seq) {
-              regionWaiterRef.current = null;
-            }
-          }
-        }, 50);
-      });
-    },
-    [],
-  );
-
   const distanceFilterMap = searchFilter.maxDistance ? stationDistances : null;
 
   const filteredStations = useMemo(() => {
@@ -929,12 +981,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const locationValue = useMemo<LocationState>(
     () => ({
+      locationHydrated,
       location,
       requestingLocation,
       refreshLocation,
       locateWithGps,
     }),
-    [location, requestingLocation, refreshLocation, locateWithGps]
+    [locationHydrated, location, requestingLocation, refreshLocation, locateWithGps]
   );
 
   const uiValue = useMemo<UIState>(
@@ -956,28 +1009,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const actionsValue = useMemo<Actions>(
     () => ({
+      rememberMapRegion,
       loadStationsForRegion,
     }),
-    [loadStationsForRegion]
+    [loadStationsForRegion, rememberMapRegion]
   );
 
+  const secondaryDataValue = useMemo(() => ({ historyDataVersion, commodityDataVersion }),
+    [historyDataVersion, commodityDataVersion]);
+
   return (
-    <StationCatalogContext.Provider value={stationCatalogValue}>
-      <StationMapDataContext.Provider value={stationMapDataValue}>
-        <StationDistanceContext.Provider value={stationDistanceValue}>
-          <StationSyncContext.Provider value={stationSyncValue}>
-            <LocationContext.Provider value={locationValue}>
-              <UIContext.Provider value={uiValue}>
-                <ActionsContext.Provider value={actionsValue}>
-                  {children}
-                </ActionsContext.Provider>
-              </UIContext.Provider>
-            </LocationContext.Provider>
-          </StationSyncContext.Provider>
-        </StationDistanceContext.Provider>
-      </StationMapDataContext.Provider>
-    </StationCatalogContext.Provider>
+    <SecondaryDataContext.Provider value={secondaryDataValue}>
+      <StationCatalogContext.Provider value={stationCatalogValue}>
+        <StationMapDataContext.Provider value={stationMapDataValue}>
+          <StationDistanceContext.Provider value={stationDistanceValue}>
+            <StationSyncContext.Provider value={stationSyncValue}>
+              <LocationContext.Provider value={locationValue}>
+                <UIContext.Provider value={uiValue}>
+                  <ActionsContext.Provider value={actionsValue}>
+                    {children}
+                  </ActionsContext.Provider>
+                </UIContext.Provider>
+              </LocationContext.Provider>
+            </StationSyncContext.Provider>
+          </StationDistanceContext.Provider>
+        </StationMapDataContext.Provider>
+      </StationCatalogContext.Provider>
+    </SecondaryDataContext.Provider>
   );
+}
+
+export function useSecondaryDataUpdates(): SecondaryDataUpdates {
+  const ctx = useContext(SecondaryDataContext);
+  if (!ctx) throw new Error('useSecondaryDataUpdates must be used within AppProvider');
+  return ctx;
 }
 
 export function useStationCatalog(): StationCatalogState {

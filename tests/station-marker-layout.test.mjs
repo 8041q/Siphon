@@ -30,3 +30,36 @@ test('marker order follows screen Y after map rotation', () => {
   ], 90);
   assert.ok(orders.get('west') > orders.get('east'));
 });
+
+test('projected stacking preserves the original ordering across rotations', async () => {
+  const { projectStations, getProjectedMarkerStackOrders } = await import('../src/components/stationMap/markerLayout.ts');
+  const stations = Array.from({ length: 80 }, (_, index) => station(String(index), -9 + (index % 9) * 0.003, 38 + Math.floor(index / 9) * 0.002));
+  const projected = projectStations(stations);
+  for (const bearing of [-180, -90, 0, 17, 90, 179, 270, 359]) {
+    const radians = Math.PI / 180;
+    const depth = station => {
+      const [longitude, latitude] = station.geometry.coordinates;
+      const x = (longitude + 180) / 360;
+      const y = (1 - Math.log(Math.tan(Math.PI / 4 + latitude * radians / 2)) / Math.PI) / 2;
+      return y * Math.cos(bearing * radians) - x * Math.sin(bearing * radians);
+    };
+    const expected = new Map([...stations].sort((a, b) => depth(b) - depth(a)).map((station, index) => [station.properties.id, stations.length - index]));
+    assert.deepEqual(getProjectedMarkerStackOrders(projected, bearing), expected);
+  }
+});
+
+test('small zoom oscillations keep the current marker mode', async () => {
+  const { detailedMarkersVisible } = await import('../src/components/stationMap/markerLayout.ts');
+  let detailed = true;
+  for (const zoom of [13.02, 12.98, 13.01, 12.95, NaN]) {
+    detailed = detailedMarkersVisible(zoom, detailed);
+    assert.equal(detailed, true);
+  }
+  detailed = detailedMarkersVisible(12.89, detailed);
+  assert.equal(detailed, false);
+  for (const zoom of [13.02, 12.98, 13.09]) {
+    detailed = detailedMarkersVisible(zoom, detailed);
+    assert.equal(detailed, false);
+  }
+  assert.equal(detailedMarkersVisible(13.11, detailed), true);
+});

@@ -9,7 +9,7 @@ import { Icon } from '../../src/components/ui/icon';
 import { GlassBackdrop } from '../../src/components/ui/glass';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../src/hooks/useSupport';
-import { useStationMapData, useStationSync } from '../../src/hooks/useApp';
+import { useLocationState } from '../../src/hooks/useApp';
 import { useStyleConfig, applyComponentRules, isGlass } from '../../src/hooks/useStyleConfig';
 import { TAB_BAR_HEIGHT, TAB_BAR_H_MARGIN, TAB_BAR_FLOAT_GAP } from '../../src/theme/layout';
 
@@ -61,9 +61,8 @@ export default function TabLayout() {
   const glass = isGlass(rules);
   const pillRadius = rules.borderRadius ?? TAB_BAR_HEIGHT / 2;
   const blurTargetRef = useRef<View | null>(null);
-  const { loading } = useStationSync();
-  const { stations } = useStationMapData();
-  const showingSplash = loading && stations.length === 0;
+  const { locationHydrated } = useLocationState();
+  const showingSplash = !locationHydrated;
 
   const shapeStyle = applyComponentRules(rules, colors.label);
   // The backdrop owns rounded clipping; the floating bar must retain its

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { client } from './useApp';
+import { client, useSecondaryDataUpdates } from './useApp';
 import type { CommodityDashboard } from '../api/siphonClient';
 
 export function useCommodities({ refresh = true }: { refresh?: boolean } = {}) {
+  const { commodityDataVersion } = useSecondaryDataUpdates();
+  const dataVersionRef = useRef(commodityDataVersion);
   const [dashboard, setDashboard] = useState<CommodityDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -18,7 +20,7 @@ export function useCommodities({ refresh = true }: { refresh?: boolean } = {}) {
     };
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (allowRefresh: boolean) => {
     const run = ++requestSeqRef.current;
     const isActive = () => mountedRef.current && requestSeqRef.current === run;
 
@@ -35,7 +37,7 @@ export function useCommodities({ refresh = true }: { refresh?: boolean } = {}) {
       if (!isActive()) return;
       if (cached) setDashboard(cached);
 
-      if (refresh) {
+      if (allowRefresh) {
         const updated = await client.refreshCommodityDashboard();
         if (!isActive()) return;
         if (updated) setDashboard(updated);
@@ -46,11 +48,20 @@ export function useCommodities({ refresh = true }: { refresh?: boolean } = {}) {
     } finally {
       if (isActive()) setLoading(false);
     }
-  }, [refresh]);
+  }, []);
+
+  const reload = useCallback(() => load(refresh), [load, refresh]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void reload();
+  }, [reload]);
 
-  return { dashboard, loading, error, reload: load };
+  useEffect(() => {
+    if (dataVersionRef.current === commodityDataVersion) return;
+    dataVersionRef.current = commodityDataVersion;
+    // The provider has already refreshed the network data. Read its new cache.
+    void load(false);
+  }, [commodityDataVersion, load]);
+
+  return { dashboard, loading, error, reload };
 }

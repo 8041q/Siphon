@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { client, useApp } from './useApp';
+import { client, useUI, useSecondaryDataUpdates } from './useApp';
 
 export type { PriceHistoryPoint } from '../api/siphonClient';
 import type { PriceHistoryPoint } from '../api/siphonClient';
 
 export function usePriceHistory(stationId: string, fuelType: string) {
-  const { historyEnabled } = useApp();
+  const { historyEnabled } = useUI();
+  const { historyDataVersion } = useSecondaryDataUpdates();
   const [data, setData] = useState<PriceHistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +31,7 @@ export function usePriceHistory(stationId: string, fuelType: string) {
 
     load();
     return () => { cancelled = true; };
-  }, [stationId, fuelType, historyEnabled]);
+  }, [stationId, fuelType, historyEnabled, historyDataVersion]);
 
   return { data, loading, enabled: historyEnabled };
 }
