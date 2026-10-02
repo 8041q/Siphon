@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useSupport } from '../../hooks/useSupport';
-import { useStyleConfig, applyComponentRules, isGlass } from '../../hooks/useStyleConfig';
+import { useStyleConfig, applyComponentRules, isGlass, componentSurface } from '../../hooks/useStyleConfig';
 import { GlassBackdrop } from './glass';
 
 type BadgeProps = {
@@ -19,7 +19,7 @@ export function Badge({ label, value, color }: BadgeProps) {
 
   return (
     <View
-      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
+      style={[{ backgroundColor: glass ? 'transparent' : componentSurface(rules, colors, 'surface') }, applyComponentRules(rules, colors.separator)]}
       className="rounded-sm px-3 py-1.5 gap-1"
     >
       {glass && <GlassBackdrop color={colors.surface} borderRadius={rules.borderRadius} />}

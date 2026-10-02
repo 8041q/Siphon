@@ -1,7 +1,9 @@
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import { useThemeTokens } from '../hooks/useThemeTokens';
-import { GlassSurface } from './ui/glass';
+import { useAppearanceSupport } from '../hooks/useSupport';
+import { isGlass } from '../hooks/useStyleConfig';
+import { GlassSurface, mapGlassTintOpacity, mapGlassBorderColor, type BlurTargetRef } from './ui/glass';
 import { Icon } from './ui/icon';
 
 export function MapActionButton({
@@ -10,16 +12,21 @@ export function MapActionButton({
   onPress,
   badgeCount = 0,
   busy = false,
+  blurTarget,
 }: {
   iconName: string;
   label: string;
   onPress: () => void;
   badgeCount?: number;
   busy?: boolean;
+  blurTarget?: BlurTargetRef;
 }) {
-  const { colors } = useThemeTokens();
+  const { colors, scheme } = useThemeTokens();
+  const { styleRules } = useAppearanceSupport();
+  const glass = isGlass(styleRules.tabBar);
+  const foreground = glass ? colors.label : colors.tint;
   return (
-    <GlassSurface color={colors.surface} style={{ borderRadius: 22 }}>
+    <GlassSurface opaque={!glass} blurTarget={blurTarget} tintOpacity={mapGlassTintOpacity(scheme, blurTarget)} color={colors.surface} style={{ borderRadius: 22, borderWidth: 1, borderColor: glass ? mapGlassBorderColor(scheme) : colors.separator }}>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onPress}
@@ -30,9 +37,9 @@ export function MapActionButton({
         hitSlop={4}
         style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
       >
-        {busy ? <ActivityIndicator size="small" color={colors.tint} /> : (
+        {busy ? <ActivityIndicator size="small" color={foreground} /> : (
           <View className="relative">
-            <Icon name={iconName} size={20} color={colors.tint} />
+            <Icon name={iconName} size={20} color={foreground} />
             {badgeCount > 0 && (
               <View style={{
                 position: 'absolute', top: -6, end: -6,

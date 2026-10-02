@@ -21,9 +21,7 @@ export const ICON_REWARDS: readonly RewardItem[] = [
 ];
 
 export const STYLE_REWARDS: readonly RewardItem[] = [
-  { id: 'dotted', requiredWatches: 4 },
-  { id: 'retro', requiredWatches: 4 },
-  { id: 'liquid-glass', requiredWatches: 10 },
+  { id: 'frosted', requiredWatches: 10 },
 ];
 
 export const REWARDS: readonly RewardItem[] = Object.freeze([

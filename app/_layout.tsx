@@ -72,23 +72,26 @@ function UpdateWatcher() {
 
 function AppContent() {
   const { paletteVariables } = useAppearanceSupport();
+  const { colors, scheme } = useThemeTokens();
   const blurTargetRef = useRef<View | null>(null);
 
   return (
     <View className="flex-1" style={paletteVariables}>
-      <StatusBar style="auto" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <AppBlurTargetProvider target={blurTargetRef}>
-        <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="legal" />
-            <Stack.Screen
-              name="price-trends/[id]"
-              options={{ headerShown: true, presentation: 'modal' }}
-            />
-          </Stack>
-        </BlurTargetView>
-        <StationDetailSheet />
+        <BottomSheetModalProvider>
+          <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false, headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.label, contentStyle: { backgroundColor: colors.background } }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="legal" />
+              <Stack.Screen
+                name="price-trends/[id]"
+                options={{ headerShown: true, presentation: 'modal' }}
+              />
+            </Stack>
+          </BlurTargetView>
+          <StationDetailSheet />
+        </BottomSheetModalProvider>
       </AppBlurTargetProvider>
     </View>
   );
@@ -100,12 +103,10 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AppProvider>
           <SupportProvider>
-            <BottomSheetModalProvider>
-              <PreferencesInit />
-              <SystemBackgroundSync />
-              <UpdateWatcher />
-              <AppContent />
-            </BottomSheetModalProvider>
+            <PreferencesInit />
+            <SystemBackgroundSync />
+            <UpdateWatcher />
+            <AppContent />
           </SupportProvider>
         </AppProvider>
       </SafeAreaProvider>

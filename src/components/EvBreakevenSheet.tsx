@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +34,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, {
 }>(function EvBreakevenSheet({ config, onSave, vehicles = [] }, ref) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
@@ -112,7 +114,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, {
       backdropComponent={SheetBackdrop}
       backgroundComponent={SheetBackground}
     >
-      <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+      <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
         <Text style={{ color: colors.label }} className="text-title-2 font-semibold mb-xs">{t('settings.ev_title')}</Text>
         <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">{t('settings.ev_tco_caption')}</Text>
 

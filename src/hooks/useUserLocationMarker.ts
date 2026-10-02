@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
+import { parseMarkerSvg } from '../theme/customSvg';
 
 const STORAGE_KEY = 'siphon:userLocationMarker';
 
 export type UserLocationMarkerConfig =
   | { type: 'svg'; value: string }
+  | { type: 'custom-svg'; value: string; name?: string }
   | { type: 'image'; value: string };
 
 export const DEFAULT_MARKER: UserLocationMarkerConfig = {
@@ -83,6 +85,10 @@ function parseStoredMarker(value: string): UserLocationMarkerConfig | null {
     if (parsed.type === 'svg' && isSvgMarker(parsed.value)) {
       return { type: 'svg', value: parsed.value };
     }
+    if (parsed.type === 'custom-svg' && typeof parsed.value === 'string') {
+      const name = (parsed as { name?: unknown }).name;
+      return { type: 'custom-svg', value: parseMarkerSvg(parsed.value), name: typeof name === 'string' ? name.slice(0, 80) : undefined };
+    }
     if (parsed.type === 'image' && typeof parsed.value === 'string' && isMarkerImageUri(parsed.value)) {
       const image = new File(parsed.value);
       return image.exists ? { type: 'image', value: parsed.value } : null;
@@ -127,6 +133,9 @@ export function useUserLocationMarker() {
   const setMarker = useCallback((config: UserLocationMarkerConfig) => {
     if (config.type === 'svg' && !isSvgMarker(config.value)) return;
     if (config.type === 'image' && !isMarkerImageUri(config.value)) return;
+    if (config.type === 'custom-svg') {
+      try { config = { ...config, value: parseMarkerSvg(config.value) }; } catch { return; }
+    }
 
     selectionVersionRef.current += 1;
     setMarkerState(config);

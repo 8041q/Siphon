@@ -138,6 +138,9 @@ test('the home map mounts after coordinate hydration even while syncing with no 
   const location = { location: { latitude: 37.5, longitude: -8, approximate: true }, locationHydrated: false, locateWithGps: async () => null };
   const calls = [], remembered = [];
   const { default: MapScreen } = await loadSource('app/(tabs)/index.tsx', {
+    'expo-blur':{BlurTargetView:'BlurTarget'},
+    '../../src/hooks/useSupport':{useAppearanceSupport:()=>({styleRules:{tabBar:{}}})},
+    '../../src/hooks/useStyleConfig':{isGlass:()=>false},
     react: hooks.react, 'expo-router': { useIsFocused: () => true },
     'react-native': { Platform: { OS: 'ios' }, Text: 'Text', TouchableOpacity: 'Button', View: 'View' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
@@ -147,7 +150,7 @@ test('the home map mounts after coordinate hydration even while syncing with no 
     '../../src/components/MapActionButton': { MapActionButton: 'Action' },
     '../../src/components/FilterSheet': { FilterSheet: 'Filters' },
     '../../src/components/ui/icon': { Icon: 'Icon' },
-    '../../src/components/ui/glass': { GlassSurface: 'Glass' },
+    '../../src/components/ui/glass': { GlassSurface: 'Glass', mapGlassTintOpacity: () => 0.18, mapGlassBorderColor: () => '#fff' },
     '../../src/hooks/useThemeTokens': { useThemeTokens: () => ({ colors: {} }) },
     '../../src/hooks/useApp': {
       useStationMapData: () => ({ stations: [], filteredStations: [] }), useStationSync: () => sync,
@@ -160,6 +163,9 @@ test('the home map mounts after coordinate hydration even while syncing with no 
   const tree = hooks.render(MapScreen); hooks.flushEffects();
   const map = hooks.walk(tree).find(node => node.type === 'Map');
   assert.ok(map);
+  const target = hooks.walk(tree).find(node => node.type === 'BlurTarget');
+  assert.ok(hooks.walk(target).includes(map));
+  for (const action of hooks.walk(tree).filter(node => node.type === 'Action')) assert.equal(action.props.blurTarget, target.props.ref);
   map.props.onRegionChange(37.5, -8, [-8.1, 37.4, -7.9, 37.6]);
   map.props.onMapReady();
   assert.equal(remembered.length, 1);
@@ -175,11 +181,14 @@ test('station navigation searches the final viewport once, ignores obsolete comp
   const calls=[];
   const location={location:{latitude:37.5,longitude:-8,approximate:true},locationHydrated:true,locateWithGps:()=>gps?.promise??Promise.resolve(null)};
   const {default:MapScreen}=await loadSource('app/(tabs)/index.tsx',{
+    'expo-blur':{BlurTargetView:'BlurTarget'},
+    '../../src/hooks/useSupport':{useAppearanceSupport:()=>({styleRules:{tabBar:{}}})},
+    '../../src/hooks/useStyleConfig':{isGlass:()=>false},
     react:hooks.react,'expo-router':{useIsFocused:()=>true},'react-native':{Platform:{OS:'ios'},Text:'Text',TouchableOpacity:'Button',View:'View'},
     'react-native-safe-area-context':{useSafeAreaInsets:()=>({top:0,bottom:0})},'react-i18next':{useTranslation:()=>({t:key=>key})},
     '../../src/components/stationMap/StationMap':{StationMap:'Map'},'../../src/components/SyncOverlay':{SyncOverlay:'Splash'},
     '../../src/components/MapActionButton':{MapActionButton:'Action'},'../../src/components/FilterSheet':{FilterSheet:'Filters'},
-    '../../src/components/ui/icon':{Icon:'Icon'},'../../src/components/ui/glass':{GlassSurface:'Glass'},
+    '../../src/components/ui/icon':{Icon:'Icon'},'../../src/components/ui/glass':{GlassSurface:'Glass',mapGlassTintOpacity:()=>0.18,mapGlassBorderColor:()=> '#fff'},
     '../../src/hooks/useThemeTokens':{useThemeTokens:()=>({colors:{}})},
     '../../src/hooks/useApp':{useStationMapData:()=>({stations:[],filteredStations:[]}),useStationSync:()=>({loading:false}),useLocationState:()=>location,useUI:()=>ui,
       useActions:()=>({loadStationsForRegion:(...args)=>{calls.push(args);return Promise.resolve([]);},rememberMapRegion:()=>{}})},

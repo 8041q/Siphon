@@ -10,6 +10,7 @@ import { useCommodities } from '../../src/hooks/useCommodities';
 import { PriceForecast } from '../../src/components/PriceForecast';
 import { PriceChart } from '../../src/components/PriceChart';
 import { FilterButton } from '../../src/components/ui/FilterButton';
+import { PriceBadge } from '../../src/components/PriceBadge';
 import { PriceStats } from '../../src/components/PriceStats';
 import { CheapDayBanner } from '../../src/components/CheapDayBanner';
 import { PriceIntelligenceCard } from '../../src/components/PriceIntelligenceCard';
@@ -19,6 +20,7 @@ import { fuelLabel, fuelUnit } from '../../src/utils/fuelNames';
 import { getLocationParts } from '../../src/utils/location';
 import { forecastPrice } from '../../src/utils/priceIntelligence';
 import { analyzeMarket } from '../../src/utils/marketAnalysis';
+import { useAppearanceLayout } from '../../src/hooks/useAppearanceLayout';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import type { FuelKey } from '../../src/api/siphonClient';
 
@@ -39,6 +41,7 @@ export default function PriceTrendsScreen() {
     reload,
   } = useStationSync();
   const { colors } = useThemeTokens();
+  const { space, modern } = useAppearanceLayout();
   const { dashboard: marketDashboard } = useCommodities({ refresh: false });
   const insets = useSafeAreaInsets();
 
@@ -62,6 +65,7 @@ export default function PriceTrendsScreen() {
   }, [fuels]);
 
   const { data, loading, enabled } = usePriceHistory(id, selectedFuel ?? '');
+  const currentPrice = selectedFuel ? station?.properties.fuels[selectedFuel] : undefined;
   const unit = fuelUnit(selectedFuel ?? '', station?.properties.source);
 
   const locationParts = useMemo(
@@ -117,7 +121,7 @@ export default function PriceTrendsScreen() {
             onPress={reload}
             accessibilityRole="button"
             accessibilityLabel={t('common.retry')}
-            style={{ backgroundColor: colors.tint, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 }}
+            style={{ backgroundColor: colors.tint, borderRadius: 8, paddingHorizontal: space.lg, paddingVertical: 8 }}
           >
             <Text style={{ color: colors.labelOnTint, fontWeight: '600' }}>
               {t('common.retry')}
@@ -171,7 +175,7 @@ export default function PriceTrendsScreen() {
       <View className="gap-lg">
         <CheapDayBanner data={data} />
         <PriceIntelligenceCard data={data} />
-        <PriceStats data={data} unit={unit} fuel={selectedFuel} source={station.properties.source} />
+        <PriceStats data={data} unit={unit} fuel={selectedFuel} source={station.properties.source} includeCurrent={!modern} />
         <PriceChart
           data={data}
           fuelLabel={fuelLabel(selectedFuel)}
@@ -200,7 +204,7 @@ export default function PriceTrendsScreen() {
 
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: 16, paddingBottom: Math.max(16, insets.bottom + 16) }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: insets.bottom + space.lg }}
       >
         {station && (offline || stationsError) && (
           <View
@@ -225,7 +229,7 @@ export default function PriceTrendsScreen() {
             )}
 
             {fuels.length > 1 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.lg }}>
                 {fuels.map((fuel) => {
                   const selected = selectedFuel === fuel;
                   return (
@@ -240,6 +244,10 @@ export default function PriceTrendsScreen() {
               </View>
             )}
           </>
+        )}
+
+        {modern && station && selectedFuel && typeof currentPrice === 'number' && Number.isFinite(currentPrice) && (
+          <View className="mb-lg"><PriceBadge fuel={selectedFuel} price={currentPrice} source={station.properties.source} prominent /></View>
         )}
 
         {content}

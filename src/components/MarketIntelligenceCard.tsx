@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { CommodityDataPoint, CommodityMetrics } from '../api/siphonClient';
 import { analyzeMarket } from '../utils/marketAnalysis';
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { GlassBox } from './ui/GlassBox';
 
@@ -20,6 +21,7 @@ export function MarketIntelligenceCard({
 }) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { numericStyle } = useAppearanceLayout();
   const insight = useMemo(
     () => analyzeMarket(crude, retail, metrics, wti),
     [crude, retail, metrics, wti],
@@ -62,7 +64,7 @@ export function MarketIntelligenceCard({
           <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">
             {t('market.retail_position')}
           </Text>
-          <Text style={{ color: colors.label }} className="text-callout font-semibold">
+          <Text style={[numericStyle, { color: colors.label }]} className="text-callout font-semibold">
             {insight.retailPercentile90 === null ? '-' : `${Math.round(insight.retailPercentile90)}%`}
           </Text>
           <Text style={{ color: colors.tertiaryLabel }} className="text-caption-2">
@@ -73,7 +75,7 @@ export function MarketIntelligenceCard({
           <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">
             {t('market.lag_label')}
           </Text>
-          <Text style={{ color: colors.label }} className="text-callout font-semibold">
+          <Text style={[numericStyle, { color: colors.label }]} className="text-callout font-semibold">
             {insight.expectedWindowDays === null
               ? '-'
               : t('market.lag_days', { days: insight.expectedWindowDays })}
@@ -86,7 +88,7 @@ export function MarketIntelligenceCard({
           <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">
             {t('market.signal_label')}
           </Text>
-          <Text style={{ color: colors.label }} className="text-callout font-semibold">
+          <Text style={[numericStyle, { color: colors.label }]} className="text-callout font-semibold">
             {t(`market.correlation_${insight.correlationStrength}`)}
           </Text>
           <Text style={{ color: colors.tertiaryLabel }} className="text-caption-2">

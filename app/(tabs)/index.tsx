@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsFocused } from 'expo-router';
+import { BlurTargetView } from 'expo-blur';
 import { AccessibilityInfo, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -10,8 +11,10 @@ import { SyncOverlay } from '../../src/components/SyncOverlay';
 import { MapActionButton } from '../../src/components/MapActionButton';
 import { FilterSheet } from '../../src/components/FilterSheet';
 import { Icon } from '../../src/components/ui/icon';
-import { GlassSurface } from '../../src/components/ui/glass';
+import { GlassSurface, mapGlassTintOpacity, mapGlassBorderColor } from '../../src/components/ui/glass';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
+import { useAppearanceSupport } from '../../src/hooks/useSupport';
+import { isGlass } from '../../src/hooks/useStyleConfig';
 import { useStationMapData, useStationSync, useUI, useLocationState, useActions } from '../../src/hooks/useApp';
 
 
@@ -22,7 +25,12 @@ async function accessibleTimeout(defaultMs: number): Promise<number> {
 
 export default function MapScreen() {
   const { t } = useTranslation();
-  const { colors } = useThemeTokens();
+  const { colors, scheme } = useThemeTokens();
+  const { styleRules } = useAppearanceSupport();
+  const glass = isGlass(styleRules.tabBar);
+  const controlForeground = glass ? colors.label : colors.tint;
+  const mapBlurTarget = useRef<View | null>(null);
+  const glassTintOpacity = mapGlassTintOpacity(scheme, mapBlurTarget);
   const isFocused = useIsFocused();
 
   const { stations, filteredStations } = useStationMapData();
@@ -293,22 +301,24 @@ export default function MapScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Map rendering full bleed */}
-      <StationMap
-        initialRegion={initialRegion}
-        stations={filteredStations}
-        onMarkerPress={onMarkerPress}
-        onRegionChange={handleRegionChange}
-        onMapReady={handleMapReady}
-        cameraRequest={cameraRequest}
-        onCameraRequestConsumed={handleCameraRequestConsumed}
-        onCameraRequestFinished={handleCameraRequestFinished}
-        userLocation={location}
-      />
+      <BlurTargetView ref={mapBlurTarget} style={{ flex: 1 }}>
+        <StationMap
+          initialRegion={initialRegion}
+          stations={filteredStations}
+          onMarkerPress={onMarkerPress}
+          onRegionChange={handleRegionChange}
+          onMapReady={handleMapReady}
+          cameraRequest={cameraRequest}
+          onCameraRequestConsumed={handleCameraRequestConsumed}
+          onCameraRequestFinished={handleCameraRequestFinished}
+          userLocation={location}
+        />
+      </BlurTargetView>
 
       {/* Offline Banner positioning below status bar */}
       {showOfflineBanner && (
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
-          <GlassSurface color={colors.surface}>
+          <GlassSurface opaque color={colors.surface}>
             <View className="py-1.5 px-lg" pointerEvents="box-none" accessibilityLiveRegion="polite">
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
                 {t('map.offline_banner')}
@@ -321,7 +331,7 @@ export default function MapScreen() {
       {/* Rate-limit notice - sync was paused to avoid hitting GitHub limits */}
       {showRateLimitedBanner && !showOfflineBanner && (
         <View style={{ paddingTop: insets.top }} className="absolute top-0 left-0 right-0 z-10">
-          <GlassSurface color={colors.surface}>
+          <GlassSurface opaque color={colors.surface}>
             <View className="py-1.5 px-lg" pointerEvents="box-none" accessibilityLiveRegion="polite">
               <Text style={{ color: colors.secondaryLabel }} className="text-footnote text-center">
                 {t('sync.rate_limited')}
@@ -333,7 +343,7 @@ export default function MapScreen() {
 
       {/* Floating search pill */}
       <View style={{ position: 'absolute', top: insets.top + 12, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
-        <GlassSurface color={colors.surface} style={{ borderRadius: 999 }}>
+        <GlassSurface opaque={!glass} blurTarget={mapBlurTarget} tintOpacity={glassTintOpacity} color={colors.surface} style={{ borderRadius: 999, borderWidth: 1, borderColor: glass ? mapGlassBorderColor(scheme) : colors.separator }}>
           <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleSearchArea}
@@ -341,8 +351,8 @@ export default function MapScreen() {
               accessibilityLabel={t('map.search_area')}
             >
             <View className="flex-row items-center gap-xs px-lg py-sm">
-              <Icon name="magnifyingglass" size={20} color={colors.tint} />
-              <Text style={{ color: colors.tint }} className="text-footnote font-semibold">
+              <Icon name="magnifyingglass" size={20} color={controlForeground} />
+              <Text style={{ color: controlForeground }} className="text-footnote font-semibold">
                 {t('map.search_area')}
               </Text>
             </View>
@@ -353,9 +363,9 @@ export default function MapScreen() {
       {/* Search feedback */}
       {mapFeedback && (
         <View style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
-          <GlassSurface color={colors.surface} style={{ borderRadius: 999 }}>
+          <GlassSurface opaque={!glass} blurTarget={mapBlurTarget} tintOpacity={glassTintOpacity} color={colors.surface} style={{ borderRadius: 999, borderWidth: 1, borderColor: glass ? mapGlassBorderColor(scheme) : colors.separator }}>
             <View className="px-lg py-1.5" accessibilityLiveRegion="polite">
-              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+              <Text style={{ color: glass ? colors.label : colors.secondaryLabel }} className="text-footnote">
                 {mapFeedback}
               </Text>
             </View>
@@ -366,6 +376,7 @@ export default function MapScreen() {
       {/* Shared geometry keeps both map actions aligned below the safe area. */}
       <View style={{ position: 'absolute', top: insets.top + 12, start: 16, zIndex: 10, gap: 12 }}>
         <MapActionButton
+          blurTarget={mapBlurTarget}
           iconName="filter_list"
           label={filterCount > 0
             ? t('search.active_filters', { count: filterCount })
@@ -374,6 +385,7 @@ export default function MapScreen() {
           onPress={() => filterSheetRef.current?.present()}
         />
         <MapActionButton
+          blurTarget={mapBlurTarget}
           iconName="my_location"
           label={t('map.locate_me')}
           onPress={handleLocate}

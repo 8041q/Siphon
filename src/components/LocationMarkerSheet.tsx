@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
@@ -5,6 +6,8 @@ import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { MarkerSvgImportSheet, type MarkerSvgImportSheetHandle } from './MarkerSvgImportSheet';
+import { Button } from './ui/button';
 
 import { Icon } from '../theme/Icon';
 import { type UserLocationMarkerConfig, saveMarkerImage } from '../hooks/useUserLocationMarker';
@@ -36,9 +39,11 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['50%'], []);
     const { colors } = useThemeTokens();
+    const { space } = useAppearanceLayout();
     const insets = useSafeAreaInsets();
 
     const { marker: currentMarker, setMarker, isUnlocked } = useSupport();
+    const svgImportRef = useRef<MarkerSvgImportSheetHandle>(null);
     const [lockedNoticeName, setLockedNoticeName] = useState<string | null>(null);
     const lockedNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const mountedRef = useRef(false);
@@ -58,7 +63,6 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     const handleSelectSvg = useCallback((name: string) => {
       void Haptics.selectionAsync().catch(() => undefined);
       setMarker({ type: 'svg', value: name });
-      bottomSheetRef.current?.dismiss();
     }, [setMarker]);
 
     const handleLockedSvgTap = useCallback((name: string) => {
@@ -85,7 +89,6 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         const savedUri = await saveMarkerImage(result.assets[0].uri);
         if (savedUri) {
           setMarker({ type: 'image', value: savedUri });
-          bottomSheetRef.current?.dismiss();
         }
       }
     }, [setMarker]);
@@ -95,6 +98,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
     }, [currentMarker]);
 
     return (
+      <>
       <BottomSheetModal
         ref={bottomSheetRef}
         snapPoints={snapPoints}
@@ -111,7 +115,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
             {t('settings.location_marker')}
           </Text>
@@ -120,7 +124,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
             {t('settings.marker_svg')}
           </Text>
-          <View className="flex-row flex-wrap gap-md mb-xl">
+          <View className="flex-row flex-wrap mb-xl" style={{ rowGap: space.md }}>
             {SVG_MARKER_NAMES.map((name) => {
               const SvgComponent = svgMarkers[name];
               const selected = isSelected({ type: 'svg', value: name });
@@ -131,7 +135,7 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                   activeOpacity={0.7}
                   onPress={() => (unlocked ? handleSelectSvg(name) : handleLockedSvgTap(name))}
                   className="items-center gap-xs"
-                  style={{ width: '22%' }}
+                  style={{ width: '25%' }}
                   accessibilityRole="button"
                   accessibilityState={{ selected, disabled: !unlocked }}
                   accessibilityLabel={name}
@@ -181,6 +185,22 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
                 </TouchableOpacity>
               );
             })}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => svgImportRef.current?.present()}
+              className="items-center gap-xs"
+              style={{ width: '25%' }}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.marker_custom_svg')}
+              accessibilityState={{ selected: currentMarker.type === 'custom-svg' }}
+            >
+              <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: colors.markerBackground,
+                alignItems: 'center', justifyContent: 'center', borderWidth: currentMarker.type === 'custom-svg' ? 2.5 : 1,
+                borderColor: currentMarker.type === 'custom-svg' ? colors.tint : colors.separator }}>
+                <Text style={{ color: colors.tint, fontSize: 32, lineHeight: 38 }}>+</Text>
+              </View>
+              <Text className="text-caption1 text-center" style={{ color: colors.secondaryLabel }}>SVG</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Custom Image section */}
@@ -230,8 +250,11 @@ export const LocationMarkerSheet = forwardRef<LocationMarkerSheetHandle, Locatio
               </Text>
             </TouchableOpacity>
           )}
+          <Button onPress={() => bottomSheetRef.current?.dismiss()}>{t('common.done')}</Button>
         </BottomSheetScrollView>
       </BottomSheetModal>
+      <MarkerSvgImportSheet ref={svgImportRef} />
+      </>
     );
   }
 );

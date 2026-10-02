@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -48,6 +49,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
   function FilterSheet({ searchFilter, onApply, showSort = true }, ref) {
     const { t } = useTranslation();
     const { colors } = useThemeTokens();
+    const { space } = useAppearanceLayout();
     const insets = useSafeAreaInsets();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const snapPoints = useMemo(() => ['90%'], []);
@@ -220,7 +222,7 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
           <BottomSheetScrollView
             style={{ flex: 1 }}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 20 }}
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.xs, paddingBottom: space.xl }}
           >
             <View className="gap-md">
               <View>
@@ -402,13 +404,13 @@ export const FilterSheet = forwardRef<{ present: () => void }, FilterSheetProps>
             style={{
               borderTopWidth: 1,
               borderTopColor: colors.separator,
-              paddingHorizontal: 16,
-              paddingTop: 12,
-              paddingBottom: Math.max(insets.bottom, 12),
+              paddingHorizontal: space.lg,
+              paddingTop: space.md,
+              paddingBottom: Math.max(insets.bottom, space.md),
               backgroundColor: 'transparent',
             }}
           >
-            <View className="flex-row gap-3">
+            <View className="flex-row gap-md">
               <GlassBox component="card" style={{ borderRadius: 6 }} className="flex-1 overflow-hidden">
                 <TouchableOpacity
                   activeOpacity={0.7}

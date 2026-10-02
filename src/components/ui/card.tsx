@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useSupport } from '../../hooks/useSupport';
-import { useStyleConfig, applyComponentRules, isGlass } from '../../hooks/useStyleConfig';
+import { useStyleConfig, applyComponentRules, isGlass, componentSurface } from '../../hooks/useStyleConfig';
 import { GlassBackdrop } from './glass';
 
 type CardProps = {
@@ -19,7 +19,7 @@ export function Card({ children, className = '' }: CardProps) {
 
   return (
     <View
-      style={[{ backgroundColor: glass ? 'transparent' : colors.groupedBackground }, applyComponentRules(rules, colors.label)]}
+      style={[{ backgroundColor: glass ? 'transparent' : componentSurface(rules, colors, 'groupedBackground') }, applyComponentRules(rules, colors.separator)]}
       className={`rounded-md p-md ${className}`}
     >
       {glass && <GlassBackdrop color={colors.groupedBackground} borderRadius={rules.borderRadius} />}

@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 :root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-xxl: 24px;
+  --space-xxxl: 32px;
   /* ── UI backgrounds ───────────────────────────────────────────── */
   --color-background: #FFFFFF;
   --color-background-dark: #FFFFFF;

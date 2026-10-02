@@ -20,13 +20,14 @@ async function mountSettings(clear) {
     '../../src/hooks/useAppUpdate': { useAppUpdate: () => ({ distribution: 'play' }) },
     '../../src/hooks/useVehicles': { useVehicles: () => ({ vehicles: [] }) },
     '../../src/hooks/useEvConfig': { useEvConfig: () => ({ config: {} }) },
+    '../../src/hooks/useAppearanceLayout': { useAppearanceLayout: () => ({ space: { xs:4, sm:8, md:12, lg:16, xl:20, xxl:24, xxxl:32 }, numericStyle: {}, modern:false, compact:false }) },
     '../../src/hooks/useThemeTokens': { useThemeTokens: () => ({ colors: {} }) },
     '../../src/hooks/useStyleConfig': { useStyleConfig: () => ({}), applyComponentRules: () => ({}) },
     '../../src/theme/layout': { tabBarClearance: () => 0 },
     '../../src/utils/fuelNames': {}, '../../src/utils/vehicles': {},
     '../../src/config/features': { MONETIZATION_ENABLED: false }, '../../src/config/legal': { SOURCE_REPOSITORY_URL: '' },
   };
-  for (const [path, name] of [['ui/button','Button'], ['ui/list-item','ListItem'], ...['Language','Theme','LocationMarker','Vehicle','EvBreakeven','Rewards','Donation'].map(name => [name+'Sheet',name+'Sheet'])]) deps['../../src/components/'+path] = { [name]: name };
+  for (const [path, name] of [['ui/GlassBox','GlassBox'], ['ui/button','Button'], ['ui/list-item','ListItem'], ...['Language','Theme','LocationMarker','Vehicle','EvBreakeven','Rewards','Donation'].map(name => [name+'Sheet',name+'Sheet'])]) deps['../../src/components/'+path] = { [name]: name };
   const { default: Settings } = await loadSource('app/(tabs)/settings.tsx', deps);
   const render = () => hooks.render(Settings);
   const toggle = () => hooks.walk(render()).find(node => node.type === 'Switch' && node.props.accessibilityLabel === 'settings.save_history');

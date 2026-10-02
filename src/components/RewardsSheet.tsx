@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import {
   forwardRef,
   useCallback,
@@ -29,6 +30,8 @@ import { Button } from './ui/button';
 import { GlassBox } from './ui/GlassBox';
 import { SheetBackground } from './ui/SheetBackground';
 import { SheetBackdrop } from './ui/SheetBackdrop';
+import { CustomIconsSheet, type CustomIconsSheetHandle } from './CustomIconsSheet';
+import type { DensityId } from '../theme/density';
 import { MONETIZATION_ENABLED } from '../config/features';
 
 export type RewardsSheetHandle = { present: () => void };
@@ -42,7 +45,8 @@ type TimerRef = MutableRefObject<ReturnType<typeof setTimeout> | null>;
 type AppearanceSelection =
   | { kind: 'palette'; id: PaletteId }
   | { kind: 'icon'; id: IconSetId }
-  | { kind: 'style'; id: StyleSetId };
+  | { kind: 'style'; id: StyleSetId }
+  | { kind: 'density'; id: DensityId };
 
 function clearTimer(ref: TimerRef): void {
   if (!ref.current) return;
@@ -53,10 +57,11 @@ function clearTimer(ref: TimerRef): void {
 export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function RewardsSheet(_props, ref) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const customIconsRef = useRef<CustomIconsSheetHandle>(null);
   const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
-  const pendingAppearanceRef = useRef<AppearanceSelection | null>(null);
   const snapPoints = useMemo(() => ['82%'], []);
 
   const {
@@ -72,6 +77,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     setIconSetId,
     styleSetId,
     setStyleSetId,
+    densityId,
+    setDensityId,
   } = useSupport();
 
   const [lastUnlockedIds, setLastUnlockedIds] = useState<Set<string>>(() => new Set());
@@ -152,27 +159,11 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       case 'palette': setPaletteId(selection.id); break;
       case 'icon': setIconSetId(selection.id); break;
       case 'style': setStyleSetId(selection.id); break;
+      case 'density': setDensityId(selection.id); break;
     }
-  }, [setPaletteId, setIconSetId, setStyleSetId]);
+  }, [setPaletteId, setIconSetId, setStyleSetId, setDensityId]);
 
-  const handleAppearanceDismiss = useCallback(() => {
-    handleSheetDismiss();
-    const selection = pendingAppearanceRef.current;
-    pendingAppearanceRef.current = null;
-    if (selection) applySelection(selection);
-  }, [handleSheetDismiss, applySelection]);
-
-  const selectAppearance = useCallback((selection: AppearanceSelection) => {
-    // Updating appearance can insert/remove native backdrops and swap icon view
-    // types. Wait for Gorhom to finish dismissing before changing that hierarchy.
-    // A timer or onChange(-1) can run while the closing animation is still active.
-    if (!bottomSheetRef.current) {
-      applySelection(selection);
-      return;
-    }
-    pendingAppearanceRef.current = selection;
-    bottomSheetRef.current.dismiss();
-  }, [applySelection]);
+  const selectAppearance = applySelection;
 
   const handleSelectPalette = useCallback((id: PaletteId) => {
     const reward = rewardForPalette(id);
@@ -191,7 +182,8 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
       return;
     }
     void Haptics.selectionAsync().catch(() => undefined);
-    selectAppearance({ kind: 'icon', id });
+    if (id === 'custom-svg') customIconsRef.current?.present();
+    else selectAppearance({ kind: 'icon', id });
   }, [isUnlocked, selectAppearance, showLockedNotice]);
 
   const handleSelectStyle = useCallback((id: StyleSetId) => {
@@ -204,213 +196,223 @@ export const RewardsSheet = forwardRef<RewardsSheetHandle, object>(function Rewa
     selectAppearance({ kind: 'style', id });
   }, [isUnlocked, selectAppearance, showLockedNotice]);
 
-  const trailingFor = (remaining: number, unlocked: boolean, id: string) => {
+  const trailingFor = (remaining: number, unlocked: boolean, id: string, selected: boolean) => {
     if (lastUnlockedIds.has(id)) {
       return <Text style={{ color: colors.priceLow }} className="text-callout font-semibold">{t('settings.reward_unlocked')}</Text>;
     }
     if (noticeId === id) {
       return <Text style={{ color: colors.tint }} className="text-footnote">{t('settings.reward_locked_notice')}</Text>;
     }
+    if (unlocked && !selected) return null;
     if (unlocked) return <Text style={{ color: colors.tint }} className="text-body">✓</Text>;
     return <Text style={{ color: colors.tertiaryLabel }} className="text-footnote">{t('settings.reward_locked_ads', { count: remaining })}</Text>;
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      enableContentPanningGesture={false}
-      enableDynamicSizing={false}
-      handleStyle={SHEET_HANDLE_STYLE}
-      handleIndicatorStyle={[SHEET_HANDLE_INDICATOR_STYLE, { backgroundColor: colors.handleIndicator }]}
-      onChange={handleSheetChange}
-      onDismiss={handleAppearanceDismiss}
-      backdropComponent={SheetBackdrop}
-      backgroundComponent={SheetBackground}
-    >
-      <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
-        <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
-          {MONETIZATION_ENABLED ? t('settings.rewards_title') : t('settings.appearance_options_title')}
-        </Text>
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
-          {MONETIZATION_ENABLED ? t('settings.rewards_caption') : t('settings.appearance_options_caption')}
-        </Text>
+    <>
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        accessible={false}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        enableContentPanningGesture={false}
+        enableDynamicSizing={false}
+        handleStyle={SHEET_HANDLE_STYLE}
+        handleIndicatorStyle={[SHEET_HANDLE_INDICATOR_STYLE, { backgroundColor: colors.handleIndicator }]}
+        onChange={handleSheetChange}
+        onDismiss={handleSheetDismiss}
+        backdropComponent={SheetBackdrop}
+        backgroundComponent={SheetBackground}
+      >
+        <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
+          <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
+            {MONETIZATION_ENABLED ? t('settings.rewards_title') : t('settings.appearance_options_title')}
+          </Text>
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote mb-lg">
+            {MONETIZATION_ENABLED ? t('settings.rewards_caption') : t('settings.appearance_options_caption')}
+          </Text>
 
-        {MONETIZATION_ENABLED && <GlassBox component="card" color={colors.fieldBackground} className="rounded-md p-md mb-lg">
-          <View className="flex-row items-center justify-between mb-sm">
-            <Text style={{ color: colors.label }} className="text-body font-semibold">
-              {t('settings.rewards_progress', { count: watchedCount })}
-            </Text>
-            {nextReward && (
-              <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
-                {t('settings.rewards_next', { ads: nextReward.requiredWatches })}
+          {MONETIZATION_ENABLED && <GlassBox component="card" color={colors.fieldBackground} className="rounded-md p-md mb-lg">
+            <View className="flex-row items-center justify-between mb-sm">
+              <Text style={{ color: colors.label }} className="text-body font-semibold">
+                {t('settings.rewards_progress', { count: watchedCount })}
+              </Text>
+              {nextReward && (
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+                  {t('settings.rewards_next', { ads: nextReward.requiredWatches })}
+                </Text>
+              )}
+            </View>
+            <Button onPress={handleWatchAd} disabled={working || !rewardsLoaded} loading={working || adLoading}>
+              {t('settings.watch_ad')}
+            </Button>
+            {working && adLoading && (
+              <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
+                {t('settings.rewards_ad_loading')}
               </Text>
             )}
-          </View>
-          <Button onPress={handleWatchAd} disabled={working || !rewardsLoaded} loading={working || adLoading}>
-            {t('settings.watch_ad')}
-          </Button>
-          {working && adLoading && (
-            <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
-              {t('settings.rewards_ad_loading')}
-            </Text>
-          )}
-          {adFailed && (
-            <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
-              {t('settings.rewards_ad_failed')}
-            </Text>
-          )}
-        </GlassBox>}
+            {adFailed && (
+              <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-sm">
+                {t('settings.rewards_ad_failed')}
+              </Text>
+            )}
+          </GlassBox>}
 
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
-          {t('settings.rewards_palettes')}
-        </Text>
-        {PALETTE_ORDER.map((id) => {
-          const palette = PALETTES[id];
-          const reward = rewardForPalette(id);
-          const unlocked = !reward || isUnlocked(reward.id);
-          const selected = paletteId === id;
-          const paletteKeys = ['surface', 'tint'] as const;
-          return (
-            <TouchableOpacity
-              key={id}
-              activeOpacity={0.7}
-              onPress={() => handleSelectPalette(id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected, disabled: !unlocked }}
-              className="flex-row items-center justify-between py-md px-sm"
-            >
-              <View className="flex-row items-center flex-1">
-                <View style={{ backgroundColor: colors.fieldBackground, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 4 }}>
-                  <View className="flex-row items-center -space-x-2">
-                    <View style={{ width: 0 }} />
-                    {paletteKeys.map((key) => (
-                      <View
-                        key={`${key}-dark`}
-                        style={{
-                          width: 16,
-                          height: 16,
-                          borderRadius: 8,
-                          backgroundColor: palette.dark[key],
-                          borderWidth: 1,
-                          borderColor: colors.separator,
-                        }}
-                      />
-                    ))}
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+            {t('settings.rewards_palettes')}
+          </Text>
+          {PALETTE_ORDER.map((id) => {
+            const palette = PALETTES[id];
+            const reward = rewardForPalette(id);
+            const unlocked = !reward || isUnlocked(reward.id);
+            const selected = paletteId === id;
+            const paletteKeys = ['surface', 'tint'] as const;
+            return (
+              <TouchableOpacity
+                key={id}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPalette(id)}
+                accessibilityRole="button"
+                style={{ minHeight: 44 }}
+                accessibilityState={{ selected, disabled: !unlocked }}
+                className="flex-row items-center justify-between py-md px-sm"
+              >
+                <View className="flex-row items-center flex-1">
+                  <View style={{ backgroundColor: colors.fieldBackground, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 4 }}>
+                    <View className="flex-row items-center -space-x-2">
+                      <View style={{ width: 0 }} />
+                      {paletteKeys.map((key) => (
+                        <View
+                          key={`${key}-dark`}
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: 8,
+                            backgroundColor: palette.dark[key],
+                            borderWidth: 1,
+                            borderColor: colors.separator,
+                          }}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  <Text
+                    style={{ color: selected ? colors.tint : colors.label, marginStart: 8 }}
+                    className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}
+                  >
+                    {t(`settings.palette_${id}`)}
+                  </Text>
+                </View>
+                {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id, selected)}
+              </TouchableOpacity>
+            );
+          })}
+
+          <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
+
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+            {t('settings.rewards_icons')}
+          </Text>
+          {ICON_SET_ORDER.map((id) => {
+            const iconSet = ICON_SETS[id];
+            const reward = rewardForIcon(id);
+            const unlocked = !reward || isUnlocked(reward.id);
+            const selected = iconSetId === id;
+            return (
+              <TouchableOpacity
+                key={id}
+                activeOpacity={0.7}
+                onPress={() => handleSelectIcon(id)}
+                accessibilityRole="button"
+                style={{ minHeight: 44 }}
+                accessibilityState={{ selected, disabled: !unlocked }}
+                className="flex-row items-center justify-between py-md px-sm"
+              >
+                <View className="flex-row items-center flex-1">
+                  <View
+                    className="w-10 h-10 rounded-full items-center justify-center"
+                    style={{ backgroundColor: colors.groupedBackground, marginEnd: 8 }}
+                  >
+                    {iconSet.render({ name: 'map.fill', size: 18, color: colors.tint })}
+                  </View>
+                  <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
+                    {t(iconSet.labelKey)}
+                  </Text>
+                </View>
+                {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id, selected)}
+              </TouchableOpacity>
+            );
+          })}
+
+          <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
+
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
+            {t('settings.rewards_styles')}
+          </Text>
+          {STYLE_SET_ORDER.map((id) => {
+            const styleSet = STYLE_SETS[id];
+            const reward = rewardForStyle(id);
+            const unlocked = !reward || isUnlocked(reward.id);
+            const selected = styleSetId === id;
+            const isGlass = styleSet.tabBar.glass === true;
+            return (
+              <TouchableOpacity
+                key={id}
+                activeOpacity={0.7}
+                onPress={() => handleSelectStyle(id)}
+                accessibilityRole="button"
+                style={{ minHeight: 44 }}
+                accessibilityState={{ selected, disabled: !unlocked }}
+                className="flex-row items-center justify-between py-md px-sm"
+              >
+                <View className="flex-row items-center flex-1">
+                  <View
+                    pointerEvents="none"
+                    className="items-center justify-center"
+                    style={{
+                      marginEnd: 8,
+                      width: 32, height: 32,
+                      backgroundColor: colors.groupedBackground,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <View style={{ width: 20, height: 16, borderRadius: id === 'default' ? 3 : 6, borderWidth: isGlass ? 1 : 0, borderColor: colors.tint, backgroundColor: id === 'default' ? colors.tint : colors.surface, transform: [{ rotate: isGlass ? '-12deg' : '0deg' }] }}>
+                      <View style={{ width: id === 'default' ? 8 : 12, height: 2, marginTop: 4, marginStart: 3, borderRadius: 1, backgroundColor: id === 'default' ? colors.labelOnTint : colors.tint }} />
+                      <View style={{ width: 8, height: 2, marginTop: 2, marginStart: 3, borderRadius: 1, backgroundColor: id === 'default' ? colors.labelOnTint : colors.separator }} />
+                    </View>
+                  </View>
+                  <View className="flex-1">
+                    <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body ${selected ? 'font-semibold' : ''}`}>{t(`settings.styleset_${id}`)}</Text>
+                    <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t(`settings.styleset_${id}_description`)}</Text>
                   </View>
                 </View>
-                <Text
-                  style={{ color: selected ? colors.tint : colors.label, marginStart: 8 }}
-                  className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}
-                >
-                  {t(`settings.palette_${id}`)}
-                </Text>
+                {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id, selected)}
+              </TouchableOpacity>
+            );
+          })}
+
+          <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
+          <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">{t('settings.density')}</Text>
+          {(['compact', 'comfortable'] as const).map(id => (
+            <TouchableOpacity key={id} activeOpacity={0.7} accessibilityRole="button" accessibilityState={{ selected: densityId === id }} style={{ minHeight: 44 }} className="flex-row items-center justify-between py-md px-sm" onPress={() => {
+              void Haptics.selectionAsync().catch(() => undefined);
+              selectAppearance({ kind: 'density', id });
+            }}>
+              <View className="flex-1">
+                <Text style={{ color: densityId === id ? colors.tint : colors.label }} className="text-body">{t(`settings.density_${id}`)}</Text>
+                <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t(`settings.density_${id}_description`)}</Text>
               </View>
-              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
+              {densityId === id && <Text style={{ color: colors.tint }} className="text-body">✓</Text>}
             </TouchableOpacity>
-          );
-        })}
+          ))}
 
-        <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
-
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
-          {t('settings.rewards_icons')}
-        </Text>
-        {ICON_SET_ORDER.map((id) => {
-          const iconSet = ICON_SETS[id];
-          const reward = rewardForIcon(id);
-          const unlocked = !reward || isUnlocked(reward.id);
-          const selected = iconSetId === id;
-          return (
-            <TouchableOpacity
-              key={id}
-              activeOpacity={0.7}
-              onPress={() => handleSelectIcon(id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected, disabled: !unlocked }}
-              className="flex-row items-center justify-between py-md px-sm"
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="w-10 h-10 rounded-full items-center justify-center"
-                  style={{ backgroundColor: colors.groupedBackground, marginEnd: 8 }}
-                >
-                  {iconSet.render({ name: 'map.fill', size: 18, color: colors.tint })}
-                </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
-                  {t(iconSet.labelKey)}
-                </Text>
-              </View>
-              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
-            </TouchableOpacity>
-          );
-        })}
-
-        <View style={{ backgroundColor: colors.separator }} className="h-px my-md" />
-
-        <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
-          {t('settings.rewards_styles')}
-        </Text>
-        {STYLE_SET_ORDER.map((id) => {
-          const styleSet = STYLE_SETS[id];
-          const cardRules = styleSet.card;
-          const reward = rewardForStyle(id);
-          const unlocked = !reward || isUnlocked(reward.id);
-          const selected = styleSetId === id;
-          const isGlass = cardRules.glass === true;
-          const radius = cardRules.borderRadius ?? 8;
-          return (
-            <TouchableOpacity
-              key={id}
-              activeOpacity={0.7}
-              onPress={() => handleSelectStyle(id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected, disabled: !unlocked }}
-              className="flex-row items-center justify-between py-md px-sm"
-            >
-              <View className="flex-row items-center flex-1">
-                <View
-                  className="w-10 h-10 items-center justify-center border"
-                  style={{
-                    marginEnd: 8,
-                    backgroundColor: colors.groupedBackground,
-                    borderColor: isGlass ? colors.tint : colors.separator,
-                    borderRadius: radius,
-                    borderStyle: cardRules.borderStyle ?? 'solid',
-                    borderWidth: isGlass ? 1.5 : (cardRules.borderWidth ?? 0),
-                    overflow: 'hidden',
-                  }}
-                >
-                  {isGlass && (
-                    <View
-                      pointerEvents="none"
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        bottom: 2,
-                        left: 2,
-                        borderRadius: Math.max(0, radius - 2),
-                        backgroundColor: colors.tint,
-                        opacity: 0.08,
-                      }}
-                    />
-                  )}
-                </View>
-                <Text style={{ color: selected ? colors.tint : colors.label }} className={`text-body flex-1 ${selected ? 'font-semibold' : ''}`}>
-                  {t(`settings.styleset_${id}`)}
-                </Text>
-              </View>
-              {trailingFor(reward ? remainingFor(reward.id) : 0, unlocked, id)}
-            </TouchableOpacity>
-          );
-        })}
-
-        <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-md">
-          {MONETIZATION_ENABLED ? t('settings.rewards_footnote') : t('settings.appearance_options_footnote')}
-        </Text>
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+          <Text style={{ color: colors.tertiaryLabel }} className="text-caption2 mt-md">
+            {MONETIZATION_ENABLED ? t('settings.rewards_footnote') : t('settings.appearance_options_footnote')}
+          </Text>
+          <Button className="mt-md" onPress={() => bottomSheetRef.current?.dismiss()}>{t('common.done')}</Button>
+        </BottomSheetScrollView>
+      </BottomSheetModal>
+      <CustomIconsSheet ref={customIconsRef} />
+    </>
   );
 });

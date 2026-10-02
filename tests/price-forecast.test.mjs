@@ -66,6 +66,7 @@ async function forecastHarness(data, forecasts=model.forecastPrice) {
   const {PriceForecast}=await loadSource('src/components/PriceForecast.tsx',{
     react:hooks.react,'react-native':{Text:'Text',View:'View',TouchableOpacity:'Button'},
     'react-i18next':{useTranslation:()=>({t:(key,values)=>key+(values?' '+JSON.stringify(values):'')})},
+    '../hooks/useAppearanceLayout': { useAppearanceLayout: () => ({ space: { xs:4, sm:8, md:12, lg:16, xl:20, xxl:24, xxxl:32 }, numericStyle: {}, modern:false, compact:false }) },
     '../hooks/useThemeTokens':{useThemeTokens:()=>({colors:{}})},
     '../utils/priceIntelligence':{...model,forecastPrice:forecasts},'./ui/GlassBox':{GlassBox:'GlassBox'}, './ui/icon':{Icon:'Icon'},
   });

@@ -97,21 +97,6 @@ for (const [set, library, font] of [['ionicons', 'ionicons', 'Ionicons'], ['mate
   });
 }
 
-test('custom SVG icons have meaningful geometry, preserve color/size, and distinguish favorites', () => {
-  const { render } = loadSource('src/theme/icons/sets/custom-svg.tsx', {
-    'react-native-svg': { default: 'Svg', Circle: 'Circle', G: 'G', Path: 'Path', Rect: 'Rect' },
-  });
-  const fallback = render({ name: 'unknown' }).props.children.props.children;
-  for (const name of iconNames) {
-    const icon = render({ name, size: 19, color: '#123456' });
-    assert.equal(icon.props.width, 19); assert.equal(icon.props.height, 19);
-    assert.equal(icon.props.stroke, '#123456'); assert.equal(icon.props.viewBox, '0 0 24 24');
-    if (name !== 'info.circle') assert.notEqual(icon.props.children.props.children, fallback, `missing SVG: ${name}`);
-  }
-  assert.notEqual(render({ name: 'star' }).props.children.props.children, render({ name: 'star.fill' }).props.children.props.children);
-  assert.notEqual(render({ name: 'map.fill' }).props.children.props.children, render({ name: 'magnifyingglass' }).props.children.props.children);
-});
-
 test('badge values, ghost buttons, and icons default to the active palette instead of platform colors', () => {
   for (const colors of [PALETTES.default.light, PALETTES.mono.dark]) {
     const theme = { useThemeTokens: () => ({ colors }) };
@@ -120,7 +105,7 @@ test('badge values, ghost buttons, and icons default to the active palette inste
     const deps = {
       'react-native': { View: 'View', Text: 'Text', TouchableOpacity: 'TouchableOpacity', ActivityIndicator: 'ActivityIndicator' },
       '../../hooks/useThemeTokens': theme, '../../hooks/useSupport': support,
-      '../../hooks/useStyleConfig': { useStyleConfig: (rules, name) => rules[name], applyComponentRules: () => ({}), isGlass: () => false },
+      '../../hooks/useStyleConfig': { useStyleConfig: (rules, name) => rules[name], applyComponentRules: () => ({}), componentSurface: (rules, colors, fallback) => colors[fallback], isGlass: () => false },
       './glass': {},
     };
     const { Badge } = loadSource('src/components/ui/badge.tsx', deps);
@@ -132,5 +117,97 @@ test('badge values, ghost buttons, and icons default to the active palette inste
     const { Icon } = loadSource('src/components/ui/icon.tsx', deps);
     Icon({ name: 'map.fill' }); assert.equal(captured[0].color, colors.label);
     Icon({ name: 'map.fill', color: '#fedcba' }); assert.equal(captured[1].color, '#fedcba');
+  }
+});
+
+const flatten = style => Array.isArray(style) ? Object.assign({}, ...style.map(flatten)) : style ?? {};
+const walk = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(walk) : [node, ...walk(node.props?.children)];
+
+test('all styles retain the benchmark price guide on featured and secondary prices', () => {
+  const { appearancePalette } = loadSource('src/theme/appearance.ts');
+  const guide = loadSource('src/utils/priceColors.ts');
+  const now = new Date().toISOString().slice(0,10);
+  const benchmarks = { schemaVersion:1, method:'anchored_real_net_price_quartiles', asOf:now, bands:{gasoline95_pt:{fuel:'gasoline95',country:'PT',unit:'EUR/L',greenBelow:1.7,redAbove:1.85}} };
+  for(const palette of Object.values(PALETTES)) for(const style of ['default','quiet','frosted']) for(const scheme of ['light','dark']) for(const compact of [true,false]){
+    const colors=appearancePalette(palette,style)[scheme];
+    const { PriceBadge } = loadSource('src/components/PriceBadge.tsx', {
+      react:{memo:c=>c},'react-native':{Text:'Text',View:'View'},'react-i18next':{useTranslation:()=>({t:key=>key})},
+      '../utils/fuelNames':{fuelLabel:()=> 'Gasoline 95',fuelUnit:()=> '€/L'},
+      '../hooks/useThemeTokens':{useThemeTokens:()=>({colors,scheme})},
+      '../hooks/useAppearanceSupport':{}, '../hooks/useSupport':{useAppearanceSupport:()=>({styleRules:{chip:{}}})},
+      '../hooks/useAppearanceLayout':{useAppearanceLayout:()=>({modern:style!=='default',compact,numericStyle:{}})},
+      '../hooks/useStyleConfig':{useStyleConfig:()=>({}),applyComponentRules:()=>({}),isGlass:()=>false},
+      './ui/glass':{},'../hooks/useApp':{usePriceBenchmarks:()=>benchmarks},'../utils/priceColors':guide,
+    });
+    for(const [price,source,level] of [[1.6,'PT','low'],[1.8,'PT','mid'],[1.9,'PT','high'],[1.6,'ES','unknown']]) for(const prominent of [true,false]){
+      const tree=PriceBadge.type({fuel:'gasoline95',price,source,prominent});
+      const value=walk(tree).find(n=>n.type==='Text'&&Array.isArray(n.props.children)&&n.props.children[0]===price.toFixed(3));
+      const color=flatten(value.props.style).color;
+      assert.equal(color,guide.priceLevelColor(level,colors,scheme),`${style}/${scheme}/${level}/${prominent}`);
+      assert.ok(contrast(color,colors.surface)>=4.5);
+    }
+  }
+});
+
+test('map actions retain glass only for Glass and stay readable over light and dark map tiles', () => {
+  const { appearancePalette } = loadSource('src/theme/appearance.ts');
+  const { STYLE_SETS }=loadSource('src/theme/styles/sets.ts');
+  const rules=loadSource('src/hooks/useStyleConfig.ts',{'react-native':{Platform:{OS:'android'}}});
+  const blurTarget={current:{}};
+  const glassApi=loadSource('src/components/ui/glass.tsx',{'react-native':{Platform:{OS:'android',Version:31}},'expo-blur':{},'../../hooks/useThemeTokens':{}});
+  for(const palette of Object.values(PALETTES)) for(const style of ['default','quiet','frosted']) for(const scheme of ['light','dark']){
+    const colors=appearancePalette(palette,style)[scheme];
+    const { MapActionButton }=loadSource('src/components/MapActionButton.tsx',{
+      'react-native':{ActivityIndicator:'Spinner',Text:'Text',TouchableOpacity:'TouchableOpacity',View:'View'},
+      '../hooks/useThemeTokens':{useThemeTokens:()=>({colors,scheme})},'./ui/glass':{...glassApi,GlassSurface:'Surface'},'./ui/icon':{Icon:'Icon'},
+      '../hooks/useSupport':{useAppearanceSupport:()=>({styleRules:STYLE_SETS[style]})},'../hooks/useStyleConfig':rules,
+    });
+    for(const iconName of ['my_location','filter_list']){
+      const tree=MapActionButton({iconName,label:iconName,onPress:()=>{},badgeCount:1,blurTarget});
+      assert.equal(tree.props.opaque,style!=='frosted');assert.equal(tree.props.color,colors.surface);
+      assert.equal(tree.props.blurTarget,blurTarget);
+      const foreground=walk(tree).find(n=>n.type==='Icon').props.color;
+      assert.equal(foreground,style==='frosted'?colors.label:colors.tint);
+      for(const tile of ['#FFFFFF','#000000']){
+        const opacity=tree.props.opaque?1:tree.props.tintOpacity;
+        // Expo Android adds its material tint before our extra veil (intensity 70).
+        const nativeAlpha=scheme==='dark'?0.55*0.7:0.78*0.7;
+        const nativeColor=scheme==='dark'?37:249;
+        const base=rgba(tile).slice(0,3).map(v=>tree.props.opaque?v:nativeColor*nativeAlpha+v*(1-nativeAlpha));
+        const rgb=rgba(colors.surface).slice(0,3).map((v,i)=>Math.round(v*opacity+base[i]*(1-opacity)));
+        const background='#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');
+        assert.ok(contrast(foreground,background)>=4.5,`${style}/${scheme} on ${tile}`);
+      }
+    }
+  }
+  const home=ts.createSourceFile('index.tsx',readFileSync(path.join(project,'app/(tabs)/index.tsx'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  let glassPills=0,mapTargets=0;
+  const inspect=n=>{
+    if(ts.isJsxOpeningElement(n)&&n.tagName.getText(home)==='GlassSurface'){
+      const attributes=n.attributes.properties;
+      if(attributes.find(a=>a.name?.getText(home)==='opaque')?.initializer?.expression?.getText(home)==='!glass'){
+        glassPills++;
+        assert.equal(attributes.find(a=>a.name?.getText(home)==='blurTarget')?.initializer?.expression?.getText(home),'mapBlurTarget');
+      }
+    }
+    if(ts.isJsxOpeningElement(n)&&n.tagName.getText(home)==='BlurTargetView')mapTargets++;
+    ts.forEachChild(n,inspect);
+  };
+  inspect(home);assert.equal(glassPills,2);assert.equal(mapTargets,1);
+});
+
+test('Privacy & Legal header and page follow the active light/dark palette', () => {
+  for(const scheme of ['light','dark']) for(const palette of Object.values(PALETTES)){
+    const colors=palette[scheme];
+    const {default:LegalScreen}=loadSource('app/legal.tsx',{
+      'react-native':{Linking:{},ScrollView:'Scroll',Text:'Text',View:'View'},'expo-router':{Stack:{Screen:'Screen'}},
+      'react-i18next':{useTranslation:()=>({t:key=>key})},'react-native-safe-area-context':{SafeAreaView:'SafeArea',useSafeAreaInsets:()=>({bottom:0})},
+      '../src/hooks/useThemeTokens':{useThemeTokens:()=>({colors})},'../src/hooks/useSupport':{useAppearanceSupport:()=>({styleRules:{}})},
+      '../src/hooks/useStyleConfig':{useStyleConfig:()=>({}),applyComponentRules:()=>({})},'../src/components/ui/list-item':{},'../src/config/legal':{},
+    });
+    const tree=LegalScreen(),options=walk(tree).find(n=>n.type==='Screen').props.options;
+    assert.equal(options.headerStyle.backgroundColor,colors.background);
+    assert.equal(options.headerTintColor,colors.label);assert.equal(options.headerTitleStyle.color,colors.label);
+    assert.equal(options.contentStyle.backgroundColor,tree.props.style.backgroundColor);
   }
 });

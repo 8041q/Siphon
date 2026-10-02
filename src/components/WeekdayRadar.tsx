@@ -56,11 +56,11 @@ export function WeekdayRadar({ data }: { data: readonly PricePoint[] }) {
   return (
     <GlassBox component="card" className="rounded-md p-md gap-sm">
       <View className="flex-row items-center justify-between gap-sm">
-        <Text style={{ color: colors.label }} className="text-headline font-semibold">
+        <Text style={{ color: colors.label, flexShrink: 1 }} className="text-headline font-semibold">
           {t('price_trends.weekday_title')}
         </Text>
         {analysis && (
-          <Text style={{ color: colors.tint }} className="text-caption-1 font-semibold">
+          <Text style={{ color: colors.tint, flexShrink: 1, textAlign: 'right' }} className="text-caption-1 font-semibold">
             {t('price_trends.weekday_best_short', { day: t(dayKeys[analysis.bestDay]) })}
           </Text>
         )}

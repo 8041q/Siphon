@@ -24,7 +24,7 @@ export default function LegalScreen() {
   const { colors } = useThemeTokens();
   const { styleRules } = useAppearanceSupport();
   const cardRules = useStyleConfig(styleRules, 'card');
-  const cardStyle = applyComponentRules(cardRules, colors.label);
+  const cardStyle = applyComponentRules(cardRules, colors.separator);
   const insets = useSafeAreaInsets();
 
   const open = (url: string) => {
@@ -33,7 +33,7 @@ export default function LegalScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['bottom']} style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ headerShown: true, title: t('legal.title') }} />
+      <Stack.Screen options={{ headerShown: true, title: t('legal.title'), headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.label, headerTitleStyle: { color: colors.label }, contentStyle: { backgroundColor: colors.background } }} />
       <ScrollView
         className="flex-1"
         contentContainerClassName="gap-lg p-lg"

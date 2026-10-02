@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useSupport } from '../../hooks/useSupport';
-import { useStyleConfig, applyComponentRules, isGlass } from '../../hooks/useStyleConfig';
+import { useStyleConfig, applyComponentRules, isGlass, componentSurface } from '../../hooks/useStyleConfig';
 import { GlassBackdrop } from './glass';
 
 type ListItemProps = {
@@ -22,7 +22,7 @@ export function ListItem({ children, onPress, trailing }: ListItemProps) {
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      style={[{ backgroundColor: glass ? 'transparent' : colors.surface }, applyComponentRules(rules, colors.label)]}
+      style={[{ minHeight: 44, backgroundColor: glass ? 'transparent' : componentSurface(rules, colors, 'surface') }, applyComponentRules(rules, colors.separator)]}
       className="flex-row items-center justify-between px-lg py-md"
     >
       {glass && <GlassBackdrop color={colors.surface} borderRadius={rules.borderRadius} />}

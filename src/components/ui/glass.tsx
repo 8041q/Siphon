@@ -11,6 +11,16 @@ import { useThemeTokens } from '../../hooks/useThemeTokens';
 
 export type BlurTargetRef = RefObject<View | null>;
 
+/** Expo's material already includes a tint; keep the extra map veil light. */
+export function mapGlassTintOpacity(scheme: 'light' | 'dark', blurTarget?: BlurTargetRef): number {
+  const hasNativeBlur = Platform.OS !== 'android' || (Number(Platform.Version) >= 31 && blurTarget != null);
+  return hasNativeBlur ? (scheme === 'dark' ? 0.46 : 0.18) : 0.72;
+}
+
+export function mapGlassBorderColor(scheme: 'light' | 'dark'): string {
+  return scheme === 'dark' ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.72)';
+}
+
 const AppBlurTargetContext = createContext<BlurTargetRef | null>(null);
 
 export function AppBlurTargetProvider({
@@ -42,10 +52,15 @@ export function GlassBackdrop({
   color,
   blurTarget,
   borderRadius,
+  enabled = true,
+  tintOpacity,
 }: {
   color?: string;
   blurTarget?: BlurTargetRef | null;
   borderRadius?: ViewStyle['borderRadius'];
+  enabled?: boolean;
+  /** Optional veil strength for contrast-protected translucent controls. */
+  tintOpacity?: number;
 }) {
   const { scheme, colors } = useThemeTokens();
   const tint =
@@ -55,18 +70,18 @@ export function GlassBackdrop({
   const androidApi = android ? Number(Platform.Version) : Number.POSITIVE_INFINITY;
   const canBlurAndroid = android && blurTarget != null && androidApi >= 31;
   const shouldRenderBlur = !android || canBlurAndroid;
-  const overlayOpacity = android && !canBlurAndroid ? 0.78 : 0.35;
+  const overlayOpacity = tintOpacity ?? (android && !canBlurAndroid ? 1 : 0.35);
 
   return (
     <View
-      style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden', zIndex: -1 }]}
+      style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden', zIndex: -1, opacity: enabled ? 1 : 0 }]}
       pointerEvents="none"
     >
       {shouldRenderBlur && (
         <BlurView
           style={StyleSheet.absoluteFill}
           tint={tint}
-          intensity={70}
+          intensity={enabled ? 70 : 0}
           blurReductionFactor={1}
           blurTarget={android ? blurTarget ?? undefined : undefined}
           blurMethod={android ? 'dimezisBlurViewSdk31Plus' : undefined}
@@ -93,25 +108,31 @@ export function GlassSurface({
   color,
   style,
   blurTarget,
+  opaque = false,
+  tintOpacity,
   ...viewProps
 }: PropsWithChildren<
   ViewProps & {
     color?: string;
     blurTarget?: BlurTargetRef | null;
+    opaque?: boolean;
+    tintOpacity?: number;
     style?: StyleProp<ViewStyle>;
   }
 >) {
+  const { colors } = useThemeTokens();
   return (
     <View
       {...viewProps}
       style={[
         { overflow: 'hidden' },
         style,
+        opaque && { backgroundColor: color ?? colors.surface },
         { isolation: 'isolate' },
         Platform.OS === 'android' && { overflow: 'visible' },
       ]}
     >
-      <GlassBackdrop color={color} blurTarget={blurTarget} borderRadius={StyleSheet.flatten(style)?.borderRadius} />
+      {!opaque && <GlassBackdrop color={color} blurTarget={blurTarget} tintOpacity={tintOpacity} borderRadius={StyleSheet.flatten(style)?.borderRadius} />}
       {children}
     </View>
   );

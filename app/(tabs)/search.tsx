@@ -8,17 +8,18 @@ import { useRouter } from 'expo-router';
 import { Icon } from '../../src/components/ui/icon';
 import { StationCard } from '../../src/components/StationCard';
 import { FilterSheet } from '../../src/components/FilterSheet';
+import { useAppearanceLayout } from '../../src/hooks/useAppearanceLayout';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStationCatalog, useStationDistances, useStationSync, useLocationState, useUI } from '../../src/hooks/useApp';
 import { tabBarClearance } from '../../src/theme/layout';
-import type { FuelStationFeature } from '../../src/api/siphonClient';
+import type { FuelKey, FuelStationFeature } from '../../src/api/siphonClient';
 import { roadEstimateKm } from '../../src/utils/routeDistance';
 import { measureSync } from '../../src/utils/perf';
 import { normalizeSearchText, stationSearchText, matchesSearch } from '../../src/utils/stationSearch';
 import { ScreenState } from '../../src/components/ui/ScreenState';
 import { fuelLabel } from '../../src/utils/fuelNames';
 
-const ItemSeparator = () => <View style={{ height: 12 }} />;
+const ItemSeparator = () => { const { space } = useAppearanceLayout(); return <View style={{ height: space.md }} />; };
 
 export default function SearchScreen() {
   const { t } = useTranslation();
@@ -29,6 +30,7 @@ export default function SearchScreen() {
   const { setSelectedStation, requestMapFocus, favorites, toggleFavorite, searchFilter, setSearchFilter } = useUI();
   const { location } = useLocationState();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const filterSheetRef = useRef<{ present: () => void }>(null);
 
   const [brandQuery, setBrandQuery] = useState('');
@@ -150,7 +152,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <View className="flex-1">
-        <View className="px-4 flex-row items-center gap-2">
+        <View className="px-lg flex-row items-center gap-2">
           <View className="flex-1">
             <SearchBar brandQuery={brandQuery} setBrandQuery={setBrandQuery} secondaryLabel={colors.secondaryLabel} />
           </View>
@@ -206,6 +208,7 @@ export default function SearchScreen() {
         )}
 
         <StationList
+          featuredFuel={searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95'}
           key={resultsKey}
           results={results}
           handleStationPress={handleStationPress}
@@ -244,6 +247,7 @@ type SearchBarProps = {
 function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: SearchBarProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
 
   return (
     <View
@@ -252,7 +256,7 @@ function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: SearchBarProps
         alignItems: 'center',
         backgroundColor: colors.groupedBackground,
         borderRadius: 8,
-        paddingHorizontal: 12,
+        paddingHorizontal: space.md,
         height: 44,
       }}
     >
@@ -264,7 +268,7 @@ function SearchBar({ brandQuery, setBrandQuery, secondaryLabel }: SearchBarProps
         placeholderTextColor={secondaryLabel}
         style={{
           flex: 1,
-          marginStart: 8,
+          marginStart: space.sm,
           paddingVertical: 0,
           color: colors.label,
           textAlignVertical: 'center',
@@ -292,6 +296,7 @@ type StationListProps = {
   onClear?: () => void;
   onOpenSort: () => void;
   sortLabel: string;
+  featuredFuel?: FuelKey;
 };
 
 const StationList = memo(function StationList({
@@ -309,9 +314,11 @@ const StationList = memo(function StationList({
   onClear,
   onOpenSort,
   sortLabel,
+  featuredFuel,
 }: StationListProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const insets = useSafeAreaInsets();
 
   const listExtraData = useMemo(
@@ -323,6 +330,7 @@ const StationList = memo(function StationList({
     ({ item }: { item: FuelStationFeature }) => (
       <StationCard
         station={item}
+        featuredFuel={featuredFuel}
         onPress={handleStationPress}
         favorite={favorites?.has(item.properties.id) ?? false}
         onToggleFavorite={onToggleFavorite}
@@ -334,6 +342,7 @@ const StationList = memo(function StationList({
     ),
     [
       favorites,
+      featuredFuel,
       handleStationPress,
       handleShowOnMap,
       onToggleFavorite,
@@ -349,7 +358,7 @@ const StationList = memo(function StationList({
 
   return (
     <View className="flex-1 gap-1 pt-lg" style={{ overflow: 'hidden' }}>
-      <View className="px-4 mb-sm" style={{ gap: 2 }}>
+      <View className="px-lg mb-sm" style={{ gap: 2 }}>
         <Text className="text-headline" style={{ color: colors.label }}>
           {t('search.results_header')} ({results.length})
         </Text>
@@ -361,7 +370,7 @@ const StationList = memo(function StationList({
         data={results}
         keyExtractor={(item) => item.properties.id}
         style={{ flex: 1, overflow: 'hidden' }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
+        contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: tabBarClearance(insets.bottom) + space.lg }}
         ItemSeparatorComponent={ItemSeparator}
         renderItem={renderItem}
         extraData={listExtraData}

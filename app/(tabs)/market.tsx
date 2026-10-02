@@ -10,6 +10,8 @@ import { MarketIntelligenceCard } from '../../src/components/MarketIntelligenceC
 import { MarketDetailsCard } from '../../src/components/MarketDetailsCard';
 import { MarketFilters, type MarketCountry, type MarketFuel } from '../../src/components/MarketFilters';
 import { analyzeMarket } from '../../src/utils/marketAnalysis';
+import { GlassBox } from '../../src/components/ui/GlassBox';
+import { useAppearanceLayout } from '../../src/hooks/useAppearanceLayout';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../src/hooks/useSupport';
 import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
@@ -25,10 +27,12 @@ function formatPct(value: number | null): string {
 export default function MarketScreen() {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { space, numericStyle } = useAppearanceLayout();
   const insets = useSafeAreaInsets();
-  const { styleRules } = useAppearanceSupport();
+  const { styleRules, styleSetId } = useAppearanceSupport();
   const cardRules = useStyleConfig(styleRules, 'card');
-  const cardStyle = applyComponentRules(cardRules, colors.label);
+  const cardStyle = applyComponentRules(cardRules, colors.separator);
+  if (styleSetId !== 'default') cardStyle.backgroundColor = colors.surface;
   const { dashboard, loading, error, reload } = useCommodities({ refresh: false });
 
   const [country, setCountry] = useState<MarketCountry>('combined');
@@ -55,13 +59,13 @@ export default function MarketScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: tabBarClearance(insets.bottom) + 16 }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: tabBarClearance(insets.bottom) + space.lg }}
       >
         <Text style={{ fontSize: 28, fontWeight: '700', color: colors.label, marginBottom: 4 }}>
           {t('market.title')}
         </Text>
         {dashboard?.lastUpdated ? (
-          <Text style={{ color: colors.tertiaryLabel, fontSize: 11, marginBottom: 16 }}>
+          <Text style={{ color: colors.tertiaryLabel, fontSize: 11, marginBottom: space.lg }}>
             {t('market.updated_at', { date: dashboard.lastUpdated })}
           </Text>
         ) : (
@@ -84,7 +88,7 @@ export default function MarketScreen() {
         ) : crudePoints.length < 2 && retailPoints.length < 2 ? (
           <ScreenState message={t('market.no_data')} />
         ) : (
-          <View style={{ gap: 12 }}>
+          <View style={{ gap: space.md }}>
             <MarketIntelligenceCard
               crude={crudePoints}
               wti={wtiPoints}
@@ -101,10 +105,10 @@ export default function MarketScreen() {
             />
 
             <View>
-              <Text style={{ color: colors.secondaryLabel, marginBottom: 8 }} className="text-footnote font-semibold uppercase tracking-wide">
+              <Text style={{ color: colors.secondaryLabel, marginBottom: space.sm }} className="text-footnote font-semibold uppercase tracking-wide">
                 {t('market.snapshot_title')}
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
                 {snapshot.map((item) => {
                   const valueColor = item.raw === null
                     ? colors.secondaryLabel
@@ -114,7 +118,7 @@ export default function MarketScreen() {
                         ? colors.priceLow
                         : colors.priceMid;
                   return (
-                    <View
+                    <GlassBox component="card"
                       key={item.label}
                       style={[
                         {
@@ -122,7 +126,7 @@ export default function MarketScreen() {
                           flexBasis: '47%',
                           backgroundColor: colors.groupedBackground,
                           borderRadius: 12,
-                          padding: 12,
+                          padding: space.md,
                         },
                         cardStyle,
                       ]}
@@ -130,21 +134,21 @@ export default function MarketScreen() {
                       <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">
                         {item.label}
                       </Text>
-                      <Text style={{ color: valueColor }} className="text-title-3 font-semibold mt-xs">
+                      <Text style={[numericStyle, { color: valueColor }]} className="text-title-3 font-semibold mt-xs">
                         {item.value}
                       </Text>
-                    </View>
+                    </GlassBox>
                   );
                 })}
               </View>
             </View>
 
             {retailPoints.length < 2 && (
-              <View style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: 12 }, cardStyle]}>
+              <GlassBox component="card" style={[{ backgroundColor: colors.groupedBackground, borderRadius: 12, padding: space.md }, cardStyle]}>
                 <Text style={{ color: colors.chartLabel, fontSize: 12, textAlign: 'center' }}>
                   {t('market.insufficient_hint')}
                 </Text>
-              </View>
+              </GlassBox>
             )}
 
             <MarketDetailsCard

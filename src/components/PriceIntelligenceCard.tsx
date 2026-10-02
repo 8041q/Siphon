@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { analyzePriceHistory, type PricePoint } from '../utils/priceIntelligence';
 import { GlassBox } from './ui/GlassBox';
@@ -9,6 +10,7 @@ import { GlassBox } from './ui/GlassBox';
 export function PriceIntelligenceCard({ data }: { data: readonly PricePoint[] }) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { numericStyle } = useAppearanceLayout();
   const analysis = useMemo(() => analyzePriceHistory(data), [data]);
   if (!analysis) return null;
 
@@ -23,20 +25,20 @@ export function PriceIntelligenceCard({ data }: { data: readonly PricePoint[] })
   return (
     <GlassBox component="card" className="rounded-md p-md gap-sm">
       <View className="flex-row items-center justify-between gap-sm">
-        <Text style={{ color: colors.label }} className="text-headline font-semibold">
+        <Text style={{ color: colors.label, flexShrink: 1 }} className="text-headline font-semibold">
           {t('price_trends.intelligence_title')}
         </Text>
-        <Text style={{ color: statusColor }} className="text-footnote font-semibold">
+        <Text style={[numericStyle, { color: statusColor, flexShrink: 1, textAlign: 'right' }]} className="text-footnote font-semibold">
           {t(`price_trends.price_status_${analysis.status}`)}
         </Text>
       </View>
 
       <View className="gap-xs">
         <View className="flex-row items-center justify-between gap-sm">
-          <Text style={{ color: colors.secondaryLabel }} className="text-footnote">
+          <Text style={{ color: colors.secondaryLabel, flexShrink: 1 }} className="text-footnote">
             {t('price_trends.position_label')}
           </Text>
-          <Text style={{ color: colors.label }} className="text-footnote font-semibold">
+          <Text style={{ color: colors.label, flexShrink: 1, textAlign: 'right' }} className="text-footnote font-semibold">
             {t('price_trends.cheaper_than_30d', { percent: cheaperThan })}
           </Text>
         </View>

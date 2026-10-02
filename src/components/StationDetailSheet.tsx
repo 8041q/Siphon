@@ -18,6 +18,7 @@ import { priceLevel, priceLevelColor } from '../utils/priceColors';
 import { stationAgeDays } from '../utils/stationFreshness';
 import { useTransientFeedback } from '../hooks/useTransientFeedback';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { WorthTheDrive } from './WorthTheDrive';
@@ -62,6 +63,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
   }, [station]);
 
   const { colors, scheme } = useThemeTokens();
+  const { numericStyle } = useAppearanceLayout();
 
   return (
     <View className="gap-md p-lg">
@@ -152,7 +154,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
               <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                 {fuelLabel(fuel)}
               </Text>
-              <Text style={{ color: priceLevelColor(priceLevel(price, fuel, source, benchmarks), colors, scheme) }} className="text-title-3 font-bold mt-0.5">
+              <Text style={[numericStyle, { color: priceLevelColor(priceLevel(price, fuel, source, benchmarks), colors, scheme) }]} className="text-title-3 font-bold mt-0.5">
                 {price.toFixed(3)}{fuelUnit(fuel, source)}
               </Text>
             </GlassBox>
@@ -295,13 +297,14 @@ export function StationDetailSheet() {
   const isPresentedRef = useRef(false);
   const lastPresentedIdRef = useRef<string | null>(null);
   const [snapIndex, setSnapIndex] = useState(0);
+  const { compact, space } = useAppearanceLayout();
   const snapPoints = useMemo(() => {
     const entries = Object.keys(selectedStation?.properties.fuels ?? {}).length;
     const rows = Math.ceil(entries / 2);
     const extraRows = Math.max(0, rows - 2);
-    const firstSnap = Math.min(50 + extraRows * 7, 85);
+    const firstSnap = Math.min((compact ? 44 : 50) + extraRows * (compact ? 6 : 7), 85);
     return [`${firstSnap}%`, '100%'];
-  }, [selectedStation]);
+  }, [selectedStation, compact]);
 
   const { colors } = useThemeTokens();
   const { t } = useTranslation();
@@ -390,7 +393,7 @@ export function StationDetailSheet() {
         </BottomSheetScrollView>
         {selectedStation && snapIndex >= 1 && (
           <View
-            style={{ borderColor: colors.separator, paddingBottom: 16 + insets.bottom }}
+            style={{ borderColor: colors.separator, paddingBottom: space.lg + insets.bottom }}
             className="px-lg pt-sm"
           >
             <GlassBox component="card" className="rounded-md overflow-hidden">

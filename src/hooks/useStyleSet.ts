@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { STYLE_SETS } from '../theme/styles';
+import { DEFAULT_STYLE_SET, STYLE_SETS, normalizeStyleSet } from '../theme/styles';
 import type { StyleSetId, StyleRules } from '../theme/styles';
 
 const STORAGE_KEY = 'siphon:styleset';
 
-function isStyleSetId(value: string | null): value is StyleSetId {
-  return value != null && Object.prototype.hasOwnProperty.call(STYLE_SETS, value);
-}
-
 export function useStyleSet() {
-  const [styleSetId, setStyleSetIdState] = useState<StyleSetId>('default');
+  const [styleSetId, setStyleSetIdState] = useState<StyleSetId>(DEFAULT_STYLE_SET);
   const [loaded, setLoaded] = useState(false);
   const selectionVersionRef = useRef(0);
 
@@ -21,7 +17,9 @@ export function useStyleSet() {
 
     void AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
-        if (!cancelled && selectionVersionRef.current === hydrationVersion && isStyleSetId(value)) setStyleSetIdState(value);
+        if (!cancelled && selectionVersionRef.current === hydrationVersion) {
+          setStyleSetIdState(normalizeStyleSet(value));
+        }
       })
       .catch(() => undefined)
       .finally(() => {
@@ -40,7 +38,7 @@ export function useStyleSet() {
   }, []);
 
   const rules: StyleRules = useMemo(
-    () => STYLE_SETS[styleSetId] ?? STYLE_SETS.default,
+    () => STYLE_SETS[styleSetId] ?? STYLE_SETS[DEFAULT_STYLE_SET],
     [styleSetId],
   );
 

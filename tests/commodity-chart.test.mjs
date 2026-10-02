@@ -9,6 +9,7 @@ async function renderChart(dataA, dataB) {
     react: hooks.react, 'react-native': { Text:'Text', View:'View' },
     'react-native-svg': { Line:'Line', Path:'Path', Svg:'Svg', Text:'SvgText' },
     'react-i18next': { useTranslation: () => ({ t: key => key }) },
+    '../hooks/useAppearanceLayout': { useAppearanceLayout: () => ({ space: { xs:4, sm:8, md:12, lg:16, xl:20, xxl:24, xxxl:32 }, numericStyle: {}, modern:false, compact:false }) },
     '../hooks/useThemeTokens': { useThemeTokens: () => ({ colors: {} }) },
   });
   const render = () => hooks.render(() => CommodityChart({ dataA, dataB, labelA:'Crude', labelB:'Retail' }));

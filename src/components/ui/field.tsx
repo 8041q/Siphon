@@ -27,7 +27,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
       <Text style={{ color: colors.secondaryLabel }} className="text-footnote uppercase tracking-wide mb-sm">
         {label}
       </Text>
-      <View style={[{ isolation: 'isolate' }, glass && applyComponentRules(rules, colors.label)]}>
+      <View style={[{ isolation: 'isolate' }, glass && applyComponentRules(rules, colors.separator)]}>
         {glass && <GlassBackdrop color={colors.fieldBackground} borderRadius={rules.borderRadius} />}
         <TextInput
           accessibilityLabel={label}
@@ -38,8 +38,8 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           style={[
-            { backgroundColor: glass ? 'transparent' : colors.fieldBackground, borderColor: colors.fieldBorder, color: colors.label },
-            glass ? undefined : applyComponentRules(rules, colors.label) as TextStyle,
+            { minHeight: 44, backgroundColor: glass ? 'transparent' : colors.fieldBackground, borderColor: colors.fieldBorder, color: colors.label },
+            glass ? undefined : applyComponentRules(rules, colors.separator) as TextStyle,
           ]}
           className="rounded-md px-3 py-2 text-body"
         />

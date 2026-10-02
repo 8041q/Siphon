@@ -43,8 +43,9 @@ function TabItem({ icon: iconName, label, isFocused, onPress, colors }: TabItemP
     >
       <View className="flex-1 items-center justify-center">
         <Icon
-          name={iconName}
+          name={iconName === 'star.fill' && !isFocused ? 'star' : iconName}
           size={24}
+          filled={Boolean(isFocused)}
           color={isFocused ? colors.tint : colors.tertiaryLabel}
         />
       </View>
@@ -64,7 +65,7 @@ export default function TabLayout() {
   const { locationHydrated } = useLocationState();
   const showingSplash = !locationHydrated;
 
-  const shapeStyle = applyComponentRules(rules, colors.label);
+  const shapeStyle = applyComponentRules(rules, colors.separator);
   // The backdrop owns rounded clipping; the floating bar must retain its
   // shadow and foreground on both platforms throughout style changes.
   shapeStyle.overflow = 'visible';

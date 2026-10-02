@@ -10,8 +10,9 @@ import { Icon } from '../theme/Icon';
 import { cleanAddress, getLocationParts, getMapsUrl } from '../utils/location';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useAppearanceSupport } from '../hooks/useSupport';
-import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
+import { useStyleConfig, applyComponentRules, isGlass, componentSurface } from '../hooks/useStyleConfig';
 import { GlassBackdrop } from './ui/glass';
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 
 interface StationCardProps {
   station: FuelStationFeature;
@@ -22,6 +23,7 @@ interface StationCardProps {
   distanceKm?: number;
   distanceLoading?: boolean;
   distanceRouted?: boolean;
+  featuredFuel?: FuelKey | null;
 }
 
 const StationCardComponent: FC<StationCardProps> = ({
@@ -33,6 +35,7 @@ const StationCardComponent: FC<StationCardProps> = ({
   distanceKm,
   distanceLoading = false,
   distanceRouted = false,
+  featuredFuel,
 }) => {
   const { t } = useTranslation();
   const { getMappingKey } = useMappingHelper();
@@ -43,6 +46,11 @@ const StationCardComponent: FC<StationCardProps> = ({
   const { styleRules } = useAppearanceSupport();
   const rules = useStyleConfig(styleRules, 'stationCard');
   const glass = isGlass(rules);
+  const { modern, space } = useAppearanceLayout();
+  const priceEntries = useMemo(() => {
+    if (!modern || !featuredFuel) return entries;
+    return [...entries.filter(([fuel]) => fuel === featuredFuel), ...entries.filter(([fuel]) => fuel !== featuredFuel)];
+  }, [entries, featuredFuel, modern]);
   const displayName = brand || name || t('common.unknown_station');
 
   const handleToggleFavorite = useCallback(
@@ -83,8 +91,8 @@ const StationCardComponent: FC<StationCardProps> = ({
       activeOpacity={0.7}
       onPress={() => onPress?.(station)}
       style={[
-        { backgroundColor: glass ? 'transparent' : colors.groupedBackground },
-        applyComponentRules(rules, colors.label),
+        { backgroundColor: glass ? 'transparent' : componentSurface(rules, colors, 'groupedBackground') },
+        applyComponentRules(rules, colors.separator),
       ]}
       className="p-md rounded-md"
       accessibilityRole="button"
@@ -197,16 +205,16 @@ const StationCardComponent: FC<StationCardProps> = ({
         </View>
       </View>
 
-      {entries.length > 0 && (
-        <View className="flex-row flex-wrap gap-sm mt-sm">
-          {entries.map(([fuel, price], index) => (
-            <PriceBadge
-              key={getMappingKey(fuel, index)}
-              fuel={fuel}
-              price={price}
-              source={station.properties.source}
-            />
-          ))}
+      {priceEntries.length > 0 && (
+        <View style={{ gap: space.sm, marginTop: space.sm }}>
+          {modern ? <>
+            <PriceBadge fuel={priceEntries[0][0]} price={priceEntries[0][1]} source={station.properties.source} prominent />
+            {priceEntries.length > 1 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, borderTopWidth: 1, borderTopColor: colors.separator, paddingTop: space.sm }}>
+              {priceEntries.slice(1).map(([fuel, price], index) => <PriceBadge key={getMappingKey(fuel, index)} fuel={fuel} price={price} source={station.properties.source} />)}
+            </View>}
+          </> : <View className="flex-row flex-wrap gap-sm">
+            {priceEntries.map(([fuel, price], index) => <PriceBadge key={getMappingKey(fuel, index)} fuel={fuel} price={price} source={station.properties.source} />)}
+          </View>}
         </View>
       )}
     </TouchableOpacity>

@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -10,6 +11,7 @@ import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
 import { SheetBackground } from './ui/SheetBackground';
 import { SheetBackdrop } from './ui/SheetBackdrop';
+import { Button } from './ui/button';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -37,10 +39,10 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
     const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
-    const snapPoints = useMemo(() => ['30%'], []);
-    const pendingTheme = useRef<ThemePref | null>(null);
+    const snapPoints = useMemo(() => ['35%'], []);
 
     const { colors } = useThemeTokens();
+    const { space } = useAppearanceLayout();
     const insets = useSafeAreaInsets();
 
     useImperativeHandle(ref, () => ({
@@ -49,22 +51,18 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
 
     const handleSelect = useCallback((pref: ThemePref) => {
       void Haptics.selectionAsync().catch(() => undefined);
-      pendingTheme.current = pref;
-      bottomSheetRef.current?.dismiss();
-    }, []);
+      onSelectTheme(pref);
+    }, [onSelectTheme]);
 
     const handleDismiss = useCallback(() => {
       handleSheetDismiss();
-      if (pendingTheme.current) {
-        onSelectTheme(pendingTheme.current);
-        pendingTheme.current = null;
-      }
       onDismiss();
-    }, [handleSheetDismiss, onSelectTheme, onDismiss]);
+    }, [handleSheetDismiss, onDismiss]);
 
     return (
       <BottomSheetModal
         ref={bottomSheetRef}
+        accessible={false}
         snapPoints={snapPoints}
         enablePanDownToClose
         enableContentPanningGesture={false}
@@ -79,7 +77,7 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
           {THEMES.map((theme) => {
             const selected = currentTheme === theme.value;
             return (
@@ -88,6 +86,8 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
                 activeOpacity={0.7}
                 onPress={() => handleSelect(theme.value)}
                 className="flex-row items-center justify-between py-md px-sm"
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
               >
                 <Text style={{ color: colors.label }} className="text-body">
                   {t(theme.labelKey)}
@@ -98,6 +98,7 @@ export const ThemeSheet = forwardRef<ThemeSheetHandle, ThemeSheetProps>(
               </TouchableOpacity>
             );
           })}
+          <Button className="mt-md" onPress={() => bottomSheetRef.current?.dismiss()}>{t('common.done')}</Button>
         </BottomSheetScrollView>
       </BottomSheetModal>
     );

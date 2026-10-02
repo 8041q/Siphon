@@ -13,6 +13,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { fuelUnit } from '../utils/fuelNames';
 import type { PricePoint } from '../utils/priceIntelligence';
@@ -121,6 +122,7 @@ function monotoneCurvePath(points: readonly ChartPoint[]): string {
 export function PriceChart({ data, fuelLabel: label, fuelKey, source, forecast }: Props) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { numericStyle, compact } = useAppearanceLayout();
   const [range, setRange] = useState<RangeDays>(30);
   const [width, setWidth] = useState(0);
   const unit = fuelUnit(fuelKey ?? '', source);
@@ -171,7 +173,7 @@ export function PriceChart({ data, fuelLabel: label, fuelKey, source, forecast }
   const yMin = Math.max(0, rawMin - span * 0.22);
   const yMax = rawMax + span * 0.22;
 
-  const chartHeight = 218;
+  const chartHeight = compact ? 190 : 218;
   const left = 46;
   const right = 14;
   const top = 16;
@@ -211,7 +213,7 @@ export function PriceChart({ data, fuelLabel: label, fuelKey, source, forecast }
           <Text style={{ color: colors.tertiaryLabel }} className="text-caption-1">
             {t('price_chart.current_label')}
           </Text>
-          <Text style={{ color: colors.label }} className="text-callout font-semibold">
+          <Text style={[numericStyle, { color: colors.label }]} className="text-callout font-semibold">
             {latest.price.toFixed(3)}{unit}
           </Text>
         </View>

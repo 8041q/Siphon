@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -40,6 +41,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
     const snapPoints = useMemo(() => ['40%'], []);
 
     const { colors } = useThemeTokens();
+    const { space } = useAppearanceLayout();
     const insets = useSafeAreaInsets();
 
     useImperativeHandle(ref, () => ({
@@ -74,7 +76,7 @@ export const LanguageSheet = forwardRef<LanguageSheetHandle, LanguageSheetProps>
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
           {LANGUAGES.map((lang) => {
             const selected = currentLang === lang.code;
             return (

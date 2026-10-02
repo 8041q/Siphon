@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import {
   forwardRef,
   useCallback,
@@ -35,6 +36,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
     const snapPoints = useMemo(() => ['52%'], []);
 
     const { colors } = useThemeTokens();
+    const { space } = useAppearanceLayout();
     const insets = useSafeAreaInsets();
     const {
       purchasing,
@@ -107,7 +109,7 @@ export const DonationSheet = forwardRef<DonationSheetHandle, object>(
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-sm">
             {t('settings.donate_title')}
           </Text>

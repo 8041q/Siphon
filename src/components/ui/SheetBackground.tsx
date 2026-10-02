@@ -32,9 +32,7 @@ export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
     },
-    glass
-      ? { backgroundColor: 'transparent', overflow: 'hidden', isolation: 'isolate' }
-      : { backgroundColor: colors.sheet },
+    { backgroundColor: glass ? 'transparent' : colors.sheet, overflow: 'hidden', isolation: 'isolate' },
   ];
 
   return (
@@ -44,7 +42,7 @@ export function SheetBackground({ pointerEvents }: SheetBackgroundProps) {
       importantForAccessibility="no"
       style={base}
     >
-      {glass && <GlassBackdrop color={colors.sheet} blurTarget={appBlurTarget} />}
+      <GlassBackdrop enabled={glass} color={colors.sheet} blurTarget={appBlurTarget} />
     </View>
   );
 }

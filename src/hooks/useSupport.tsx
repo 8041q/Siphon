@@ -7,6 +7,16 @@ import type { RewardItem } from './useAdRewards';
 import { usePalette } from './usePalette';
 import { useIconSet } from './useIconSet';
 import { useStyleSet } from './useStyleSet';
+import { useDensity } from './useDensity';
+import { vars } from 'nativewind';
+import { appearancePalette } from '../theme/appearance';
+import { densityVariables, type DensityId } from '../theme/density';
+import { paletteToVariables } from '../theme/variables';
+import { DEFAULT_ICON_SET } from '../theme/icons';
+import { DEFAULT_STYLE_SET } from '../theme/styles';
+import { useCustomIconPack } from './useCustomIconPack';
+import { createCustomIconRenderer } from '../theme/icons/sets/custom-svg';
+import type { CustomIconPack } from '../theme/customSvg';
 import type { IconSetId, IconSetDef } from '../theme/icons';
 import { useRewardedAd } from './useRewardedAd';
 import { useUserLocationMarker, type UserLocationMarkerConfig } from './useUserLocationMarker';
@@ -28,9 +38,13 @@ export interface AppearanceSupportValue {
   iconSetId: IconSetId;
   setIconSetId: (id: IconSetId) => void;
   iconSet: IconSetDef;
+  customIconPack: CustomIconPack | null;
+  setCustomIconPack: (pack: CustomIconPack) => Promise<void>;
   styleSetId: StyleSetId;
   setStyleSetId: (id: StyleSetId) => void;
   styleRules: StyleRules;
+  densityId: DensityId;
+  setDensityId: (id: DensityId) => void;
   marker: UserLocationMarkerConfig;
   setMarker: (config: UserLocationMarkerConfig) => void;
   markerLoaded: boolean;
@@ -60,7 +74,14 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   const rewards = useAdRewards();
   const paletteState = usePalette();
   const iconSetState = useIconSet();
+  const customIcons = useCustomIconPack();
+  const iconSet = useMemo(() => iconSetState.iconSetId === 'custom-svg' && customIcons.customIconPack
+    ? { ...iconSetState.iconSet, render: createCustomIconRenderer(customIcons.customIconPack.icons) }
+    : iconSetState.iconSet, [iconSetState.iconSet, iconSetState.iconSetId, customIcons.customIconPack]);
   const styleSetState = useStyleSet();
+  const densityState = useDensity();
+  const palette = useMemo(() => appearancePalette(paletteState.palette, styleSetState.styleSetId), [paletteState.palette, styleSetState.styleSetId]);
+  const appearanceVariables = useMemo(() => vars({ ...paletteToVariables(palette), ...densityVariables(densityState.densityId) }), [palette, densityState.densityId]);
   const rewarded = useRewardedAd();
   const consent = useAdConsent();
   const locationMarker = useUserLocationMarker();
@@ -82,8 +103,8 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!MONETIZATION_ENABLED || !rewardsLoaded) return;
     if (!isUnlocked(paletteState.paletteId)) paletteState.setPaletteId('default');
-    if (!isUnlocked(iconSetState.iconSetId)) iconSetState.setIconSetId('ionicons');
-    if (!isUnlocked(styleSetState.styleSetId)) styleSetState.setStyleSetId('default');
+    if (!isUnlocked(iconSetState.iconSetId)) iconSetState.setIconSetId(DEFAULT_ICON_SET);
+    if (!isUnlocked(styleSetState.styleSetId)) styleSetState.setStyleSetId(DEFAULT_STYLE_SET);
   }, [
     rewardsLoaded,
     isUnlocked,
@@ -132,32 +153,40 @@ export function SupportProvider({ children }: { children: React.ReactNode }) {
   // does not invalidate every themed surface in the app.
   const appearanceValue = useMemo<AppearanceSupportValue>(
     () => ({
-      palette: paletteState.palette,
+      palette,
       paletteId: paletteState.paletteId,
       setPaletteId: paletteState.setPaletteId,
-      paletteVariables: paletteState.variables,
+      paletteVariables: appearanceVariables,
       iconSetId: iconSetState.iconSetId,
       setIconSetId: iconSetState.setIconSetId,
-      iconSet: iconSetState.iconSet,
+      iconSet,
+      customIconPack: customIcons.customIconPack,
+      setCustomIconPack: customIcons.setCustomIconPack,
       styleSetId: styleSetState.styleSetId,
       setStyleSetId: styleSetState.setStyleSetId,
       styleRules: styleSetState.rules,
+      densityId: densityState.densityId,
+      setDensityId: densityState.setDensityId,
       marker: locationMarker.marker,
       setMarker: locationMarker.setMarker,
       markerLoaded: locationMarker.loaded,
       availableMarkers: locationMarker.availableMarkers,
     }),
     [
-      paletteState.palette,
+      palette,
       paletteState.paletteId,
       paletteState.setPaletteId,
-      paletteState.variables,
+      appearanceVariables,
       iconSetState.iconSetId,
       iconSetState.setIconSetId,
-      iconSetState.iconSet,
+      iconSet,
+      customIcons.customIconPack,
+      customIcons.setCustomIconPack,
       styleSetState.styleSetId,
       styleSetState.setStyleSetId,
       styleSetState.rules,
+      densityState.densityId,
+      densityState.setDensityId,
       locationMarker.marker,
       locationMarker.setMarker,
       locationMarker.loaded,

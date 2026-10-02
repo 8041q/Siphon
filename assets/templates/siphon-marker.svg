@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Center artwork on a square canvas. Keep generous padding for the 50 px marker.
+       currentColor follows the palette. Basic vector shapes only, no external resources. -->
+  <circle cx="24" cy="24" r="20" fill="#ffffff" stroke="currentColor" stroke-width="3"/>
+  <path d="m24 10 11 27-11-6-11 6Z" fill="currentColor"/>
+</svg>

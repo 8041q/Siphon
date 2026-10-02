@@ -8,11 +8,12 @@ async function mountMap(options = {}) {
   const hooks = hookHarness(), timers = fakeTimers();
   let stackBuilds = 0;
   const { StationMap } = await loadSource('src/components/stationMap/StationMap.tsx', {
-    react: hooks.react, 'react-native': { Image: 'Image', Text: 'Text', View: 'View' },
+    react: hooks.react, 'react-native-svg': { SvgXml:'SvgXml' },
+    'react-native': { Image: 'Image', Text: 'Text', View: 'View' },
     '@maplibre/maplibre-react-native': { Map: 'Map', Camera: 'Camera', Marker: 'Marker', GeoJSONSource: 'Source', Layer: 'Layer' },
     'expo-haptics': {}, '../../hooks/useThemeTokens': { useThemeTokens: () => ({ colors: {} }) },
     '../../hooks/useReducedMotion': { useReducedMotion: () => false },
-    '../../hooks/useSupport': { useAppearanceSupport: () => ({ marker: { type: 'svg', value: 'default' } }) },
+    '../../hooks/useSupport': { useAppearanceSupport: () => ({ marker: options.customMarker ?? { type: 'svg', value: 'default' } }) },
     '../userLocationMarkers': { svgMarkers: {} }, './brandIcons': { getStationMarkerImage: () => 1 },
     './markerLayout': { ...layout, getProjectedMarkerStackOrders: (...args) => { stackBuilds++; return layout.getProjectedMarkerStackOrders(...args); } },
     '../../utils/perf': { measureSync: (_name, work) => work() },
@@ -100,5 +101,13 @@ test('a newer camera target supersedes the previous request and a gesture cancel
   f.find('Map').props.onRegionIsChanging({nativeEvent:{zoom:15.2,bearing:0,userInteraction:true}});
   f.find('Map').props.onRegionDidChange({nativeEvent:{center:[-9.14,38.72],bounds:[[-9.16,38.71],[-9.14,38.73]],zoom:15.2,bearing:0,userInteraction:false}});
   assert.equal(ended.length,2);assert.equal(ended[1][0],2);assert.equal(ended[1][1],null);
+  f.hooks.unmount();
+});
+
+
+test('custom SVG location markers render at map size with the palette color', async () => {
+  const xml='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>';
+  const f=await mountMap({customMarker:{type:'custom-svg',value:xml},userLocation:{latitude:38.72,longitude:-9.15}});
+  const marker=f.find('SvgXml');assert.ok(marker);assert.equal(marker.props.xml,xml);assert.equal(marker.props.width,50);assert.equal(marker.props.height,50);
   f.hooks.unmount();
 });

@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 
 import { useThemeTokens } from '../../hooks/useThemeTokens';
 import { useAppearanceSupport } from '../../hooks/useSupport';
-import { useStyleConfig, applyComponentRules, isGlass } from '../../hooks/useStyleConfig';
+import { useStyleConfig, applyComponentRules, isGlass, componentSurface } from '../../hooks/useStyleConfig';
 import type { StyleRules } from '../../theme/styles';
 import { GlassBackdrop } from './glass';
 
@@ -26,8 +26,8 @@ export function GlassBox({ component, children, color, className = '', style }: 
   return (
     <View
       style={[
-        { backgroundColor: glass ? 'transparent' : color ?? colors.surface },
-        applyComponentRules(rules, colors.label),
+        { backgroundColor: glass ? 'transparent' : color ?? componentSurface(rules, colors, 'surface') },
+        applyComponentRules(rules, colors.separator),
         style,
         glass && Platform.OS === 'android' && { overflow: 'visible' },
       ]}

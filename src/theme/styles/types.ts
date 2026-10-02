@@ -1,11 +1,13 @@
 import type { ViewStyle } from 'react-native';
 
-export type StyleSetId = 'default' | 'liquid-glass' | 'dotted' | 'retro';
+export type StyleSetId = 'default' | 'quiet' | 'frosted';
 
 export type ComponentRules = {
   borderRadius?: number;
   borderStyle?: ViewStyle['borderStyle'];
   borderWidth?: number;
+  borderTopWidth?: number;
+  surface?: 'background' | 'groupedBackground' | 'surface' | 'transparent';
   opacity?: number;
   /** When true, the surface renders a glassmorphism backdrop (blur + translucent tint)
    *  instead of a flat opacity fade. */

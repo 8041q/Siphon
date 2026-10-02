@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { fuelLabel } from '../utils/fuelNames';
 import { FilterButton } from './ui/FilterButton';
@@ -47,9 +48,10 @@ export function MarketFilters({ country, fuel, onCountryChange, onFuelChange }: 
   onFuelChange: (fuel: MarketFuel) => void;
 }) {
   const { t } = useTranslation();
+  const { space } = useAppearanceLayout();
 
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.md }}>
       <FilterGroup<MarketCountry>
         label={t('search.country')}
         options={[

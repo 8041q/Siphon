@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ICON_SETS } from '../theme/icons';
+import { DEFAULT_ICON_SET, ICON_SETS } from '../theme/icons';
 import type { IconSetId, IconSetDef } from '../theme/icons';
 
 const STORAGE_KEY = 'siphon:iconset';
@@ -11,7 +11,7 @@ function isIconSetId(value: string | null): value is IconSetId {
 }
 
 export function useIconSet() {
-  const [iconSetId, setIconSetIdState] = useState<IconSetId>('ionicons');
+  const [iconSetId, setIconSetIdState] = useState<IconSetId>(DEFAULT_ICON_SET);
   const [loaded, setLoaded] = useState(false);
   const selectionVersionRef = useRef(0);
 
@@ -40,7 +40,7 @@ export function useIconSet() {
   }, []);
 
   const iconSet: IconSetDef = useMemo(
-    () => ICON_SETS[iconSetId] ?? ICON_SETS.ionicons,
+    () => ICON_SETS[iconSetId] ?? ICON_SETS[DEFAULT_ICON_SET],
     [iconSetId],
   );
 

@@ -1,4 +1,5 @@
 import { Platform, type ViewStyle } from 'react-native';
+import type { ThemeColors } from '../theme/types';
 import type { ComponentRules, StyleRules } from '../theme/styles';
 
 export function useStyleConfig(rules: StyleRules, component: keyof StyleRules): ComponentRules {
@@ -26,13 +27,21 @@ export function applyComponentRules(rules: ComponentRules, borderColor?: string)
     style.borderStyle = rules.borderStyle;
     if (borderColor) style.borderColor = borderColor;
   }
-  if (rules.borderWidth !== undefined) style.borderWidth = rules.borderWidth;
+  if (rules.borderTopWidth !== undefined) { style.borderTopWidth = rules.borderTopWidth; if (borderColor) style.borderTopColor = borderColor; }
+  if (rules.borderWidth !== undefined) {
+    style.borderWidth = rules.borderWidth;
+    if (borderColor) style.borderColor = borderColor;
+  }
   if (rules.opacity !== undefined && !rules.glass) style.opacity = rules.opacity;
   // Android can clip away children when a rounded view changes its border or
-  // background (for example, when switching from Retro to Liquid Glass).
+  // background during an appearance switch.
   // Clip the backdrop itself there, keeping text and controls outside that mask.
   if (rules.glass) {
     style.overflow = Platform.OS === 'android' ? 'visible' : 'hidden';
   }
   return style;
+}
+
+export function componentSurface(rules: ComponentRules, colors: ThemeColors, fallback: keyof ThemeColors): string {
+  return rules.surface === 'transparent' ? 'transparent' : colors[rules.surface ?? fallback];
 }

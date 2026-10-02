@@ -3,6 +3,7 @@ import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { Line, Path, Svg, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 
 import type { CommodityDataPoint } from '../api/siphonClient';
@@ -37,6 +38,7 @@ interface CommodityChartProps {
 export function CommodityChart({ dataA: rawA, dataB: rawB, labelA, labelB, pendingLabel }: CommodityChartProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const [width, setWidth] = useState(0);
   const { dataA, dataB, dates } = useMemo(() => {
     const clean = (points: CommodityDataPoint[]) => points
@@ -66,7 +68,7 @@ export function CommodityChart({ dataA: rawA, dataB: rawB, labelA, labelB, pendi
 
   if (!hasA && !hasB) {
     return (
-      <View style={{ alignItems: 'center', padding: 24 }}>
+      <View style={{ alignItems: 'center', padding: space.xxl }}>
         <Text style={{ color: colors.chartLabel }}>{t('market.no_data')}</Text>
       </View>
     );
@@ -91,12 +93,12 @@ export function CommodityChart({ dataA: rawA, dataB: rawB, labelA, labelB, pendi
   return (
     <View>
       {/* Legend */}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: space.lg, marginBottom: space.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
           <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: colors.chartLine }} />
           <Text style={{ fontSize: 11, color: hasA ? colors.chartLabel : colors.chartGrid }}>{labelA}</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
           <View style={{ flexDirection: 'row', gap: 3 }}>
             {[0, 1].map(index => <View key={index} style={{ width: 6, height: 2, backgroundColor: colors.tint }} />)}
           </View>

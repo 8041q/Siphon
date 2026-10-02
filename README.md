@@ -8,7 +8,7 @@ Siphon is a fuel-station app for Portugal and Spain, built with React Native, Ex
 - Favorites, vehicle preferences, station details, and directions.
 - Up to 90 days of locally cached price history, plus a fuel-market dashboard.
 - Foreground location on request, with OSRM road distances and local estimates when routing is unavailable.
-- Light/dark themes, color palettes, icon styles, and custom location-marker images.
+- Light/dark themes, color palettes, Round/Minimal/Glass styles, Comfortable/Compact density, icon families including Lucide, and imported custom SVG icon packs, SVG location markers, or marker images. New installs default to Minimal, Compact, and Lucide. See [custom SVG artwork](docs/CUSTOM-SVG.md) for templates and import requirements.
 - English, Portuguese, Spanish, French, and German.
 
 The current release has ads disabled. Appearance options are available without watching ads. Monetization remains disabled until permission for commercial use of DGEG data is obtained. Ads usage is 100% optional.

@@ -12,6 +12,8 @@ import { useAppearanceSupport, useSupport } from '../../src/hooks/useSupport';
 import { useAppUpdate } from '../../src/hooks/useAppUpdate';
 import { useVehicles } from '../../src/hooks/useVehicles';
 import { useEvConfig } from '../../src/hooks/useEvConfig';
+import { GlassBox } from '../../src/components/ui/GlassBox';
+import { useAppearanceLayout } from '../../src/hooks/useAppearanceLayout';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { useStyleConfig, applyComponentRules } from '../../src/hooks/useStyleConfig';
 import { tabBarClearance } from '../../src/theme/layout';
@@ -95,12 +97,13 @@ export default function SettingsScreen() {
   const languageChangeVersionRef = useRef(0);
 
   const { watchedCount, privacyOptionsRequired, showPrivacyOptions, privacyRefreshing } = useSupport();
-  const { paletteId, iconSet, styleSetId, styleRules, marker: currentMarker } = useAppearanceSupport();
+  const { paletteId, iconSet, styleSetId, styleRules, densityId, marker: currentMarker } = useAppearanceSupport();
   const { vehicles, addVehicle, updateVehicle, removeVehicle } = useVehicles();
   const { config: evConfig, setEvConfig } = useEvConfig();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const cardRules = useStyleConfig(styleRules, 'card');
-  const cardStyle = applyComponentRules(cardRules, colors.label);
+  const cardStyle = applyComponentRules(cardRules, colors.separator);
 
   const persistLanguage = useCallback(async (lng: string) => {
     if (!isSupportedLanguage(lng)) return;
@@ -267,10 +270,10 @@ export default function SettingsScreen() {
       <ScrollView
         className="flex-1"
         contentContainerClassName="gap-lg"
-        contentContainerStyle={{ paddingBottom: tabBarClearance(insets.bottom) + 16 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance(insets.bottom) + space.lg }}
       >
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.appearance')}
           </Text>
@@ -289,27 +292,31 @@ export default function SettingsScreen() {
           <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.styleset_${styleSetId}`)}>
             {t('settings.style_set')}
           </ListItem>
-        </View>
+          <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
+          <ListItem onPress={() => rewardsSheetRef.current?.present()} trailing={t(`settings.density_${densityId ?? 'compact'}`)}>
+            {t('settings.density')}
+          </ListItem>
+        </GlassBox>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.language')}
           </Text>
           <ListItem onPress={() => languageSheetRef.current?.present()} trailing={langLabel}>
             {t('settings.language')}
           </ListItem>
-        </View>
+        </GlassBox>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.location_marker')}
           </Text>
           <ListItem onPress={() => locationMarkerSheetRef.current?.present()} trailing={markerLabel}>
             {t('settings.marker_style')}
           </ListItem>
-        </View>
+        </GlassBox>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.my_vehicles')}
           </Text>
@@ -351,9 +358,9 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.vehicles_caption')}
           </Text>
-        </View>
+        </GlassBox>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.price_history')}
           </Text>
@@ -372,9 +379,9 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.save_history_caption')}
           </Text>
-        </View>
+        </GlassBox>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.data_storage')}
           </Text>
@@ -384,9 +391,9 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.route_cache_caption')}
           </Text>
-        </View>
+        </GlassBox>
 
-        {MONETIZATION_ENABLED && <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        {MONETIZATION_ENABLED && <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.privacy_ads')}
           </Text>
@@ -405,9 +412,9 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.ads_opt_in_caption')}
           </Text>
-        </View>}
+        </GlassBox>}
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.ev_compare_title')}
           </Text>
@@ -417,9 +424,9 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-md pt-xs">
             {t('settings.ev_tco_caption')}
           </Text>
-        </View>
+        </GlassBox>
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.updates')}
           </Text>
@@ -480,9 +487,9 @@ export default function SettingsScreen() {
               </View>
             </>
           )}
-        </View>
+        </GlassBox>
 
-        {MONETIZATION_ENABLED && <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        {MONETIZATION_ENABLED && <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.support')}
           </Text>
@@ -496,9 +503,9 @@ export default function SettingsScreen() {
           <ListItem onPress={() => donationSheetRef.current?.present()}>
             {t('settings.support_donate')}
           </ListItem>
-        </View>}
+        </GlassBox>}
 
-        <View style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
+        <GlassBox component="card" style={[{ backgroundColor: colors.surface }, cardStyle]} className="mx-lg rounded-md overflow-hidden">
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote px-lg pb-xs pt-md uppercase tracking-wide">
             {t('settings.about')}
           </Text>
@@ -511,7 +518,7 @@ export default function SettingsScreen() {
           <ListItem onPress={() => { void Linking.openURL(SOURCE_REPOSITORY_URL); }}>{t('settings.source_code')}</ListItem>
           <View style={{ backgroundColor: colors.separator }} className="h-px mx-lg" />
           <ListItem trailing={installedVersion}>{t('settings.version')}</ListItem>
-        </View>
+        </GlassBox>
       </ScrollView>
 
       <LanguageSheet

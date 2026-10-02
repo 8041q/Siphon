@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { Image, Text, View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
 import type { LayoutChangeEvent } from 'react-native';
 import { Map as MapComponent, Camera, Marker, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Haptics from 'expo-haptics';
@@ -472,6 +473,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
                 elevation: 5,
               }}
             >
+              {markerConfig.type === 'custom-svg' && <SvgXml xml={markerConfig.value} width={50} height={50} color={colors.pin} />}
               {markerConfig.type === 'svg' && (() => {
                 const SvgComp = svgMarkers[markerConfig.value];
                 return SvgComp ? <SvgComp size={50} color={colors.pin} /> : null;

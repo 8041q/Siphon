@@ -1,3 +1,4 @@
+import { useAppearanceLayout } from '../hooks/useAppearanceLayout';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -54,6 +55,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
     const { handleSheetChange, handleSheetDismiss } = useBottomSheetBackHandler(bottomSheetRef);
     const snapPoints = useMemo(() => ['80%'], []);
     const { colors } = useThemeTokens();
+    const { space } = useAppearanceLayout();
     const insets = useSafeAreaInsets();
 
     const [editing, setEditing] = useState<Vehicle | null>(null);
@@ -219,7 +221,7 @@ export const VehicleSheet = forwardRef<VehicleSheetHandle, VehicleSheetProps>(
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 16 + insets.bottom }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + insets.bottom }}>
           <Text style={{ color: colors.label }} className="text-title2 font-semibold mb-lg">
             {isEdit ? t('settings.vehicle_edit_title') : t('settings.vehicle_new_title')}
           </Text>

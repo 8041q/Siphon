@@ -61,6 +61,7 @@ async function mountSheet(kind = 'FilterSheet', initial = {}, showSort = true) {
     '@gorhom/bottom-sheet': { BottomSheetModal: 'Modal', BottomSheetScrollView: 'ScrollView', BottomSheetBackdrop: 'Backdrop' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     'react-i18next': { useTranslation: () => ({ t: (key, options) => options?.max ? `${key}:${options.max}` : key }) },
+    '../hooks/useAppearanceLayout': { useAppearanceLayout: () => ({space:{xs:4,sm:8,md:12,lg:16,xl:20,xxl:24,xxxl:32}}) },
     '../hooks/useThemeTokens': { useThemeTokens: () => ({ colors: {} }) },
     '../hooks/useBottomSheetBackHandler': { useBottomSheetBackHandler: () => ({ handleSheetChange: () => {}, handleSheetDismiss: () => {} }) },
     '../theme/layout': {},
@@ -251,5 +252,5 @@ test('every bottom sheet uses the shared non-dismissing backdrop', async () => {
     };
     inspect(ast);
   }
-  assert.equal(sheets, 9, 'cover the complete current sheet inventory');
+  assert.equal(sheets, 11, 'cover the complete current sheet inventory');
 });

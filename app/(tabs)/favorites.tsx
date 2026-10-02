@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { StationCard } from '../../src/components/StationCard';
 import { useStationCatalog, useStationDistances, useStationSync, useUI } from '../../src/hooks/useApp';
 import { Icon } from '../../src/components/ui/icon';
+import { useAppearanceLayout } from '../../src/hooks/useAppearanceLayout';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { tabBarClearance } from '../../src/theme/layout';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
@@ -15,7 +16,7 @@ import { useTransientFeedback } from '../../src/hooks/useTransientFeedback';
 import { ScreenState } from '../../src/components/ui/ScreenState';
 import { GlassBox } from '../../src/components/ui/GlassBox';
 
-const ItemSeparator = () => <View style={{ height: 12 }} />;
+const ItemSeparator = () => { const { space } = useAppearanceLayout(); return <View style={{ height: space.md }} />; };
 
 export default function FavoritesScreen() {
   const { t } = useTranslation();
@@ -25,6 +26,7 @@ export default function FavoritesScreen() {
   const { loading, error, offline, reload } = useStationSync();
   const { favorites, setSelectedStation, requestMapFocus, toggleFavorite } = useUI();
   const { colors } = useThemeTokens();
+  const { space } = useAppearanceLayout();
   const insets = useSafeAreaInsets();
   const { feedback: removed, show: showRemoved, dismiss: dismissRemoved } = useTransientFeedback<FuelStationFeature>(6000);
   const handleToggleFavorite = useCallback((station: FuelStationFeature) => {
@@ -127,8 +129,8 @@ export default function FavoritesScreen() {
           keyExtractor={(item) => item.properties.id}
           style={{ flex: 1, overflow: 'hidden' }}
           contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingBottom: tabBarClearance(insets.bottom) + 16,
+            paddingHorizontal: space.lg,
+            paddingBottom: tabBarClearance(insets.bottom) + space.lg,
           }}
           ItemSeparatorComponent={ItemSeparator}
           renderItem={renderItem}
