@@ -1,10 +1,12 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { Text, View } from 'react-native';
 import { fuelLabel, fuelUnit } from '../utils/fuelNames';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { useSupport } from '../hooks/useSupport';
 import { useStyleConfig, applyComponentRules, isGlass } from '../hooks/useStyleConfig';
 import { GlassBackdrop } from './ui/glass';
+import { usePriceBenchmarks } from '../hooks/useApp';
+import { priceLevel, priceLevelColor } from '../utils/priceColors';
 
 interface PriceBadgeProps {
   fuel: string;
@@ -13,16 +15,13 @@ interface PriceBadgeProps {
 }
 
 function PriceBadgeComponent({ fuel, price, source }: PriceBadgeProps) {
-  const { colors } = useThemeTokens();
+  const { colors, scheme } = useThemeTokens();
   const { styleRules } = useSupport();
   const rules = useStyleConfig(styleRules, 'chip');
   const glass = isGlass(rules);
 
-  const priceColor = useMemo(() => {
-    if (price < 1.65) return colors.priceLow;
-    if (price < 1.87) return colors.priceMid;
-    return colors.priceHigh;
-  }, [price, colors]);
+  const benchmarks = usePriceBenchmarks();
+  const priceColor = priceLevelColor(priceLevel(price, fuel, source, benchmarks), colors, scheme);
 
   return (
     <View

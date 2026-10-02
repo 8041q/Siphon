@@ -8,7 +8,7 @@ const schedule = await loadSource('src/utils/schedule.ts', { '../i18n': { defaul
 const enrichment = await loadSource('src/utils/markerEnrichment.ts', { './schedule': schedule });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-async function mountProvider(catalog = []) {
+async function mountProvider(catalog = [], cachedMarket = null) {
   const hooks = hookHarness(), timers = fakeTimers();
   const root = deferred(), sync = deferred(), history = deferred();
   const events = [];
@@ -24,6 +24,7 @@ async function mountProvider(catalog = []) {
     syncAll: async () => { events.push('sync'); return sync.promise; },
     commitRootManifest: async () => events.push('commit'),
     checkHistoryUpdates: async () => { events.push('history'); return history.promise; },
+    getCachedCommodityDashboard: async () => cachedMarket,
     refreshCommodityDashboard: async () => { events.push('market'); return { lastUpdated: 'today' }; },
   };
   const location = { location: { latitude: 37.5, longitude: -8, approximate: true }, hydrated: true,
@@ -166,4 +167,47 @@ test('the home map mounts after coordinate hydration even while syncing with no 
   sync.loading = false; hooks.render(MapScreen); hooks.flushEffects();
   assert.equal(calls.length, 1, 'refreshes the current viewport after sync completes');
   hooks.unmount(); await tick();
+});
+
+test('station navigation searches the final viewport once, ignores obsolete completions and retains newer focus over late GPS', async () => {
+  const hooks=hookHarness(),timers=fakeTimers();let gps=null;
+  const ui={searchFilter:{},mapFocusRequest:{requestId:10,coordinates:[-9.15,38.72]},clearMapFocusRequest:id=>{if(ui.mapFocusRequest?.requestId===id)ui.mapFocusRequest=null;}};
+  const calls=[];
+  const location={location:{latitude:37.5,longitude:-8,approximate:true},locationHydrated:true,locateWithGps:()=>gps?.promise??Promise.resolve(null)};
+  const {default:MapScreen}=await loadSource('app/(tabs)/index.tsx',{
+    react:hooks.react,'expo-router':{useIsFocused:()=>true},'react-native':{Platform:{OS:'ios'},Text:'Text',TouchableOpacity:'Button',View:'View'},
+    'react-native-safe-area-context':{useSafeAreaInsets:()=>({top:0,bottom:0})},'react-i18next':{useTranslation:()=>({t:key=>key})},
+    '../../src/components/stationMap/StationMap':{StationMap:'Map'},'../../src/components/SyncOverlay':{SyncOverlay:'Splash'},
+    '../../src/components/MapActionButton':{MapActionButton:'Action'},'../../src/components/FilterSheet':{FilterSheet:'Filters'},
+    '../../src/components/ui/icon':{Icon:'Icon'},'../../src/components/ui/glass':{GlassSurface:'Glass'},
+    '../../src/hooks/useThemeTokens':{useThemeTokens:()=>({colors:{}})},
+    '../../src/hooks/useApp':{useStationMapData:()=>({stations:[],filteredStations:[]}),useStationSync:()=>({loading:false}),useLocationState:()=>location,useUI:()=>ui,
+      useActions:()=>({loadStationsForRegion:(...args)=>{calls.push(args);return Promise.resolve([]);},rememberMapRegion:()=>{}})},
+  },{requestAnimationFrame:cb=>timers.setTimeout(cb,0),cancelAnimationFrame:timers.clearTimeout,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+  let tree;
+  const render=()=>{tree=hooks.render(MapScreen);hooks.flushEffects();};
+  const map=()=>hooks.walk(tree).find(node=>node.type==='Map').props;
+  render();timers.advance(1);render();
+  const target={lat:38.72,lng:-9.15,bounds:[-9.16,38.71,-9.14,38.73]};
+  assert.equal(calls.length,0,'no preload before the camera arrives');
+  const id=map().cameraRequest.requestId;map().onCameraRequestConsumed(id);render();
+  map().onRegionChange(target.lat,target.lng,target.bounds);map().onCameraRequestFinished(id,target);map().onCameraRequestFinished(id,target);
+  assert.equal(calls.length,1);assert.equal(calls[0][2],target.bounds);
+  ui.mapFocusRequest={requestId:11,coordinates:[-8.5,39]};render();timers.advance(1);render();
+  const nextId=map().cameraRequest.requestId;map().onCameraRequestFinished(id,target);assert.equal(calls.length,1);
+  map().onCameraRequestFinished(nextId,null);map().onRegionChange(39,-8.5,[-8.6,38.9,-8.4,39.1]);assert.equal(calls.length,1,'gesture cancellation keeps ordinary panning manual');
+  gps=deferred();const locate=hooks.walk(tree).find(node=>node.type==='Action'&&node.props.label==='map.locate_me').props.onPress();
+  ui.mapFocusRequest={requestId:12,coordinates:[-8.4,39.1]};render();timers.advance(1);render();
+  gps.resolve({latitude:37.5,longitude:-8});await locate;render();assert.equal(map().cameraRequest.mode,'station');
+  assert.equal(map().cameraRequest.coordinates[0],-8.4,'late GPS cannot replace a newer station navigation');
+  hooks.unmount();await tick();
+});
+
+
+test('historical price references hydrate from the shared offline cache without a market request', async () => {
+  const benchmark={schemaVersion:1,asOf:'2026-09-28',bands:{}};
+  const fixture=await mountProvider([esStation()],{priceBenchmarks:benchmark});
+  assert.equal(fixture.module.usePriceBenchmarks(),benchmark);
+  assert.equal(fixture.events.includes('market'),false);
+  fixture.hooks.unmount();fixture.root.resolve({offline:true});await fixture.pump();
 });

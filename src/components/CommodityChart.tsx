@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { Line, Path, Svg, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -10,11 +10,11 @@ import type { CommodityDataPoint } from '../api/siphonClient';
 const PADDING = { top: 8, right: 12, bottom: 24, left: 36 };
 const HEIGHT = 200;
 
-function buildPath(pts: CommodityDataPoint[], xScale: (i: number) => number, yLerp: (v: number) => number) {
+function buildPath(pts: CommodityDataPoint[], xScale: (point: CommodityDataPoint) => number, yLerp: (v: number) => number) {
   return pts
     .map((p, i) => {
       const cmd = i === 0 ? 'M' : 'L';
-      return `${cmd} ${xScale(i)},${yLerp(p.value)}`;
+      return `${cmd} ${xScale(p)},${yLerp(p.value)}`;
     })
     .join(' ');
 }
@@ -34,10 +34,27 @@ interface CommodityChartProps {
   pendingLabel?: string;
 }
 
-export function CommodityChart({ dataA, dataB, labelA, labelB, pendingLabel }: CommodityChartProps) {
+export function CommodityChart({ dataA: rawA, dataB: rawB, labelA, labelB, pendingLabel }: CommodityChartProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
   const [width, setWidth] = useState(0);
+  const { dataA, dataB, dates } = useMemo(() => {
+    const clean = (points: CommodityDataPoint[]) => points
+      .filter(point => Number.isFinite(point.value) && Number.isFinite(Date.parse(point.date)))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    let a = clean(rawA), b = clean(rawB);
+    if (a.length < 2) a = [];
+    if (b.length < 2) b = [];
+    if (a.length && b.length) {
+      // Compare the shared history window, retaining newer observations from
+      // either series. Never stretch daily retail points across years of crude.
+      const start = a[0].date > b[0].date ? a[0].date : b[0].date;
+      const recentA = a.filter(point => point.date >= start);
+      const recentB = b.filter(point => point.date >= start);
+      if (recentA.length >= 2 && recentB.length >= 2) { a = recentA; b = recentB; }
+    }
+    return { dataA: a, dataB: b, dates: [...new Set([...a, ...b].map(point => point.date))].sort() };
+  }, [rawA, rawB]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = Math.floor(event.nativeEvent.layout.width);
@@ -61,14 +78,15 @@ export function CommodityChart({ dataA, dataB, labelA, labelB, pendingLabel }: C
   const metricsA = hasA ? scalePoints(dataA) : { min: 0, range: 1 };
   const metricsB = hasB ? scalePoints(dataB) : { min: 0, range: 1 };
 
-  const xScale = (i: number, len: number) =>
-    PADDING.left + (i / Math.max(len - 1, 1)) * chartW;
+  const startTime = Date.parse(dates[0]);
+  const timeRange = Math.max(1, Date.parse(dates[dates.length - 1]) - startTime);
+  const xScale = (date: string) =>
+    PADDING.left + ((Date.parse(date) - startTime) / timeRange) * chartW;
 
   const yLerp = (v: number, min: number, range: number) =>
     PADDING.top + chartH - ((v - min) / range) * chartH;
 
-  const xLabelMain = hasA ? dataA : dataB;
-  const xLabelIndexes = [0, Math.floor((xLabelMain.length - 1) / 2), xLabelMain.length - 1];
+  const xLabelIndexes = [0, Math.floor((dates.length - 1) / 2), dates.length - 1];
 
   return (
     <View>
@@ -79,7 +97,9 @@ export function CommodityChart({ dataA, dataB, labelA, labelB, pendingLabel }: C
           <Text style={{ fontSize: 11, color: hasA ? colors.chartLabel : colors.chartGrid }}>{labelA}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: colors.tint }} />
+          <View style={{ flexDirection: 'row', gap: 3 }}>
+            {[0, 1].map(index => <View key={index} style={{ width: 6, height: 2, backgroundColor: colors.tint }} />)}
+          </View>
           <Text style={{ fontSize: 11, color: hasB ? colors.chartLabel : colors.chartGrid }}>{labelB}</Text>
         </View>
       </View>
@@ -122,7 +142,7 @@ export function CommodityChart({ dataA, dataB, labelA, labelB, pendingLabel }: C
             {/* Crude (series A) */}
             {hasA && (
               <Path
-                d={buildPath(dataA, (i) => xScale(i, dataA.length), (v) => yLerp(v, metricsA.min, metricsA.range))}
+                d={buildPath(dataA, (point) => xScale(point.date), (v) => yLerp(v, metricsA.min, metricsA.range))}
                 fill="none"
                 stroke={colors.chartLine}
                 strokeWidth={2}
@@ -132,26 +152,27 @@ export function CommodityChart({ dataA, dataB, labelA, labelB, pendingLabel }: C
             {/* Retail (series B) */}
             {hasB && (
               <Path
-                d={buildPath(dataB, (i) => xScale(i, dataB.length), (v) => yLerp(v, metricsB.min, metricsB.range))}
+                d={buildPath(dataB, (point) => xScale(point.date), (v) => yLerp(v, metricsB.min, metricsB.range))}
                 fill="none"
                 stroke={colors.tint}
                 strokeWidth={2}
+                strokeDasharray="6 3"
               />
             )}
 
             {/* X-axis date labels */}
             {[...new Set(xLabelIndexes)].map((idx) => {
-              const p = xLabelMain[idx];
+              const date = dates[idx];
               return (
                 <SvgText
-                  key={p.date}
-                  x={xScale(idx, xLabelMain.length)}
+                  key={date}
+                  x={xScale(date)}
                   y={HEIGHT - 6}
                   fill={colors.chartLabel}
                   fontSize={9}
-                  textAnchor={idx === 0 ? 'start' : idx === xLabelMain.length - 1 ? 'end' : 'middle'}
+                  textAnchor={idx === 0 ? 'start' : idx === dates.length - 1 ? 'end' : 'middle'}
                 >
-                  {p.date.slice(5)}
+                  {date.slice(5)}
                 </SvgText>
               );
             })}

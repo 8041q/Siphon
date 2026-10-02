@@ -30,6 +30,7 @@ export function Field({ label, value, onChangeText, placeholder, error, keyboard
       <View style={[{ isolation: 'isolate' }, glass && applyComponentRules(rules, colors.label)]}>
         {glass && <GlassBackdrop color={colors.fieldBackground} borderRadius={rules.borderRadius} />}
         <TextInput
+          accessibilityLabel={label}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

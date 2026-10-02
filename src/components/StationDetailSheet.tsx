@@ -13,7 +13,10 @@ import { formatSchedule, marginLabel } from '../utils/schedule';
 import { serviceLabel, stationTypeLabel } from '../utils/stationLabels';
 import { cleanAddress, getLocationParts, formatStationAddress, getMapsUrl } from '../utils/location';
 import { Icon } from '../theme/Icon';
-import { useUI, useStationDistances } from '../hooks/useApp';
+import { useUI, useStationDistances, usePriceBenchmarks } from '../hooks/useApp';
+import { priceLevel, priceLevelColor } from '../utils/priceColors';
+import { stationAgeDays } from '../utils/stationFreshness';
+import { useTransientFeedback } from '../hooks/useTransientFeedback';
 import { useBottomSheetBackHandler } from '../hooks/useBottomSheetBackHandler';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import { SHEET_HANDLE_STYLE, SHEET_HANDLE_INDICATOR_STYLE } from '../theme/layout';
@@ -24,12 +27,6 @@ import { GlassBox } from './ui/GlassBox';
 
 const REPORT_ISSUE_URL = 'https://github.com/8041q/SiphonAPI/issues/new?template=incorrect-station-info.yml';
 
-function priceColorStyle(price: number, colors: { priceLow: string; priceMid: string; priceHigh: string }): { color: string } {
-  if (price < 1.65) return { color: colors.priceLow };
-  if (price < 1.87) return { color: colors.priceMid };
-  return { color: colors.priceHigh };
-}
-
 function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distanceRouted = false, onClose }: { station: FuelStationFeature; snapIndex: number; distanceKm?: number; distanceLoading?: boolean; distanceRouted?: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { name, brand, address, fuels, hours, schedule, services, paymentMethods, observations, otherServices, lastUpdated, extra, source } = station.properties;
@@ -39,18 +36,32 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
   const { favorites, toggleFavorite } = useUI();
   const favorite = favorites?.has(station.properties.id) ?? false;
   const displayName = brand || name || t('common.unknown_station');
+  const benchmarks = usePriceBenchmarks();
+  const { feedback: copyFeedback, show: showCopyFeedback, dismiss: dismissCopyFeedback } = useTransientFeedback<string>();
+  const copyVersion = useRef(0);
+  useEffect(() => {
+    copyVersion.current += 1;
+    dismissCopyFeedback();
+    return () => { copyVersion.current += 1; };
+  }, [station.properties.id, dismissCopyFeedback]);
+  const age = stationAgeDays(lastUpdated);
 
   const handleCopyAddress = useCallback(() => {
     const formatted = formatStationAddress(station.properties);
-    void Clipboard.setStringAsync(formatted).catch(() => undefined);
-  }, [station.properties]);
+    const run = ++copyVersion.current;
+    void Clipboard.setStringAsync(formatted).then(() => {
+      if (copyVersion.current === run) showCopyFeedback(t('station.address_copied'));
+    }).catch(() => {
+      if (copyVersion.current === run) showCopyFeedback(t('station.copy_failed'));
+    });
+  }, [station.properties, showCopyFeedback, t]);
 
   const handleOpenInMaps = useCallback(() => {
     const url = getMapsUrl(station);
     void Linking.openURL(url).catch(() => undefined);
   }, [station]);
 
-  const { colors } = useThemeTokens();
+  const { colors, scheme } = useThemeTokens();
 
   return (
     <View className="gap-md p-lg">
@@ -91,6 +102,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
               {locationParts.join(', ')}
             </Text>
           )}
+          {copyFeedback && <Text accessibilityLiveRegion="polite" style={{ color: colors.tint }} className="text-footnote mt-xs">{copyFeedback}</Text>}
           {distanceKm !== undefined && (
             <View className="flex-row items-center gap-1 mt-0.5">
               <Text style={{ color: colors.tertiaryLabel }} className="text-subheadline">
@@ -140,7 +152,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
               <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                 {fuelLabel(fuel)}
               </Text>
-              <Text style={priceColorStyle(price, colors)} className="text-title-3 font-bold mt-0.5">
+              <Text style={{ color: priceLevelColor(priceLevel(price, fuel, source, benchmarks), colors, scheme) }} className="text-title-3 font-bold mt-0.5">
                 {price.toFixed(3)}{fuelUnit(fuel, source)}
               </Text>
             </GlassBox>
@@ -237,7 +249,7 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
               </View>
             )}
 
-            {(observations || otherServices || extra?.stationType || extra?.margin || lastUpdated) && (
+            {(observations || otherServices || extra?.stationType || extra?.margin) && (
               <View>
                 <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">
                   {t('common.station')}
@@ -246,7 +258,6 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
                 {otherServices && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.other_services')}: {otherServices}</Text>}
                 {extra?.margin && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.margin')}: {marginLabel(extra.margin)}</Text>}
                 {observations && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{observations}</Text>}
-                {lastUpdated && <Text style={{ color: colors.secondaryLabel }} className="text-callout">{t('station.last_updated')}: {lastUpdated}</Text>}
               </View>
             )}
 
@@ -257,6 +268,14 @@ function DetailContent({ station, snapIndex, distanceKm, distanceLoading, distan
               <Text style={{ color: colors.secondaryLabel }} className="text-callout">
                 {station.properties.id}
               </Text>
+            </View>
+
+            <View>
+              <Text style={{ color: colors.label }} className="text-footnote font-semibold mb-xs uppercase tracking-wide">{t('station.last_updated')}</Text>
+              <Text style={{ color: colors.secondaryLabel }} className="text-callout">
+                {age === null ? t('station.update_unknown') : age === 0 ? t('station.updated_today') : age === 1 ? t('station.updated_yesterday') : t('station.updated_days_ago', { count: age })}
+              </Text>
+              {lastUpdated && <Text style={{ color: colors.tertiaryLabel }} className="text-footnote mt-0.5">{lastUpdated}</Text>}
             </View>
 
           </View>

@@ -9,7 +9,8 @@
     "loading": "Loading…",
     "retry": "Retry",
     "using_cached_data": "Using cached data",
-    "continue": "Continue"
+    "continue": "Continue",
+    "undo": "Undo"
   },
   "tabs": {
     "map": "Map",
@@ -74,11 +75,15 @@
     "sort_recommended": "Recommended",
     "sort_cheapest": "Lowest price",
     "sort_nearest": "Nearest",
-    "sort_fuel_hint": "Choose the fuel price to compare"
+    "sort_fuel_hint": "Choose the fuel price to compare",
+    "no_results_hint": "Try a different search or remove a filter.",
+    "clear_search": "Clear search and filters"
   },
   "favorites": {
     "empty_title": "No favorites yet",
-    "empty_subtitle": "Tap the star on a station to add it here"
+    "empty_subtitle": "Tap the star on a station to add it here",
+    "browse_stations": "Browse stations",
+    "removed": "{{name}} removed from favorites"
   },
   "settings": {
     "appearance": "Appearance",
@@ -270,7 +275,7 @@
     "ev_maintenance_ev": "EV maintenance per year (€)",
     "ev_maintenance_ice": "Combustion maintenance per year (€)",
     "ev_battery_cost_optional": "Battery replacement cost (€, optional)",
-    "ev_battery_cost_hint": "Leave blank for no replacement. If entered, this cost is added once during the ownership period.",
+    "ev_battery_cost_hint": "Set to 0 for no replacement. A non-zero cost is added once during the ownership period.",
     "ev_result_ev": "EV is cheaper in this scenario",
     "ev_result_ice": "Combustion is cheaper in this scenario",
     "ev_result_close": "Costs are very close in this scenario",
@@ -320,7 +325,11 @@
     "distribution_unknown": "Unknown",
     "update_ota_caption": "Downloads the compatible app update and restarts Siphon.",
     "update_play_caption": "Google Play handles the download and installation of this app version.",
-    "update_github_caption": "Opens the APK from the latest GitHub Release for you to download and install."
+    "update_github_caption": "Opens the APK from the latest GitHub Release for you to download and install.",
+    "history_confirm_title": "Turn off saved price history?",
+    "history_confirm_body": "This deletes saved price history from this device and stops automatic history downloads. Cancel to keep your data.",
+    "history_delete_action": "Turn off and delete",
+    "history_delete_failed": "Saved history could not be fully removed. History remains enabled. Please try again."
   },
   "screen": {
     "price_history": "Price History"
@@ -457,7 +466,14 @@
     "add_favorite": "Add to favorites",
     "remove_favorite": "Remove from favorites",
     "payment_info": "Payment method information",
-    "show_on_map": "Show on map"
+    "show_on_map": "Show on map",
+    "address_copied": "Address copied",
+    "copy_failed": "Could not copy address. Try again.",
+    "update_unknown": "Station update time unavailable",
+    "updated_today": "Updated today",
+    "updated_yesterday": "Updated yesterday",
+    "updated_days_ago_one": "Updated {{count}} day ago",
+    "updated_days_ago_other": "Updated {{count}} days ago"
   },
   "price_chart": {
     "no_data": "No price history available.",

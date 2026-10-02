@@ -5,10 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { useThemeTokens } from '../hooks/useThemeTokens';
 import type { PriceHistoryPoint } from '../api/siphonClient';
 import { statsFor } from '../utils/priceAnalysis';
+import { usePriceBenchmarks } from '../hooks/useApp';
+import { priceLevel, priceLevelColor } from '../utils/priceColors';
 
 interface PriceStatsProps {
   data: PriceHistoryPoint[];
   unit: string;
+  fuel: string;
+  source?: string;
 }
 
 function StatCell({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
@@ -38,24 +42,19 @@ function ChangeCell({ label, pct }: { label: string; pct: number | null }) {
   );
 }
 
-const PriceStatsComponent = ({ data, unit }: PriceStatsProps) => {
+const PriceStatsComponent = ({ data, unit, fuel, source }: PriceStatsProps) => {
   const { t } = useTranslation();
-  const { colors } = useThemeTokens();
+  const { colors, scheme } = useThemeTokens();
+  const benchmarks = usePriceBenchmarks();
   const stats = statsFor(data);
   if (!stats) return null;
-
-  const priceColor = (price: number) => {
-    if (price < 1.65) return colors.priceLow;
-    if (price < 1.87) return colors.priceMid;
-    return colors.priceHigh;
-  };
 
   return (
     <View className="flex-row flex-wrap gap-sm">
       <StatCell
         label={t('price_trends.stat_current')}
         value={`${stats.current.toFixed(3)}${unit}`}
-        valueColor={priceColor(stats.current)}
+        valueColor={priceLevelColor(priceLevel(stats.current, fuel, source, benchmarks), colors, scheme)}
       />
       <ChangeCell label={t('price_trends.stat_change_7d')} pct={stats.change7dPct} />
       <ChangeCell label={t('price_trends.stat_change_30d')} pct={stats.change30dPct} />

@@ -50,6 +50,7 @@ export default function MapScreen() {
 
   const [cameraRequest, setCameraRequest] = useState<MapCameraRequest | null>(null);
   const cameraRequestSeqRef = useRef(0);
+  const pendingStationSearchRef = useRef<number | null>(null);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [showRateLimitedBanner, setShowRateLimitedBanner] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
@@ -127,12 +128,13 @@ export default function MapScreen() {
       mapFocusFrameRef.current = null;
       const [longitude, latitude] = request.coordinates;
       mapCenterRef.current = { lat: latitude, lng: longitude, bounds: undefined };
+      const requestId = ++cameraRequestSeqRef.current;
+      pendingStationSearchRef.current = requestId;
       setCameraRequest({
-        requestId: ++cameraRequestSeqRef.current,
+        requestId,
         coordinates: [longitude, latitude],
         mode: 'station',
       });
-      void loadStationsForRegion(latitude, longitude);
       clearMapFocusRequest(request.requestId);
     });
 
@@ -142,7 +144,7 @@ export default function MapScreen() {
         mapFocusFrameRef.current = null;
       }
     };
-  }, [clearMapFocusRequest, isFocused, loadStationsForRegion, mapFocusRequest]);
+  }, [clearMapFocusRequest, isFocused, mapFocusRequest]);
 
   const handleRegionChange = useCallback((lat: number, lng: number, bounds?: [number, number, number, number]) => {
     mapCenterRef.current = { lat, lng, bounds };
@@ -154,7 +156,7 @@ export default function MapScreen() {
     rememberMapRegion(lat, lng, bounds);
     if (!firstBoundsRef.current) {
       firstBoundsRef.current = true;
-      if (!loading) void loadStationsForRegion(lat, lng, bounds);
+      if (!loading && pendingStationSearchRef.current === null) void loadStationsForRegion(lat, lng, bounds);
     }
   }, [loadStationsForRegion, loading, rememberMapRegion]);
 
@@ -164,7 +166,7 @@ export default function MapScreen() {
   useEffect(() => {
     const justFinishedLoading = previousLoadingRef.current && !loading;
     previousLoadingRef.current = loading;
-    if (!justFinishedLoading || !firstBoundsRef.current) return;
+    if (!justFinishedLoading || !firstBoundsRef.current || pendingStationSearchRef.current !== null) return;
     const { lat, lng, bounds } = mapCenterRef.current;
     if (!bounds) return;
     void loadStationsForRegion(lat, lng, bounds);
@@ -189,6 +191,15 @@ export default function MapScreen() {
     }
   }, [loadStationsForRegion, t]);
 
+  const handleCameraRequestFinished = useCallback((requestId: number, region: { lat: number; lng: number; bounds: [number, number, number, number] } | null) => {
+    if (pendingStationSearchRef.current !== requestId) return;
+    pendingStationSearchRef.current = null;
+    if (!region || !isFocused) return;
+    mapCenterRef.current = region;
+    // Use the final viewport and existing search feedback, exactly once per move.
+    void handleSearchArea();
+  }, [handleSearchArea, isFocused]);
+
   useEffect(() => {
     return () => {
       searchVersionRef.current += 1;
@@ -203,14 +214,16 @@ export default function MapScreen() {
   const handleMapReady = useCallback(() => {
     if (mapReadyRef.current) return;
     mapReadyRef.current = true;
-    if (!loading && stationsLenRef.current === 0) {
+    if (!loading && stationsLenRef.current === 0 && pendingStationSearchRef.current === null) {
       loadStationsForRegion(mapCenterRef.current.lat, mapCenterRef.current.lng, mapCenterRef.current.bounds);
     }
   }, [loadStationsForRegion, loading]);
 
   const handleLocate = useCallback(async () => {
+    const previousRequest = cameraRequestSeqRef.current;
     const gps = await locateWithGps();
-    if (!gps) return;
+    if (!gps || cameraRequestSeqRef.current !== previousRequest) return;
+    pendingStationSearchRef.current = null;
     setCameraRequest({
       requestId: ++cameraRequestSeqRef.current,
       coordinates: [gps.longitude, gps.latitude],
@@ -288,6 +301,7 @@ export default function MapScreen() {
         onMapReady={handleMapReady}
         cameraRequest={cameraRequest}
         onCameraRequestConsumed={handleCameraRequestConsumed}
+        onCameraRequestFinished={handleCameraRequestFinished}
         userLocation={location}
       />
 

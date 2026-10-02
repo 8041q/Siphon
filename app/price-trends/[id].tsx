@@ -170,7 +170,7 @@ export default function PriceTrendsScreen() {
       <View className="gap-lg">
         <CheapDayBanner data={data} />
         <PriceIntelligenceCard data={data} unit={unit} marketInsight={marketInsight} />
-        <PriceStats data={data} unit={unit} />
+        <PriceStats data={data} unit={unit} fuel={selectedFuel} source={station.properties.source} />
         <PriceChart
           data={data}
           fuelLabel={fuelLabel(selectedFuel)}

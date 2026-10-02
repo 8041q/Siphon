@@ -61,6 +61,9 @@ export default function SettingsScreen() {
   const { clearSavedRoadDistances } = useStationDistances();
   const [clearingRoutes, setClearingRoutes] = useState(false);
   const routeClearDialogRef = useRef(false);
+  const historyDialogRef = useRef(false);
+  const historyClearingRef = useRef(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
   const {
     updateAvailable,
     updateKind,
@@ -148,14 +151,35 @@ export default function SettingsScreen() {
     void AsyncStorage.setItem(THEME_STORAGE_KEY, pref).catch(() => undefined);
   };
 
-  const handleToggleHistory = async (value: boolean) => {
+  const handleToggleHistory = (value: boolean) => {
+    if (historyDialogRef.current || historyClearingRef.current) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-    if (!value) {
-      try {
-        await client.clearHistoryCache();
-      } catch {}
+    if (value) {
+      setHistoryEnabled(true);
+      return;
     }
-    setHistoryEnabled(value);
+    historyDialogRef.current = true;
+    Alert.alert(t('settings.history_confirm_title'), t('settings.history_confirm_body'), [
+      { text: t('common.cancel'), style: 'cancel', onPress: () => { historyDialogRef.current = false; } },
+      {
+        text: t('settings.history_delete_action'),
+        style: 'destructive',
+        onPress: () => {
+          if (historyClearingRef.current) return;
+          historyClearingRef.current = true;
+          setClearingHistory(true);
+          void client.clearHistoryCache().then(() => {
+            setHistoryEnabled(false);
+          }).catch(() => {
+            Alert.alert(t('common.something_went_wrong'), t('settings.history_delete_failed'));
+          }).finally(() => {
+            historyDialogRef.current = false;
+            historyClearingRef.current = false;
+            setClearingHistory(false);
+          });
+        },
+      },
+    ], { cancelable: true, onDismiss: () => { historyDialogRef.current = false; } });
   };
 
   const handleClearRoutes = () => {
@@ -340,6 +364,7 @@ export default function SettingsScreen() {
             <Switch
               value={historyEnabled}
               onValueChange={handleToggleHistory}
+              disabled={clearingHistory}
               accessibilityLabel={t('settings.save_history')}
             />
           </View>

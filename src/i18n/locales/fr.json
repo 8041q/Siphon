@@ -9,7 +9,8 @@
     "loading": "Chargement…",
     "retry": "Réessayer",
     "using_cached_data": "Utilisation des données en cache",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "undo": "Annuler"
   },
   "tabs": {
     "map": "Carte",
@@ -74,11 +75,15 @@
     "sort_recommended": "Recommandé",
     "sort_cheapest": "Prix le plus bas",
     "sort_nearest": "La plus proche",
-    "sort_fuel_hint": "Choisissez le carburant dont vous voulez comparer le prix"
+    "sort_fuel_hint": "Choisissez le carburant dont vous voulez comparer le prix",
+    "no_results_hint": "Essayez une autre recherche ou retirez un filtre.",
+    "clear_search": "Effacer la recherche et les filtres"
   },
   "favorites": {
     "empty_title": "Pas encore de favoris",
-    "empty_subtitle": "Appuyez sur l'étoile d'une station pour l'ajouter ici"
+    "empty_subtitle": "Appuyez sur l'étoile d'une station pour l'ajouter ici",
+    "browse_stations": "Rechercher des stations",
+    "removed": "{{name}} retiré des favoris"
   },
   "settings": {
     "appearance": "Apparence",
@@ -270,7 +275,7 @@
     "ev_maintenance_ev": "Entretien VE par an (€)",
     "ev_maintenance_ice": "Entretien thermique par an (€)",
     "ev_battery_cost_optional": "Coût de remplacement de la batterie (€, facultatif)",
-    "ev_battery_cost_hint": "Laissez vide pour ne pas inclure de remplacement. Si renseigné, ce coût est ajouté une fois pendant la durée de possession.",
+    "ev_battery_cost_hint": "Indiquez 0 sans remplacement. Un coût non nul est ajouté une seule fois pendant la durée de possession.",
     "ev_result_ev": "Le VE est moins cher dans ce scénario",
     "ev_result_ice": "La voiture thermique est moins chère dans ce scénario",
     "ev_result_close": "Les coûts sont très proches dans ce scénario",
@@ -320,7 +325,11 @@
     "distribution_unknown": "Inconnue",
     "update_ota_caption": "Télécharge la mise à jour compatible et redémarre Siphon.",
     "update_play_caption": "Google Play gère le téléchargement et l’installation de cette version.",
-    "update_github_caption": "Ouvre l’APK de la dernière version GitHub pour le télécharger et l’installer."
+    "update_github_caption": "Ouvre l’APK de la dernière version GitHub pour le télécharger et l’installer.",
+    "history_confirm_title": "Désactiver l’historique enregistré ?",
+    "history_confirm_body": "Cette action supprime l’historique des prix enregistré sur cet appareil et arrête les téléchargements automatiques. Annulez pour conserver vos données.",
+    "history_delete_action": "Désactiver et supprimer",
+    "history_delete_failed": "L’historique enregistré n’a pas pu être entièrement supprimé. Il reste activé. Réessayez."
   },
   "screen": {
     "price_history": "Historique des Prix"
@@ -457,7 +466,14 @@
     "add_favorite": "Ajouter aux favoris",
     "remove_favorite": "Retirer des favoris",
     "payment_info": "Informations sur les moyens de paiement",
-    "show_on_map": "Afficher sur la carte"
+    "show_on_map": "Afficher sur la carte",
+    "address_copied": "Adresse copiée",
+    "copy_failed": "Impossible de copier l’adresse. Réessayez.",
+    "update_unknown": "Date de mise à jour de la station indisponible",
+    "updated_today": "Mis à jour aujourd’hui",
+    "updated_yesterday": "Mis à jour hier",
+    "updated_days_ago_one": "Mis à jour il y a {{count}} jour",
+    "updated_days_ago_other": "Mis à jour il y a {{count}} jours"
   },
   "price_chart": {
     "no_data": "Historique des prix indisponible.",

@@ -9,7 +9,8 @@
     "loading": "Wird geladen…",
     "retry": "Erneut versuchen",
     "using_cached_data": "Zwischengespeicherte Daten werden verwendet",
-    "continue": "Weiter"
+    "continue": "Weiter",
+    "undo": "Rückgängig"
   },
   "tabs": {
     "map": "Karte",
@@ -74,11 +75,15 @@
     "sort_recommended": "Empfohlen",
     "sort_cheapest": "Niedrigster Preis",
     "sort_nearest": "Am nächsten",
-    "sort_fuel_hint": "Wählen Sie den Kraftstoffpreis für den Vergleich"
+    "sort_fuel_hint": "Wählen Sie den Kraftstoffpreis für den Vergleich",
+    "no_results_hint": "Versuche eine andere Suche oder entferne einen Filter.",
+    "clear_search": "Suche und Filter löschen"
   },
   "favorites": {
     "empty_title": "Noch keine Favoriten",
-    "empty_subtitle": "Tippe auf den Stern einer Tankstelle, um sie hier hinzuzufügen"
+    "empty_subtitle": "Tippe auf den Stern einer Tankstelle, um sie hier hinzuzufügen",
+    "browse_stations": "Tankstellen suchen",
+    "removed": "{{name}} aus Favoriten entfernt"
   },
   "settings": {
     "appearance": "Darstellung",
@@ -270,7 +275,7 @@
     "ev_maintenance_ev": "EV-Wartung pro Jahr (€)",
     "ev_maintenance_ice": "Verbrenner-Wartung pro Jahr (€)",
     "ev_battery_cost_optional": "Kosten für Batteriewechsel (€, optional)",
-    "ev_battery_cost_hint": "Leer lassen, um keinen Wechsel einzurechnen. Ein eingetragener Betrag wird einmal während der Besitzdauer addiert.",
+    "ev_battery_cost_hint": "Für keinen Austausch 0 eingeben. Ein Betrag über 0 wird einmal während der Besitzdauer addiert.",
     "ev_result_ev": "Das Elektroauto ist in diesem Szenario günstiger",
     "ev_result_ice": "Der Verbrenner ist in diesem Szenario günstiger",
     "ev_result_close": "Die Kosten liegen in diesem Szenario sehr nah beieinander",
@@ -320,7 +325,11 @@
     "distribution_unknown": "Unbekannt",
     "update_ota_caption": "Lädt das kompatible App-Update herunter und startet Siphon neu.",
     "update_play_caption": "Google Play übernimmt Download und Installation dieser App-Version.",
-    "update_github_caption": "Öffnet die APK der neuesten GitHub-Version zum Herunterladen und Installieren."
+    "update_github_caption": "Öffnet die APK der neuesten GitHub-Version zum Herunterladen und Installieren.",
+    "history_confirm_title": "Gespeicherten Preisverlauf deaktivieren?",
+    "history_confirm_body": "Dadurch wird der gespeicherte Preisverlauf auf diesem Gerät gelöscht und der automatische Download beendet. Zum Behalten der Daten abbrechen.",
+    "history_delete_action": "Deaktivieren und löschen",
+    "history_delete_failed": "Der gespeicherte Verlauf konnte nicht vollständig gelöscht werden. Er bleibt aktiviert. Bitte erneut versuchen."
   },
   "screen": {
     "price_history": "Preisverlauf"
@@ -457,7 +466,14 @@
     "add_favorite": "Zu Favoriten hinzufügen",
     "remove_favorite": "Aus Favoriten entfernen",
     "payment_info": "Informationen zu Zahlungsmethoden",
-    "show_on_map": "Auf der Karte anzeigen"
+    "show_on_map": "Auf der Karte anzeigen",
+    "address_copied": "Adresse kopiert",
+    "copy_failed": "Adresse konnte nicht kopiert werden. Versuche es erneut.",
+    "update_unknown": "Aktualisierungszeit der Tankstelle nicht verfügbar",
+    "updated_today": "Heute aktualisiert",
+    "updated_yesterday": "Gestern aktualisiert",
+    "updated_days_ago_one": "Vor {{count}} Tag aktualisiert",
+    "updated_days_ago_other": "Vor {{count}} Tagen aktualisiert"
   },
   "price_chart": {
     "no_data": "Preisverlauf nicht verfügbar.",

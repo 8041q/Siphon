@@ -11,6 +11,9 @@ import { Icon } from '../../src/components/ui/icon';
 import { useThemeTokens } from '../../src/hooks/useThemeTokens';
 import { tabBarClearance } from '../../src/theme/layout';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
+import { useTransientFeedback } from '../../src/hooks/useTransientFeedback';
+import { ScreenState } from '../../src/components/ui/ScreenState';
+import { GlassBox } from '../../src/components/ui/GlassBox';
 
 const ItemSeparator = () => <View style={{ height: 12 }} />;
 
@@ -23,6 +26,15 @@ export default function FavoritesScreen() {
   const { favorites, setSelectedStation, requestMapFocus, toggleFavorite } = useUI();
   const { colors } = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const { feedback: removed, show: showRemoved, dismiss: dismissRemoved } = useTransientFeedback<FuelStationFeature>(6000);
+  const handleToggleFavorite = useCallback((station: FuelStationFeature) => {
+    if (favorites.has(station.properties.id)) showRemoved(station);
+    toggleFavorite(station);
+  }, [favorites, showRemoved, toggleFavorite]);
+  const handleUndo = useCallback(() => {
+    if (removed && !favorites.has(removed.properties.id)) toggleFavorite(removed);
+    dismissRemoved();
+  }, [removed, favorites, toggleFavorite, dismissRemoved]);
 
   const favoriteStations = useMemo(
     () =>
@@ -58,7 +70,7 @@ export default function FavoritesScreen() {
         station={item}
         onPress={handleStationPress}
         favorite
-        onToggleFavorite={toggleFavorite}
+        onToggleFavorite={handleToggleFavorite}
         onShowOnMap={handleShowOnMap}
         distanceKm={stationDistances.get(item.properties.id)}
         distanceLoading={distanceLoading}
@@ -68,7 +80,7 @@ export default function FavoritesScreen() {
     [
       handleStationPress,
       handleShowOnMap,
-      toggleFavorite,
+      handleToggleFavorite,
       stationDistances,
       routedStationIds,
       distanceLoading,
@@ -93,31 +105,11 @@ export default function FavoritesScreen() {
       )}
 
       {loading && !hasStationData ? (
-        <View className="flex-1 justify-center items-center p-xl" accessibilityLiveRegion="polite">
-          <Text className="text-body text-center" style={{ color: colors.secondaryLabel }}>
-            {t('common.loading')}
-          </Text>
-        </View>
+        <ScreenState message={t('common.loading')} />
       ) : fatalError ? (
-        <View className="flex-1 justify-center items-center p-xl gap-md" accessibilityLiveRegion="assertive">
-          <Text className="text-body text-center" style={{ color: colors.secondaryLabel }}>
-            {t('common.something_went_wrong')}
-          </Text>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={reload}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.retry')}
-            style={{ backgroundColor: colors.tint }}
-            className="rounded-md px-lg py-sm"
-          >
-            <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">
-              {t('common.retry')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ScreenState error message={t('common.something_went_wrong')} action={t('common.retry')} onAction={reload} />
       ) : favoriteStations.length === 0 ? (
-        <View className="flex-1 justify-center items-center p-xl" accessible>
+        <View className="flex-1 justify-center items-center p-xl">
           <Icon name="star.fill" size={48} color={colors.placeholder} />
           <Text className="text-body mt-md text-center" style={{ color: colors.secondaryLabel }}>
             {t('favorites.empty_title')}
@@ -125,6 +117,9 @@ export default function FavoritesScreen() {
           <Text className="text-footnote mt-xs text-center" style={{ color: colors.tertiaryLabel }}>
             {t('favorites.empty_subtitle')}
           </Text>
+          <TouchableOpacity onPress={() => router.navigate('/search')} accessibilityRole="button" style={{ paddingVertical: 12, marginTop: 8 }}>
+            <Text className="text-callout font-semibold" style={{ color: colors.tint }}>{t('favorites.browse_stations')}</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlashList
@@ -139,6 +134,16 @@ export default function FavoritesScreen() {
           renderItem={renderItem}
           extraData={listExtraData}
         />
+      )}
+      {removed && !favorites.has(removed.properties.id) && (
+        <View style={{ position: 'absolute', bottom: tabBarClearance(insets.bottom) + 8, left: 16, right: 16 }}>
+          <GlassBox component="card" className="rounded-md px-md py-xs flex-row items-center gap-sm">
+            <Text accessibilityLiveRegion="polite" numberOfLines={2} style={{ flex: 1, color: colors.label }} className="text-footnote">{t('favorites.removed', { name: removed.properties.brand || removed.properties.name || t('common.unknown_station') })}</Text>
+            <TouchableOpacity onPress={handleUndo} accessibilityRole="button" style={{ paddingVertical: 12, paddingHorizontal: 8 }}>
+              <Text className="text-callout font-semibold" style={{ color: colors.tint }}>{t('common.undo')}</Text>
+            </TouchableOpacity>
+          </GlassBox>
+        </View>
       )}
     </SafeAreaView>
   );

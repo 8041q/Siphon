@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useColorScheme } from 'nativewind';
 
 import { useAppearanceSupport } from './useSupport';
-import type { ColorSlot } from '../theme/types';
+import type { ColorScheme, ColorSlot } from '../theme/types';
 
 /**
  * Return resolved UI/station colors for the active palette + color scheme.
@@ -11,7 +11,7 @@ import type { ColorSlot } from '../theme/types';
 export function useThemeTokens() {
   const { palette } = useAppearanceSupport();
   const { colorScheme } = useColorScheme();
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const scheme: ColorScheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   const colors = useMemo(() => palette[scheme], [palette, scheme]);
   const get = useCallback((key: ColorSlot): string => colors[key], [colors]);

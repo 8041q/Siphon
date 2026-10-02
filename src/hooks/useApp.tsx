@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { FuelDataClient, isFuelKey, type FuelKey, type FuelStationFeature, type CountryCode } from '../api/siphonClient';
+import { FuelDataClient, isFuelKey, type FuelKey, type FuelStationFeature, type CountryCode, type PriceBenchmarks } from '../api/siphonClient';
 import { RateLimitedError } from '../api/rateLimit';
 import { hybridStore } from '../store/hybridStore';
 import { useLocation } from './useLocation';
@@ -157,6 +157,7 @@ const StationMapDataContext = createContext<StationMapDataState | null>(null);
 const StationDistanceContext = createContext<StationDistanceState | null>(null);
 const StationSyncContext = createContext<StationSyncState | null>(null);
 const SecondaryDataContext = createContext<SecondaryDataUpdates | null>(null);
+const PriceBenchmarksContext = createContext<PriceBenchmarks | null>(null);
 const LocationContext = createContext<LocationState | null>(null);
 const UIContext = createContext<UIState | null>(null);
 const ActionsContext = createContext<Actions | null>(null);
@@ -208,6 +209,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
   const [historyDataVersion, setHistoryDataVersion] = useState(0);
   const [commodityDataVersion, setCommodityDataVersion] = useState(0);
+  const [priceBenchmarks, setPriceBenchmarks] = useState<PriceBenchmarks | null>(null);
+  const priceBenchmarkVersionRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    const version = priceBenchmarkVersionRef.current;
+    void client.getCachedCommodityDashboard().then(dashboard => {
+      if (active && priceBenchmarkVersionRef.current === version) setPriceBenchmarks(dashboard?.priceBenchmarks ?? null);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const [selectedStation, setSelectedStation] = useState<FuelStationFeature | null>(null);
   const [mapFocusRequest, setMapFocusRequest] = useState<MapFocusRequest | null>(null);
   const mapFocusRequestSeqRef = useRef(0);
@@ -592,7 +604,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (!isActive()) return;
-      if (dashboard) setCommodityDataVersion(version => version + 1);
+      if (dashboard) {
+        setCommodityDataVersion(version => version + 1);
+        priceBenchmarkVersionRef.current += 1;
+        setPriceBenchmarks(dashboard.priceBenchmarks ?? null);
+      }
       await client.rateLimiter.recordSyncCompleted().catch(() => undefined);
     } catch (error: unknown) {
       changedCountriesRef.current = [];
@@ -1019,23 +1035,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [historyDataVersion, commodityDataVersion]);
 
   return (
-    <SecondaryDataContext.Provider value={secondaryDataValue}>
-      <StationCatalogContext.Provider value={stationCatalogValue}>
-        <StationMapDataContext.Provider value={stationMapDataValue}>
-          <StationDistanceContext.Provider value={stationDistanceValue}>
-            <StationSyncContext.Provider value={stationSyncValue}>
-              <LocationContext.Provider value={locationValue}>
-                <UIContext.Provider value={uiValue}>
-                  <ActionsContext.Provider value={actionsValue}>
-                    {children}
-                  </ActionsContext.Provider>
-                </UIContext.Provider>
-              </LocationContext.Provider>
-            </StationSyncContext.Provider>
-          </StationDistanceContext.Provider>
-        </StationMapDataContext.Provider>
-      </StationCatalogContext.Provider>
-    </SecondaryDataContext.Provider>
+    <PriceBenchmarksContext.Provider value={priceBenchmarks}>
+      <SecondaryDataContext.Provider value={secondaryDataValue}>
+        <StationCatalogContext.Provider value={stationCatalogValue}>
+          <StationMapDataContext.Provider value={stationMapDataValue}>
+            <StationDistanceContext.Provider value={stationDistanceValue}>
+              <StationSyncContext.Provider value={stationSyncValue}>
+                <LocationContext.Provider value={locationValue}>
+                  <UIContext.Provider value={uiValue}>
+                    <ActionsContext.Provider value={actionsValue}>
+                      {children}
+                    </ActionsContext.Provider>
+                  </UIContext.Provider>
+                </LocationContext.Provider>
+              </StationSyncContext.Provider>
+            </StationDistanceContext.Provider>
+          </StationMapDataContext.Provider>
+        </StationCatalogContext.Provider>
+      </SecondaryDataContext.Provider>
+    </PriceBenchmarksContext.Provider>
   );
 }
 
@@ -1043,6 +1061,10 @@ export function useSecondaryDataUpdates(): SecondaryDataUpdates {
   const ctx = useContext(SecondaryDataContext);
   if (!ctx) throw new Error('useSecondaryDataUpdates must be used within AppProvider');
   return ctx;
+}
+
+export function usePriceBenchmarks(): PriceBenchmarks | null {
+  return useContext(PriceBenchmarksContext);
 }
 
 export function useStationCatalog(): StationCatalogState {

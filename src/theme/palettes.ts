@@ -53,10 +53,10 @@ export const midnight: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#13733A',
+    priceLow: '#0C7B32',
     priceLowTint: 'rgba(22, 163, 74, 0.1)',
-    priceMid: '#A34A08',
-    priceHigh: '#BE1D1D',
+    priceMid: '#AC5000',
+    priceHigh: '#CD1E28',
     priceHighTint: 'rgba(220, 38, 38, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
     worthItText: '#13733A',
@@ -180,10 +180,10 @@ export const sunset: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#237534',
+    priceLow: '#0C7B32',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
-    priceMid: '#A34A08',
-    priceHigh: '#C92A2A',
+    priceMid: '#AC5000',
+    priceHigh: '#CD1E28',
     priceHighTint: 'rgba(201, 42, 42, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
     worthItText: '#237534',
@@ -307,10 +307,10 @@ export const forest: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#237534',
+    priceLow: '#0C7B32',
     priceLowTint: 'rgba(47, 158, 68, 0.1)',
-    priceMid: '#A34A08',
-    priceHigh: '#C92A2A',
+    priceMid: '#AC5000',
+    priceHigh: '#CD1E28',
     priceHighTint: 'rgba(201, 42, 42, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
     worthItText: '#237534',
@@ -434,10 +434,10 @@ export const mono: Palette = {
     markerPriceHalo: '#FFFFFF',
     markerBody: '#FFFFFF',
     // ── Price badges ─────────────────────────────────────────────
-    priceLow: '#1C7C54',
+    priceLow: '#0C7B32',
     priceLowTint: 'rgba(28, 124, 84, 0.1)',
-    priceMid: '#8A6400',
-    priceHigh: '#B3261E',
+    priceMid: '#AC5000',
+    priceHigh: '#CD1E28',
     priceHighTint: 'rgba(179, 38, 30, 0.1)',
     // ── Worth the drive ──────────────────────────────────────────
     worthItText: '#1C7C54',

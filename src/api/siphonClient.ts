@@ -66,6 +66,21 @@ export interface CommodityDashboard {
   };
   retail: Record<string, CommodityDataPoint[]>;
   metrics: Record<string, CommodityMetrics>;
+  priceBenchmarks?: PriceBenchmarks | null;
+}
+
+export interface PriceBenchmarks {
+  schemaVersion: number;
+  method: string;
+  referenceStart: string;
+  referenceEnd: string;
+  asOf: string;
+  source: string;
+  bands: Record<string, {
+    fuel: string; country: string; unit: string;
+    greenBelow: number; redAbove: number; reference: number;
+    referenceMonths: number; inflationMonth: string;
+  }>;
 }
 
 export interface SpainTile {

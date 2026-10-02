@@ -9,7 +9,8 @@
     "loading": "A carregar…",
     "retry": "Tentar novamente",
     "using_cached_data": "A usar dados em cache",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "undo": "Desfazer"
   },
   "tabs": {
     "map": "Mapa",
@@ -74,11 +75,15 @@
     "sort_recommended": "Recomendado",
     "sort_cheapest": "Preço mais baixo",
     "sort_nearest": "Mais perto",
-    "sort_fuel_hint": "Escolha o combustível cujo preço quer comparar"
+    "sort_fuel_hint": "Escolha o combustível cujo preço quer comparar",
+    "no_results_hint": "Experimente outra pesquisa ou remova um filtro.",
+    "clear_search": "Limpar pesquisa e filtros"
   },
   "favorites": {
     "empty_title": "Ainda sem favoritos",
-    "empty_subtitle": "Toque na estrela de uma estação para a adicionar aqui"
+    "empty_subtitle": "Toque na estrela de uma estação para a adicionar aqui",
+    "browse_stations": "Procurar postos",
+    "removed": "{{name}} removido dos favoritos"
   },
   "settings": {
     "appearance": "Aparência",
@@ -270,7 +275,7 @@
     "ev_maintenance_ev": "Manutenção EV por ano (€)",
     "ev_maintenance_ice": "Manutenção combustão por ano (€)",
     "ev_battery_cost_optional": "Custo de substituição da bateria (€, opcional)",
-    "ev_battery_cost_hint": "Deixa em branco para não incluir uma substituição. Se preenchido, este custo é somado uma vez durante o período de posse.",
+    "ev_battery_cost_hint": "Use 0 para não considerar uma substituição. Um custo superior a zero é adicionado uma única vez durante o período de utilização.",
     "ev_result_ev": "O EV é mais barato neste cenário",
     "ev_result_ice": "A combustão é mais barata neste cenário",
     "ev_result_close": "Os custos são muito próximos neste cenário",
@@ -320,7 +325,11 @@
     "distribution_unknown": "Desconhecida",
     "update_ota_caption": "Transfere a atualização compatível da app e reinicia o Siphon.",
     "update_play_caption": "O Google Play gere a transferência e instalação desta versão da app.",
-    "update_github_caption": "Abre o APK da versão mais recente no GitHub para transferir e instalar."
+    "update_github_caption": "Abre o APK da versão mais recente no GitHub para transferir e instalar.",
+    "history_confirm_title": "Desativar o histórico guardado?",
+    "history_confirm_body": "Esta ação elimina o histórico de preços guardado neste dispositivo e interrompe os downloads automáticos. Cancele para manter os dados.",
+    "history_delete_action": "Desativar e eliminar",
+    "history_delete_failed": "Não foi possível eliminar todo o histórico guardado. O histórico continua ativado. Tente novamente."
   },
   "screen": {
     "price_history": "Histórico de Preços"
@@ -457,7 +466,14 @@
     "add_favorite": "Adicionar aos favoritos",
     "remove_favorite": "Remover dos favoritos",
     "payment_info": "Informação sobre métodos de pagamento",
-    "show_on_map": "Mostrar no mapa"
+    "show_on_map": "Mostrar no mapa",
+    "address_copied": "Morada copiada",
+    "copy_failed": "Não foi possível copiar a morada. Tente novamente.",
+    "update_unknown": "Data de atualização do posto indisponível",
+    "updated_today": "Atualizado hoje",
+    "updated_yesterday": "Atualizado ontem",
+    "updated_days_ago_one": "Atualizado há {{count}} dia",
+    "updated_days_ago_other": "Atualizado há {{count}} dias"
   },
   "price_chart": {
     "no_data": "Histórico de preços indisponível.",

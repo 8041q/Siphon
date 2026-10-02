@@ -4,14 +4,13 @@ import { Platform } from 'react-native';
 import { numericInput, syncNumericInput } from '../../utils/numericInput';
 import { Field } from './field';
 
-export function NumericField({ label, value, onChangeValue, integer = false, optional = false }: {
+export function NumericField({ label, value, onChangeValue, integer = false }: {
   label: string;
   value: number;
   onChangeValue: (value: number) => void;
   integer?: boolean;
-  optional?: boolean;
 }) {
-  const [text, setText] = useState(() => optional && value === 0 ? '' : String(value));
+  const [text, setText] = useState(() => String(value));
 
   useEffect(() => {
     setText((current) => syncNumericInput(current, value));

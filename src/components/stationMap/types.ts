@@ -19,5 +19,6 @@ export interface StationMapProps {
   onMapReady?: () => void;
   cameraRequest?: MapCameraRequest | null;
   onCameraRequestConsumed?: (requestId: number) => void;
+  onCameraRequestFinished?: (requestId: number, region: { lat: number; lng: number; bounds: [number, number, number, number] } | null) => void;
   userLocation?: { latitude: number; longitude: number; approximate: boolean };
 }

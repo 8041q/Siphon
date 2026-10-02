@@ -14,6 +14,9 @@ import { tabBarClearance } from '../../src/theme/layout';
 import type { FuelStationFeature } from '../../src/api/siphonClient';
 import { roadEstimateKm } from '../../src/utils/routeDistance';
 import { measureSync } from '../../src/utils/perf';
+import { normalizeSearchText, stationSearchText, matchesSearch } from '../../src/utils/stationSearch';
+import { ScreenState } from '../../src/components/ui/ScreenState';
+import { fuelLabel } from '../../src/utils/fuelNames';
 
 const ItemSeparator = () => <View style={{ height: 12 }} />;
 
@@ -35,18 +38,8 @@ export default function SearchScreen() {
   const relevantDistances = needsDistanceData ? stationDistances : null;
 
   const searchIndex = useMemo(() => measureSync('siphon.search.build_index', () => {
-    const index = new Map<string, { brandName: string; location: string }>();
-    for (const station of allStations) {
-      const properties = station.properties;
-      const administrativeArea = properties.source === 'PT' ? properties.district : properties.province;
-      index.set(properties.id, {
-        brandName: `${properties.brand ?? ''}
-${properties.name ?? ''}`.toLocaleLowerCase(),
-        location: `${properties.municipality}
-${administrativeArea}
-${properties.address}`.toLocaleLowerCase(),
-      });
-    }
+    const index = new Map<string, { text: string; location: string }>();
+    for (const station of allStations) index.set(station.properties.id, stationSearchText(station));
     return index;
   }, 4), [allStations]);
 
@@ -77,8 +70,8 @@ ${properties.address}`.toLocaleLowerCase(),
   );
 
   const results = useMemo(() => measureSync('siphon.search.filter_sort', () => {
-    const brandNeedle = deferredBrandQuery.trim().toLocaleLowerCase();
-    const cityNeedle = searchFilter.city?.trim().toLocaleLowerCase() ?? '';
+    const brandNeedle = normalizeSearchText(deferredBrandQuery);
+    const cityNeedle = normalizeSearchText(searchFilter.city ?? '');
     const countries = searchFilter.countries;
     const fuelTypes = searchFilter.fuelTypes;
     const priceMax = searchFilter.priceRange?.max;
@@ -90,7 +83,7 @@ ${properties.address}`.toLocaleLowerCase(),
     let result = allStations.filter((station) => {
       const properties = station.properties;
 
-      if (brandNeedle && !searchIndex.get(properties.id)?.brandName.includes(brandNeedle)) return false;
+      if (brandNeedle && !matchesSearch(searchIndex.get(properties.id)?.text ?? '', brandNeedle)) return false;
 
       if (countries?.length && !countries.includes(properties.source)) return false;
 
@@ -142,10 +135,10 @@ ${properties.address}`.toLocaleLowerCase(),
 
   // A new search starts at the top; catalog and distance updates keep the current position.
   const resultsKey = JSON.stringify({
-    query: deferredBrandQuery.trim().toLocaleLowerCase(),
+    query: normalizeSearchText(deferredBrandQuery),
     countries: [...(searchFilter.countries ?? [])].sort(),
     fuelTypes: [...(searchFilter.fuelTypes ?? [])].sort(),
-    city: searchFilter.city?.trim().toLocaleLowerCase() ?? '',
+    city: normalizeSearchText(searchFilter.city ?? ''),
     priceMax: searchFilter.priceRange?.max ?? null,
     maxDistance: searchFilter.maxDistance || null,
     sortBy: searchFilter.sortBy ?? null,
@@ -164,7 +157,7 @@ ${properties.address}`.toLocaleLowerCase(),
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => filterSheetRef.current?.present()}
-            style={{ backgroundColor: colors.groupedBackground, borderRadius: 6, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
+            style={{ backgroundColor: colors.groupedBackground, borderRadius: 6, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
             hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel={
@@ -175,7 +168,7 @@ ${properties.address}`.toLocaleLowerCase(),
             accessibilityState={{ selected: filterCount > 0 }}
           >
             <View className="relative">
-              <Icon name="filter_list" size={18} color={colors.secondaryLabel} />
+              <Icon name="filter_list" size={20} color={colors.secondaryLabel} />
               {filterCount > 0 && (
                 <View
                   style={{
@@ -225,6 +218,11 @@ ${properties.address}`.toLocaleLowerCase(),
           loading={loading && allStations.length === 0}
           error={allStations.length === 0 ? error : null}
           onRetry={reload}
+          onClear={brandQuery.trim() || filterCount > 0 ? () => { setBrandQuery(''); setSearchFilter({}); } : undefined}
+          onOpenSort={() => filterSheetRef.current?.present()}
+          sortLabel={searchFilter.sortBy === 'price'
+            ? `${t('search.sort_cheapest')} · ${fuelLabel(searchFilter.sortByFuel ?? searchFilter.fuelTypes?.[0] ?? 'gasoline95')}`
+            : searchFilter.sortBy === 'distance' ? t('search.sort_nearest') : t('search.sort_recommended')}
         />
       </View>
 
@@ -291,6 +289,9 @@ type StationListProps = {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onClear?: () => void;
+  onOpenSort: () => void;
+  sortLabel: string;
 };
 
 const StationList = memo(function StationList({
@@ -305,6 +306,9 @@ const StationList = memo(function StationList({
   loading,
   error,
   onRetry,
+  onClear,
+  onOpenSort,
+  sortLabel,
 }: StationListProps) {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
@@ -339,53 +343,20 @@ const StationList = memo(function StationList({
     ],
   );
 
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center px-xl" accessibilityLiveRegion="polite">
-        <Text className="text-title-3 text-center" style={{ color: colors.secondaryLabel }}>
-          {t('common.loading')}
-        </Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center px-xl gap-md" accessibilityLiveRegion="assertive">
-        <Text className="text-title-3 text-center" style={{ color: colors.secondaryLabel }}>
-          {t('common.something_went_wrong')}
-        </Text>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={onRetry}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.retry')}
-          style={{ backgroundColor: colors.tint }}
-          className="rounded-md px-lg py-sm"
-        >
-          <Text style={{ color: colors.labelOnTint }} className="font-semibold text-callout">
-            {t('common.retry')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (results.length === 0) {
-    return (
-      <View className="flex-1 items-center justify-center px-xl" accessibilityLiveRegion="polite">
-        <Text className="text-title-3 text-center" style={{ color: colors.secondaryLabel }}>
-          {t('search.no_results')}
-        </Text>
-      </View>
-    );
-  }
+  if (loading) return <ScreenState message={t('common.loading')} />;
+  if (error) return <ScreenState error message={t('common.something_went_wrong')} action={t('common.retry')} onAction={onRetry} />;
+  if (results.length === 0) return <ScreenState message={t('search.no_results')} detail={onClear ? t('search.no_results_hint') : undefined} action={onClear ? t('search.clear_search') : undefined} onAction={onClear} />;
 
   return (
     <View className="flex-1 gap-1 pt-lg" style={{ overflow: 'hidden' }}>
-      <Text className="text-headline mb-sm px-4" style={{ color: colors.label }}>
-        {t('search.results_header')} ({results.length})
-      </Text>
+      <View className="px-4 mb-sm" style={{ gap: 2 }}>
+        <Text className="text-headline" style={{ color: colors.label }}>
+          {t('search.results_header')} ({results.length})
+        </Text>
+        <TouchableOpacity onPress={onOpenSort} accessibilityRole="button" accessibilityLabel={`${t('search.sort_by')}: ${sortLabel}`} style={{ alignSelf: 'flex-start', paddingVertical: 4 }} hitSlop={4}>
+          <Text className="text-footnote" style={{ color: colors.tint }}>{sortLabel}</Text>
+        </TouchableOpacity>
+      </View>
       <FlashList
         data={results}
         keyExtractor={(item) => item.properties.id}

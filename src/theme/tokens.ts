@@ -127,13 +127,13 @@ export const station = {
 
     // ── Price badges ─────────────────────────────────────────────
     /** Low price indicator */
-    priceLow: '#126E46',
+    priceLow: '#0C7B32',
     /** Low price tint background (badges, stats) */
     priceLowTint: 'rgba(30, 158, 103, 0.1)',
     /** Mid range price indicator */
-    priceMid: '#8E590B',
+    priceMid: '#AC5000',
     /** High price indicator */
-    priceHigh: '#BB2B2B',
+    priceHigh: '#CD1E28',
     /** High price tint background */
     priceHighTint: 'rgba(226, 76, 76, 0.1)',
 

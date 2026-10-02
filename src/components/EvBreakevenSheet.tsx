@@ -140,7 +140,7 @@ export const EvBreakevenSheet = forwardRef<EvBreakevenSheetHandle, {
           <NumericField label={t('settings.ev_ownership_years')} value={extras.ownershipYears} onChangeValue={(v) => saveExtra('ownershipYears', v)} integer />
           <NumericField label={t('settings.ev_maintenance_ev')} value={extras.evMaintenanceYear} onChangeValue={(v) => saveExtra('evMaintenanceYear', v)} />
           <NumericField label={t('settings.ev_maintenance_ice')} value={extras.iceMaintenanceYear} onChangeValue={(v) => saveExtra('iceMaintenanceYear', v)} />
-          <NumericField label={t('settings.ev_battery_cost_optional')} value={extras.batteryReplacementCost} onChangeValue={(v) => saveExtra('batteryReplacementCost', v)} optional />
+          <NumericField label={t('settings.ev_battery_cost_optional')} value={extras.batteryReplacementCost} onChangeValue={(v) => saveExtra('batteryReplacementCost', v)} />
           <Text style={{ color: colors.secondaryLabel }} className="text-footnote">{t('settings.ev_battery_cost_hint')}</Text>
         </View>
 

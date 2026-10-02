@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { ScreenState } from '../../src/components/ui/ScreenState';
 import { useCommodities } from '../../src/hooks/useCommodities';
 import { CommodityChart } from '../../src/components/CommodityChart';
 import { MarketIntelligenceCard } from '../../src/components/MarketIntelligenceCard';
@@ -28,7 +29,7 @@ export default function MarketScreen() {
   const { styleRules } = useAppearanceSupport();
   const cardRules = useStyleConfig(styleRules, 'card');
   const cardStyle = applyComponentRules(cardRules, colors.label);
-  const { dashboard, loading, error } = useCommodities({ refresh: false });
+  const { dashboard, loading, error, reload } = useCommodities({ refresh: false });
 
   const [country, setCountry] = useState<MarketCountry>('combined');
   const [fuel, setFuel] = useState<MarketFuel>('gasoline95');
@@ -75,21 +76,13 @@ export default function MarketScreen() {
         />
 
         {loading && !dashboard ? (
-          <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
-            {t('market.loading')}
-          </Text>
+          <ScreenState message={t('market.loading')} />
         ) : error && !dashboard ? (
-          <Text style={{ color: colors.destructive, textAlign: 'center', padding: 24 }}>
-            {t('common.something_went_wrong')}
-          </Text>
+          <ScreenState error message={t('common.something_went_wrong')} action={t('common.retry')} onAction={reload} />
         ) : !dashboard || dashboard.status === 'no_crude' ? (
-          <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
-            {t('market.no_data')}
-          </Text>
+          <ScreenState message={t('market.no_data')} />
         ) : crudePoints.length < 2 && retailPoints.length < 2 ? (
-          <Text style={{ color: colors.chartLabel, textAlign: 'center', padding: 24 }}>
-            {t('market.no_data')}
-          </Text>
+          <ScreenState message={t('market.no_data')} />
         ) : (
           <View style={{ gap: 12 }}>
             <MarketIntelligenceCard

@@ -75,7 +75,7 @@ const StationPriceMarker = memo(function StationPriceMarker({ station, zIndex, o
   );
 });
 
-function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, cameraRequest, onCameraRequestConsumed, userLocation }: StationMapProps) {
+function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionChange, onMapReady, cameraRequest, onCameraRequestConsumed, onCameraRequestFinished, userLocation }: StationMapProps) {
   const { colors } = useThemeTokens();
   const reducedMotion = useReducedMotion();
   const cameraRef = useRef<CameraRef>(null);
@@ -83,6 +83,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const onMapReadyFired = useRef(false);
   const isMounted = useRef(false);
   const pendingCameraRequestRef = useRef<MapCameraRequest | null>(null);
+  const activeCameraMoveRef = useRef<MapCameraRequest | null>(null);
   const layoutReadyRef = useRef(false);
   const cameraMountedRef = useRef(false);
   const cameraMoveFrameRef = useRef<number | null>(null);
@@ -160,6 +161,7 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
       pendingCameraRequestRef.current = null;
       lastAppliedCameraRequestIdRef.current = request.requestId;
+      activeCameraMoveRef.current = request;
 
       // Repeated flyTo() calls have a known iOS/New-Architecture issue in
       // MapLibre RN. Keep all programmatic movement on the guarded easeTo path.
@@ -177,6 +179,11 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
 
   useEffect(() => {
     if (!cameraRequest || !isMounted.current) return;
+    const previous = activeCameraMoveRef.current;
+    if (previous && previous.requestId !== cameraRequest.requestId) {
+      activeCameraMoveRef.current = null;
+      onCameraRequestFinished?.(previous.requestId, null);
+    }
     const [longitude, latitude] = cameraRequest.coordinates;
     if (
       !Number.isFinite(longitude) ||
@@ -185,12 +192,13 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
       Math.abs(latitude) > 90
     ) {
       onCameraRequestConsumed?.(cameraRequest.requestId);
+      onCameraRequestFinished?.(cameraRequest.requestId, null);
       return;
     }
 
     pendingCameraRequestRef.current = cameraRequest;
     flushPendingCameraMove();
-  }, [cameraRequest, flushPendingCameraMove, onCameraRequestConsumed]);
+  }, [cameraRequest, flushPendingCameraMove, onCameraRequestConsumed, onCameraRequestFinished]);
 
   const handleMapLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -311,7 +319,6 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
   const handleRegionDidChange = useCallback(
     (event: Parameters<NonNullable<ComponentProps<typeof MapComponent>['onRegionDidChange']>>[0]) => {
       updateMarkerViewport(event.nativeEvent.zoom, event.nativeEvent.bearing, true);
-      if (!onRegionChange) return;
 
       const nativeEvent = event.nativeEvent as unknown as { center?: unknown; bounds?: unknown };
       const center = nativeEvent.center;
@@ -347,16 +354,33 @@ function StationMapComponent({ initialRegion, stations, onMarkerPress, onRegionC
         }
       }
 
-      onRegionChange(lat, lng, bounds);
+      onRegionChange?.(lat, lng, bounds);
+      const active = activeCameraMoveRef.current;
+      if (!active) return;
+      if (event.nativeEvent.userInteraction) {
+        activeCameraMoveRef.current = null;
+        onCameraRequestFinished?.(active.requestId, null);
+      } else if (bounds && bounds[0] < bounds[2] && bounds[1] < bounds[3] &&
+        bounds[2] - bounds[0] < 180 && bounds[3] - bounds[1] < 160 &&
+        Math.abs(lng - active.coordinates[0]) < 0.0001 && Math.abs(lat - active.coordinates[1]) < 0.0001 &&
+        Math.abs(event.nativeEvent.zoom - (active.mode === 'station' ? 15.2 : 13.3)) < 0.15) {
+        activeCameraMoveRef.current = null;
+        onCameraRequestFinished?.(active.requestId, { lat, lng, bounds });
+      }
     },
-    [onRegionChange, updateMarkerViewport],
+    [onRegionChange, onCameraRequestFinished, updateMarkerViewport],
   );
 
   const handleRegionIsChanging = useCallback(
     (event: Parameters<NonNullable<ComponentProps<typeof MapComponent>['onRegionIsChanging']>>[0]) => {
+      const active = activeCameraMoveRef.current;
+      if (event.nativeEvent.userInteraction && active) {
+        activeCameraMoveRef.current = null;
+        onCameraRequestFinished?.(active.requestId, null);
+      }
       updateMarkerViewport(event.nativeEvent.zoom, event.nativeEvent.bearing, false);
     },
-    [updateMarkerViewport],
+    [onCameraRequestFinished, updateMarkerViewport],
   );
 
   const handleStationSourcePress = useCallback(
