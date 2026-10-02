@@ -26,6 +26,9 @@ const MAPPING: Record<string, IoniconsName> = {
   'kofi': 'cafe',
   'lock': 'lock-closed',
   'gift': 'gift-outline',
+  'arrow.down': 'arrow-down',
+  'arrow.up': 'arrow-up',
+  'arrow.right': 'arrow-forward',
   'oilcan.fill': 'bar-chart',
 };
 

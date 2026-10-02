@@ -26,6 +26,9 @@ const MAPPING: Record<string, MaterialName> = {
   'kofi': 'local-cafe',
   'lock': 'lock',
   'gift': 'card-giftcard',
+  'arrow.down': 'arrow-downward',
+  'arrow.up': 'arrow-upward',
+  'arrow.right': 'arrow-forward',
   'oilcan.fill': 'show-chart',
 };
 

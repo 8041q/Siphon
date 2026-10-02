@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useStationCatalog, useStationDistances, useStationSync } from '../../src/hooks/useApp';
 import { usePriceHistory } from '../../src/hooks/usePriceHistory';
 import { useCommodities } from '../../src/hooks/useCommodities';
+import { PriceForecast } from '../../src/components/PriceForecast';
 import { PriceChart } from '../../src/components/PriceChart';
 import { FilterButton } from '../../src/components/ui/FilterButton';
 import { PriceStats } from '../../src/components/PriceStats';
@@ -169,7 +170,7 @@ export default function PriceTrendsScreen() {
     return (
       <View className="gap-lg">
         <CheapDayBanner data={data} />
-        <PriceIntelligenceCard data={data} unit={unit} marketInsight={marketInsight} />
+        <PriceIntelligenceCard data={data} />
         <PriceStats data={data} unit={unit} fuel={selectedFuel} source={station.properties.source} />
         <PriceChart
           data={data}
@@ -179,6 +180,7 @@ export default function PriceTrendsScreen() {
           forecast={chartForecast}
         />
         <WeekdayRadar data={data} />
+        <PriceForecast data={data} unit={unit} marketInsight={marketInsight} />
         <PriceHistoryExplainer />
       </View>
     );

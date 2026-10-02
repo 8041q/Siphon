@@ -5,11 +5,15 @@ export type Confidence = 'high' | 'medium' | 'low' | 'none';
 
 export type PriceForecastResult = {
   horizonDays: number;
+  asOfDate: string;
+  targetDate: string;
   predicted: number;
   low: number;
   high: number;
   confidence: Confidence;
-  backtestMae: number | null;
+  backtestMae: number;
+  backtestSamples: number;
+  method: 'trend' | 'unchanged';
   sampleDays: number;
   direction: 'up' | 'down' | 'flat';
 };
@@ -25,8 +29,6 @@ export type PriceIntelligence = {
   daysSinceChange: number | null;
   volatility30: number;
   status: 'low' | 'normal' | 'high';
-  forecast3: PriceForecastResult | null;
-  forecast7: PriceForecastResult | null;
 };
 
 export const PRICE_FORECAST_MIN_DAYS = 80;
@@ -56,8 +58,12 @@ function stdev(values: readonly number[]): number {
   return Math.sqrt(values.reduce((sum, value) => sum + (value - avg) ** 2, 0) / values.length);
 }
 
+export function historyCoverageDays(data: readonly PricePoint[]): number {
+  return coverageDays(clean(data));
+}
+
 function coverageDays(points: readonly PricePoint[]): number {
-  if (points.length < 2) return 0;
+  if (!points.length) return 0;
   return Math.floor((isoDayToMs(points[points.length - 1].date) - isoDayToMs(points[0].date)) / DAY) + 1;
 }
 
@@ -99,14 +105,13 @@ function robustSlope(points: readonly PricePoint[], lookbackDays = 28): number {
 function weekdayAdjustment(points: readonly PricePoint[], horizonDays: number): number {
   if (points.length < 28) return 0;
   const recent = points.slice(-70);
-  const byDay = Array.from({ length: 7 }, () => [] as number[]);
-  for (const point of recent) {
-    byDay[isoWeekday(point.date)].push(point.price);
-  }
-  const baseline = mean(recent.map((p) => p.price));
-  if (!Number.isFinite(baseline)) return 0;
+  // Remove the local trend before comparing weekdays. Otherwise a rising or
+  // falling month can look like a weekday effect simply because of sample dates.
+  const slope = robustSlope(recent, recent.length - 1);
+  const residuals = recent.map((p, i) => p.price - slope * i);
+  const baseline = mean(residuals);
   const targetDay = isoWeekday(shiftIsoDay(points[points.length - 1].date, horizonDays));
-  const values = byDay[targetDay];
+  const values = recent.flatMap((p, i) => isoWeekday(p.date) === targetDay ? [residuals[i]] : []);
   if (values.length < 3) return 0;
   return mean(values) - baseline;
 }
@@ -114,59 +119,77 @@ function weekdayAdjustment(points: readonly PricePoint[], horizonDays: number): 
 function simplePredict(points: readonly PricePoint[], horizonDays: number): number {
   const latest = points[points.length - 1].price;
   const slope = robustSlope(points);
-  const recentMedian = median(points.slice(-14).map((p) => p.price));
+  const recent = points.slice(-14);
+  const recentMedian = median(recent.map((p) => p.price));
   const trendPrediction = latest + slope * horizonDays;
-  const meanReversion = Number.isFinite(recentMedian) ? recentMedian : latest;
+  // The median describes the middle of the window, not today. Project it to
+  // the target date so smoothing does not erase a consistent recent trend.
+  const medianProjection = Number.isFinite(recentMedian)
+    ? recentMedian + slope * ((recent.length - 1) / 2 + horizonDays)
+    : trendPrediction;
   const weekday = weekdayAdjustment(points, horizonDays);
-  return Math.max(0, trendPrediction * 0.72 + meanReversion * 0.28 + weekday * 0.35);
+  return Math.max(0, trendPrediction * 0.72 + medianProjection * 0.28 + weekday * 0.35);
 }
 
-function backtestMae(points: readonly PricePoint[], horizonDays: number): number | null {
-  const minTrainDays = PRICE_FORECAST_MIN_DAYS;
-  const maes: number[] = [];
-  for (let i = 0; i < points.length; i += 1) {
+function backtest(points: readonly PricePoint[], horizonDays: number) {
+  // The 80-day display gate is separate from the 35-day training requirement.
+  // Validate the most recent 18 completed forecasts, never their future targets.
+  const trendErrors: number[] = [];
+  const unchangedErrors: number[] = [];
+  const lastOrigin = points.length - 1 - horizonDays;
+  const firstOrigin = Math.max(34, lastOrigin - 17);
+  for (let i = firstOrigin; i <= lastOrigin; i += 1) {
     const train = points.slice(0, i + 1);
-    if (coverageDays(train) < minTrainDays || train.length < 35) continue;
-    const targetIndex = i + horizonDays;
-    if (targetIndex >= points.length) continue;
-    const predicted = simplePredict(train, horizonDays);
-    maes.push(Math.abs(predicted - points[targetIndex].price));
-    if (maes.length >= 18) break;
+    const actual = points[i + horizonDays].price;
+    trendErrors.push(Math.abs(simplePredict(train, horizonDays) - actual));
+    unchangedErrors.push(Math.abs(points[i].price - actual));
   }
-  return maes.length >= 5 ? mean(maes) : null;
+  if (trendErrors.length < 5) return null;
+  // A more complex trend must earn its place against the unchanged-price baseline.
+  const method = mean(trendErrors) < mean(unchangedErrors) ? 'trend' : 'unchanged';
+  const errors = method === 'trend' ? trendErrors : unchangedErrors;
+  return { method, errors, mae: mean(errors) } as const;
 }
 
 export function forecastPrice(data: readonly PricePoint[], horizonDays: number): PriceForecastResult | null {
+  if (!Number.isInteger(horizonDays) || horizonDays < 1 || horizonDays > 7) return null;
   const points = clean(data);
   const sampleDays = coverageDays(points);
-  if (sampleDays < PRICE_FORECAST_MIN_DAYS || points.length < 35) return null;
-  const predicted = simplePredict(points, horizonDays);
-  const mae = backtestMae(points, horizonDays);
+  if (sampleDays < PRICE_FORECAST_MIN_DAYS) return null;
+  const validation = backtest(points, horizonDays);
+  if (!validation) return null;
+  const latest = points[points.length - 1].price;
+  const predicted = validation.method === 'trend' ? simplePredict(points, horizonDays) : latest;
   const last30 = points.slice(-30);
   const dailyMoves = last30.slice(1).map((p, i) => p.price - last30[i].price);
-  const noise = Math.max(stdev(dailyMoves), 0.003);
-  const error = Math.max(mae ?? noise * Math.sqrt(horizonDays), noise * 1.5);
-  const latest = points[points.length - 1].price;
-  const relativeError = latest > 0 ? error / latest : 1;
-  const confidence: Confidence = mae === null
-    ? 'low'
-    : relativeError <= 0.012
-      ? 'high'
-      : relativeError <= 0.025
-        ? 'medium'
-        : relativeError <= 0.05
-          ? 'low'
-          : 'none';
+  // Keep the band sensitive to current volatility and recent misses. It is an
+  // indicative range, not a claimed probability or statistical confidence interval.
+  const sortedErrors = [...validation.errors].sort((a, b) => a - b);
+  const recentMae = mean(validation.errors.slice(-5));
+  const error = Math.max(validation.mae, recentMae);
+  const halfWidth = Math.max(
+    sortedErrors[Math.ceil(sortedErrors.length * 0.9) - 1],
+    stdev(dailyMoves) * Math.sqrt(horizonDays),
+    0.005,
+  );
+  const relativeError = error / latest;
+  const confidence: Confidence = relativeError <= 0.012 ? 'high'
+    : relativeError <= 0.025 ? 'medium'
+    : relativeError <= 0.05 ? 'low' : 'none';
   if (confidence === 'none') return null;
   const delta = predicted - latest;
-  const direction = Math.abs(delta) < 0.005 ? 'flat' : delta > 0 ? 'up' : 'down';
+  // Do not describe a tiny move inside the model's typical error as a trend.
+  const direction = Math.abs(delta) <= Math.max(0.005, error) ? 'flat' : delta > 0 ? 'up' : 'down';
   return {
-    horizonDays,
-    predicted,
-    low: Math.max(0, predicted - error * 1.35),
-    high: predicted + error * 1.35,
+    horizonDays, predicted,
+    asOfDate: points[points.length - 1].date,
+    targetDate: shiftIsoDay(points[points.length - 1].date, horizonDays),
+    low: Math.max(0, predicted - halfWidth),
+    high: predicted + halfWidth,
     confidence,
-    backtestMae: mae,
+    backtestMae: validation.mae,
+    backtestSamples: validation.errors.length,
+    method: validation.method,
     sampleDays,
     direction,
   };
@@ -213,7 +236,5 @@ export function analyzePriceHistory(data: readonly PricePoint[]): PriceIntellige
     daysSinceChange,
     volatility30: stdev(dailyMoves),
     status,
-    forecast3: forecastPrice(points, 3),
-    forecast7: forecastPrice(points, 7),
   };
 }

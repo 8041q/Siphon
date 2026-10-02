@@ -8,6 +8,9 @@ const star = 'm12 3 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3L12 17.4l-5.6 3 1.1-6.3L3 9.6l6
 // Each symbol keeps the same 24-point canvas and stroke weight so small tab,
 // filter, and station-action icons remain recognizable across the app.
 const SYMBOLS: Record<string, ReactNode> = {
+  'arrow.down': <Path d="M12 4v16m-6-6 6 6 6-6" />,
+  'arrow.up': <Path d="M12 20V4m-6 6 6-6 6 6" />,
+  'arrow.right': <Path d="M4 12h16m-6-6 6 6-6 6" />,
   map: <><Path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z" /><Path d="M9 3v16M15 5v16" /></>,
   list: <><Path d="M8 6h13M8 12h13M8 18h13" /><Circle cx="3" cy="6" r=".8" /><Circle cx="3" cy="12" r=".8" /><Circle cx="3" cy="18" r=".8" /></>,
   search: <><Circle cx="10.5" cy="10.5" r="6.5" /><Path d="m16 16 5 5" /></>,

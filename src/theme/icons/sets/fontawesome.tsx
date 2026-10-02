@@ -26,6 +26,9 @@ const MAPPING: Record<string, FaName> = {
   'kofi': 'coffee',
   'lock': 'lock',
   'gift': 'gift',
+  'arrow.down': 'arrow-down',
+  'arrow.up': 'arrow-up',
+  'arrow.right': 'arrow-right',
   'oilcan.fill': 'line-chart',
 };
 
